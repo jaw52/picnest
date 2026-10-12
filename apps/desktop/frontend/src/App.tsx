@@ -65,7 +65,7 @@ export default function App() {
   const tabPath = useAtomValue(activeTabPathAtom)
   const folder = useAtomValue(currentFolderAtom)
   const filter = useAtomValue(ratingFilterAtom)
-  const infoExtent = useInfoPanelExtent()
+  const infoExtent = useInfoPanelExtent(tabPath === null)
   const size = useSize()
   const { refreshFolder } = useOpenFolder()
   useFolderWatcher(() => {
@@ -90,7 +90,7 @@ export default function App() {
 
   return (
     <div {...stylex.props(styles.root)}>
-      <InfoPanel extent={infoExtent} paddingTop={headerHeight} />
+      {tabPath !== null && <InfoPanel extent={infoExtent} paddingTop={headerHeight} />}
       <motion.div style={{ marginRight: infoExtent }}>
         <div ref={headerRef} {...stylex.props(styles.header)}>
           {/* The tab bar doubles as a drag handle, like a native app's

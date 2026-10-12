@@ -9,6 +9,7 @@ import {
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
 import { infoSidebarCollapsedAtom } from '~/atoms/layout'
+import { activeTabPathAtom } from '~/atoms/tabs'
 import { IconButton } from '~/components/IconButton'
 import { Slider } from '~/components/Slider'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
@@ -49,6 +50,7 @@ const styles = stylex.create({
 })
 
 export function Toolbar() {
+  const tabPath = useAtomValue(activeTabPathAtom)
   const currentFolder = useAtomValue(currentFolderAtom)
   const isScanning = useAtomValue(isScanningAtom)
   const selectedIds = useAtomValue(selectedPhotoIdsAtom)
@@ -94,11 +96,13 @@ export function Toolbar() {
           onClick={() => navigateToFolder(currentFolder)}
         />
       )}
-      <IconButton
-        label={infoCollapsed ? '展开信息栏' : '收起信息栏'}
-        icon={infoCollapsed ? PanelRightOpen : PanelRightClose}
-        onClick={() => setInfoCollapsed(v => !v)}
-      />
+      {tabPath !== null && (
+        <IconButton
+          label={infoCollapsed ? '展开信息栏' : '收起信息栏'}
+          icon={infoCollapsed ? PanelRightOpen : PanelRightClose}
+          onClick={() => setInfoCollapsed(v => !v)}
+        />
+      )}
     </div>
   )
 }
