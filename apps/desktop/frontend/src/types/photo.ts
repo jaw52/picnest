@@ -1,0 +1,38 @@
+export interface PhotoMeta {
+  path: string
+  fileName: string
+  width: number
+  height: number
+  rating: number
+  modified: number
+  isCloudPlaceholder: boolean
+}
+
+export interface PhotoPage {
+  photos: PhotoMeta[]
+  total: number
+}
+
+export interface Photo extends PhotoMeta {
+  id: string
+  aspectRatio: number
+  thumbnailUrl?: string
+}
+
+export interface PhotoExif {
+  cameraMake?: string
+  cameraModel?: string
+  lensModel?: string
+  focalLength?: string
+  aperture?: string
+  shutterSpeed?: string
+  iso?: string
+  exposureBias?: string
+  takenAt?: string
+}
+
+export interface PhotoDetails {
+  fileSize: number
+  created?: number
+  exif?: PhotoExif
+}

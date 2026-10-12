@@ -1,0 +1,114 @@
+import type { FolderEntry } from '~/types/folder'
+import type { PhotoDetails, PhotoPage } from '~/types/photo'
+
+import { App } from '~/mygo'
+import { convertFileSrc, pickFolder } from './native'
+
+export { pickFolder }
+
+/**
+ * Go errors reach JS as `CallError`s; callers format rejections with
+ * `${error}`, so unwrap them to the plain message string.
+ */
+async function call<T>(promise: PromiseLike<T>): Promise<T> {
+  try {
+    return await promise
+  }
+  catch (error) {
+    throw error instanceof Error ? error.message : error
+  }
+}
+
+export function scanFolderPage(
+  folderPath: string,
+  offset: number,
+  limit: number,
+): Promise<PhotoPage> {
+  return call(App.scanFolderPage(folderPath, offset, limit)) as Promise<PhotoPage>
+}
+
+/**
+ * Starts watching `folderPath` for on-disk changes (files added/removed/
+ * renamed); the backend emits a `folder-changed` event when that happens.
+ * Only one folder is watched at a time - calling this again for a
+ * different folder replaces the previous watch.
+ */
+export function watchFolder(folderPath: string): Promise<void> {
+  return call(App.watchFolder(folderPath))
+}
+
+/** Stops watching the currently open folder started by `watchFolder`. */
+export function unwatchFolder(): Promise<void> {
+  return call(App.unwatchFolder())
+}
+
+/** Rejection message of a thumbnail request aborted through its signal. */
+export const THUMBNAIL_CANCELLED = 'thumbnail-cancelled'
+
+let thumbnailRequestSeq = 0
+
+/**
+ * Resolves a thumbnail's URL, generating it if needed. Aborting `signal`
+ * drops the request from the backend queue if it hasn't started decoding
+ * yet; it then rejects with THUMBNAIL_CANCELLED.
+ */
+export async function ensureThumbnailUrl(
+  folderPath: string,
+  filePath: string,
+  maxEdge: number,
+  { background = false, signal }: { background?: boolean, signal?: AbortSignal } = {},
+): Promise<string> {
+  const requestId = signal ? String(++thumbnailRequestSeq) : ''
+  const cancel = () => void App.cancelThumbnail(requestId)
+  signal?.addEventListener('abort', cancel, { once: true })
+  try {
+    const thumbPath = await call(App.ensureThumbnail(folderPath, filePath, maxEdge, background, requestId))
+    return convertFileSrc(thumbPath)
+  }
+  finally {
+    signal?.removeEventListener('abort', cancel)
+  }
+}
+
+export function setRating(folderPath: string, fileName: string, rating: number): Promise<void> {
+  return call(App.setRating(folderPath, fileName, rating))
+}
+
+export async function listSubfolders(folderPath: string): Promise<FolderEntry[]> {
+  return (await call(App.listSubfolders(folderPath))) ?? []
+}
+
+export function getPhotoDetails(filePath: string): Promise<PhotoDetails> {
+  return call(App.getPhotoDetails(filePath)) as Promise<PhotoDetails>
+}
+
+/** Asks iCloud Drive to fetch a not-yet-downloaded file; the download runs on in the background. */
+export function downloadPlaceholder(filePath: string): Promise<void> {
+  return call(App.downloadPlaceholder(filePath))
+}
+
+export function deletePhotos(folderPath: string, filePaths: string[]): Promise<void> {
+  return call(App.deletePhotos(folderPath, filePaths))
+}
+
+/** Moves `folderPath` itself to the system trash. */
+export function deleteFolder(folderPath: string): Promise<void> {
+  return call(App.deleteFolder(folderPath))
+}
+
+export function renamePhoto(folderPath: string, oldName: string, newName: string): Promise<void> {
+  return call(App.renamePhoto(folderPath, oldName, newName))
+}
+
+/**
+ * Moves the named files out of `folderPath` into `destFolder`, carrying
+ * their ratings along. Rejects with every per-file
+ * failure joined by newlines; files that did move stay moved.
+ */
+export function movePhotos(
+  folderPath: string,
+  fileNames: string[],
+  destFolder: string,
+): Promise<void> {
+  return call(App.movePhotos(folderPath, fileNames, destFolder))
+}

@@ -1,0 +1,25 @@
+import '@testing-library/jest-dom/vitest'
+
+// jsdom doesn't implement ResizeObserver; the masonry grid uses it to track
+// its container's width. The real WebKit webview has it natively.
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+// Stub only implements the methods the grid uses.
+globalThis.ResizeObserver = ResizeObserverStub as any
+
+// jsdom doesn't implement matchMedia; framer-motion and the Fluid
+// Functionalism components query it (reduced motion, pointer type).
+window.matchMedia ??= (query: string) =>
+  ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener() {},
+    removeEventListener() {},
+    addListener() {},
+    removeListener() {},
+    dispatchEvent: () => false,
+  }) as MediaQueryList

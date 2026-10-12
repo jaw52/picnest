@@ -1,0 +1,245 @@
+import type { ContextMenuItem } from '~/components/ContextMenu'
+import type { View } from '~/lib/zoom'
+import * as stylex from '@stylexjs/stylex'
+import { motion } from 'framer-motion'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { ContextMenu } from '~/components/ContextMenu'
+import { spring } from '~/lib/springs'
+import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
+
+/** Height reserved under the photo for the caption: its 16px offset, its own height, and a gap. */
+const CAPTION_STRIP = 64
+/** Movement under this is a click, not a drag. */
+const DRAG_THRESHOLD = 3
+/** Pinch deltas arrive as small wheel `deltaY`s with ctrl held; this turns them into a zoom factor. */
+const WHEEL_ZOOM_RATE = 0.01
+
+const styles = stylex.create({
+  // Fills the overlay. The bottom padding leaves the caption a strip of its
+  // own, so a tall photo is fitted above it instead of running underneath.
+  viewport: {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    paddingTop: 16,
+    paddingBottom: CAPTION_STRIP,
+    touchAction: 'none',
+  },
+  stage: { margin: 'auto', transformOrigin: 'center' },
+  smooth: { transitionProperty: 'transform', transitionDuration: '200ms', transitionTimingFunction: 'ease-out' },
+  image: {
+    display: 'block',
+    maxHeight: `calc(100vh - ${16 + CAPTION_STRIP}px)`,
+    maxWidth: '92vw',
+    objectFit: 'contain',
+  },
+  fit: { cursor: 'zoom-in' },
+  zoomed: { cursor: 'grab' },
+  dragging: { cursor: 'grabbing' },
+})
+
+interface WebKitGestureEvent extends UIEvent {
+  scale: number
+  clientX: number
+  clientY: number
+}
+
+interface ZoomableImageProps {
+  src: string
+  alt: string
+  menuItems: ContextMenuItem[]
+}
+
+/**
+ * The lightbox photo with trackpad zoom: pinch to zoom around the cursor,
+ * two-finger scroll to pan once zoomed, drag to pan, click to jump between
+ * fit and actual size. Pinch arrives as `gesture*` events in WebKit (the
+ * macOS webview) and as ctrl+wheel in Chromium; both are handled.
+ */
+export function ZoomableImage({ src, alt, menuItems }: ZoomableImageProps) {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
+  const [view, setView] = useState<View>(FIT)
+  const [smooth, setSmooth] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  // The handlers below are native listeners registered once, so they read
+  // the latest view from a ref rather than closing over state.
+  const viewRef = useRef<View>(FIT)
+  const gestureRef = useRef<{ base: number } | null>(null)
+  const dragRef = useRef<{ x: number, y: number, view: View, moved: boolean } | null>(null)
+  const suppressClickRef = useRef(false)
+
+  function updateView(next: View, animated = false) {
+    viewRef.current = next
+    setSmooth(animated)
+    setView(next)
+  }
+
+  function measure() {
+    const viewport = viewportRef.current
+    const stage = stageRef.current
+    const image = imageRef.current
+    if (!viewport || !stage || !image)
+      return null
+    const rect = stage.getBoundingClientRect()
+    const vRect = viewport.getBoundingClientRect()
+    const v = viewRef.current
+    return {
+      // Where the photo is centered on screen, whatever it is currently scaled or panned to.
+      centerX: rect.left + rect.width / 2 - v.x,
+      centerY: rect.top + rect.height / 2 - v.y,
+      box: {
+        imageW: image.offsetWidth,
+        imageH: image.offsetHeight,
+        viewW: viewport.clientWidth,
+        viewH: viewport.clientHeight,
+        offsetX: rect.left + rect.width / 2 - v.x - (vRect.left + vRect.width / 2),
+        offsetY: rect.top + rect.height / 2 - v.y - (vRect.top + vRect.height / 2),
+      },
+      max: Math.max(4, actualSizeScale(image.naturalWidth, image.offsetWidth) * 4),
+      actual: actualSizeScale(image.naturalWidth, image.offsetWidth),
+    }
+  }
+
+  function zoomTo(scale: number, clientX: number, clientY: number, animated = false) {
+    const m = measure()
+    if (!m)
+      return
+    updateView(
+      zoomAbout(viewRef.current, scale, clientX - m.centerX, clientY - m.centerY, m.box, m.max),
+      animated,
+    )
+  }
+
+  // Native listeners (React's are passive, which can't cancel a wheel event),
+  // wired through effect events so they always see the latest handlers.
+  const onWheel = useEffectEvent((e: WheelEvent) => {
+    // Stops the page scrolling, or WebKit zooming the whole page.
+    e.preventDefault()
+    if (gestureRef.current)
+      return
+    if (e.ctrlKey) {
+      zoomTo(viewRef.current.scale * Math.exp(-e.deltaY * WHEEL_ZOOM_RATE), e.clientX, e.clientY)
+      return
+    }
+    if (viewRef.current.scale <= 1)
+      return
+    const m = measure()
+    if (m) {
+      const { x, y } = viewRef.current
+      updateView(clampView({ ...viewRef.current, x: x - e.deltaX, y: y - e.deltaY }, m.box))
+    }
+  })
+  const onGestureStart = useEffectEvent((e: Event) => {
+    e.preventDefault()
+    gestureRef.current = { base: viewRef.current.scale }
+  })
+  const onGestureChange = useEffectEvent((e: Event) => {
+    e.preventDefault()
+    const g = e as WebKitGestureEvent
+    if (gestureRef.current)
+      zoomTo(gestureRef.current.base * g.scale, g.clientX, g.clientY)
+  })
+  const onGestureEnd = useEffectEvent((e: Event) => {
+    e.preventDefault()
+    gestureRef.current = null
+  })
+
+  useEffect(() => {
+    const el = viewportRef.current
+    if (!el)
+      return
+    const wheel = (e: WheelEvent) => onWheel(e)
+    const start = (e: Event) => onGestureStart(e)
+    const change = (e: Event) => onGestureChange(e)
+    const end = (e: Event) => onGestureEnd(e)
+    el.addEventListener('wheel', wheel, { passive: false })
+    el.addEventListener('gesturestart', start)
+    el.addEventListener('gesturechange', change)
+    el.addEventListener('gestureend', end)
+    return () => {
+      el.removeEventListener('wheel', wheel)
+      el.removeEventListener('gesturestart', start)
+      el.removeEventListener('gesturechange', change)
+      el.removeEventListener('gestureend', end)
+    }
+  }, [])
+
+  const zoomed = view.scale > 1
+
+  return (
+    <div
+      ref={viewportRef}
+      {...stylex.props(styles.viewport)}
+      onPointerDown={(e) => {
+        if (e.button !== 0 || !zoomed)
+          return
+        suppressClickRef.current = false
+        dragRef.current = { x: e.clientX, y: e.clientY, view: viewRef.current, moved: false }
+      }}
+      onPointerMove={(e) => {
+        const d = dragRef.current
+        if (!d)
+          return
+        const dx = e.clientX - d.x
+        const dy = e.clientY - d.y
+        if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD)
+          return
+        if (!d.moved) {
+          // Captured only once it is a drag: capturing on press would
+          // redirect a plain click from the photo to the viewport.
+          e.currentTarget.setPointerCapture(e.pointerId)
+          d.moved = true
+          setDragging(true)
+        }
+        const m = measure()
+        if (m)
+          updateView(clampView({ ...d.view, x: d.view.x + dx, y: d.view.y + dy }, m.box))
+      }}
+      onPointerUp={() => {
+        // A drag that ends over the backdrop must not close the lightbox.
+        suppressClickRef.current = dragRef.current?.moved ?? false
+        dragRef.current = null
+        setDragging(false)
+      }}
+      onClickCapture={(e) => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false
+          e.stopPropagation()
+        }
+      }}
+    >
+      <ContextMenu items={menuItems}>
+        <div
+          ref={stageRef}
+          className={stylex.props(styles.stage, smooth && styles.smooth).className}
+          style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
+        >
+          <motion.img
+            ref={imageRef}
+            src={src}
+            alt={alt}
+            {...stylex.props(styles.image, dragging ? styles.dragging : zoomed ? styles.zoomed : styles.fit)}
+            draggable={false}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={spring.slow}
+            onClick={(e) => {
+              e.stopPropagation()
+              const m = measure()
+              if (!m)
+                return
+              if (zoomed)
+                updateView(FIT, true)
+              else
+                zoomTo(m.actual, e.clientX, e.clientY, true)
+            }}
+          />
+        </div>
+      </ContextMenu>
+    </div>
+  )
+}
