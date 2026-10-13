@@ -20,7 +20,8 @@
     "lucide-react": "^1.52.0",
     "mygo-runtime": "0.4.2",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "wheel-gestures": "^2.3.0"
   },
   "devDependencies": {
     "@stylexjs/unplugin": "0.19.1",

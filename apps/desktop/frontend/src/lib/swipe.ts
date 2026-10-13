@@ -1,55 +1,42 @@
-/** Horizontal scroll a swipe has to travel before it counts. */
+import { WheelGestures } from 'wheel-gestures'
+
+/** Horizontal travel within one gesture before it counts as a swipe. */
 export const SWIPE_DISTANCE = 40
-/** A pause this long between wheel events always ends the gesture. */
-export const SWIPE_IDLE_MS = 200
 
 /**
  * Turns a stream of trackpad wheel events into discrete swipes, one per
  * gesture: `push` returns 1 (fingers moved left, i.e. next), -1 (previous)
- * or 0. Once a swipe fires the gesture is locked, so its trailing momentum
- * can't fire again. The lock lifts on a pause, or as soon as a new gesture
- * shows up inside the momentum: momentum only ever decays in one direction,
- * so a reversal or a delta that grows twice in a row means fresh fingers.
+ * or 0. wheel-gestures tells where each gesture starts, its momentum
+ * included, so a swipe fires once its horizontal travel reaches
+ * SWIPE_DISTANCE and not again until fresh fingers start a new gesture.
  */
 export function createSwipeDetector() {
-  let dx = 0
-  let locked = false
-  let lastTime = -Infinity
-  let lastDelta = 0
-  let rises = 0
+  // Fed by hand rather than observing an element: the caller decides which
+  // events are its to handle, and has already prevented the default.
+  const gestures = WheelGestures({ preventWheelAction: false })
+  let fired = false
+  let result: -1 | 0 | 1 = 0
 
-  function reset() {
-    dx = 0
-    locked = false
-    rises = 0
-  }
-
-  /** Whether `delta`, arriving while locked, is a new gesture rather than momentum. */
-  function startsNewGesture(delta: number) {
-    if (Math.sign(delta) !== Math.sign(dx))
-      return true
-    rises = Math.abs(delta) > Math.abs(lastDelta) ? rises + 1 : 0
-    return rises >= 2
-  }
+  gestures.on('wheel', (state) => {
+    if (state.isStart)
+      fired = false
+    if (fired || state.isEnding)
+      return
+    const [x, y] = state.axisMovement
+    if (Math.abs(x) < SWIPE_DISTANCE || Math.abs(x) <= Math.abs(y))
+      return
+    fired = true
+    // Movement runs against the deltas (it is what the content would do),
+    // so fingers moving left - positive deltaX - move it negative.
+    result = x < 0 ? 1 : -1
+  })
 
   return {
-    push(deltaX: number, deltaY: number, time: number): -1 | 0 | 1 {
-      if (time - lastTime > SWIPE_IDLE_MS)
-        reset()
-      lastTime = time
-      const horizontal = Math.abs(deltaX) > Math.abs(deltaY)
-      const delta = horizontal ? deltaX : 0
-      if (locked && delta !== 0 && startsNewGesture(delta))
-        reset()
-      lastDelta = delta
-      if (locked || !horizontal)
-        return 0
-      // A change of direction before the threshold starts the count over.
-      dx = Math.sign(delta) === Math.sign(dx) ? dx + delta : delta
-      if (Math.abs(dx) < SWIPE_DISTANCE)
-        return 0
-      locked = true
-      return dx > 0 ? 1 : -1
+    push(event: Pick<WheelEvent, 'deltaMode' | 'deltaX' | 'deltaY' | 'timeStamp'>): -1 | 0 | 1 {
+      result = 0
+      // Listeners run synchronously, so `result` is this event's verdict.
+      gestures.feedWheel(event)
+      return result
     },
   }
 }

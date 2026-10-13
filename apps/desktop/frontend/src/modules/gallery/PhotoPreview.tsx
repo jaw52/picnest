@@ -194,7 +194,7 @@ export function PhotoPreview() {
   function onWheel(e: WheelEvent<HTMLDivElement>) {
     if (e.ctrlKey)
       return
-    const direction = swipe.push(e.deltaX, e.deltaY, e.timeStamp)
+    const direction = swipe.push(e.nativeEvent)
     if (direction !== 0)
       goTo(direction)
   }
