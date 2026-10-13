@@ -1,9 +1,9 @@
-import type { LucideIcon } from 'lucide-react'
 import type { MouseEvent, WheelEvent } from 'react'
+import type { IconComponent } from '~/lib/icon'
+import { CloseRegular, CopyRegular, Delete2Regular, LeftRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai'
-import { ChevronLeft, ChevronRight, Copy, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   currentFolderAtom,
@@ -22,7 +22,6 @@ import { spring } from '~/lib/springs'
 import { createSwipeDetector } from '~/lib/swipe'
 import { motion as motionTokens, radius } from '~/theme/layout.stylex'
 import { text } from '~/theme/text'
-import { lightboxButtonMarker } from './markers.stylex'
 import { ZoomableImage } from './ZoomableImage'
 
 const styles = stylex.create({
@@ -59,11 +58,6 @@ const styles = stylex.create({
   close: { top: 16, right: 16 },
   prev: { top: '50%', left: 16, transform: 'translateY(-50%)' },
   next: { top: '50%', right: 16, transform: 'translateY(-50%)' },
-  icon: {
-    strokeWidth: { default: 1.5, [stylex.when.ancestor(':hover', lightboxButtonMarker)]: 2, [stylex.when.ancestor(':active', lightboxButtonMarker)]: 2 },
-    transitionProperty: 'stroke-width',
-    transitionDuration: motionTokens.fast,
-  },
   notice: { margin: 'auto', color: 'rgb(255 255 255 / 0.8)' },
   caption: {
     position: 'absolute',
@@ -102,7 +96,7 @@ function LightboxButton({
   onClick,
 }: {
   label: string
-  icon: LucideIcon
+  icon: IconComponent
   position: LightboxPosition
   onClick: (e: MouseEvent) => void
 }) {
@@ -111,10 +105,10 @@ function LightboxButton({
       <button
         type="button"
         aria-label={label}
-        {...stylex.props(lightboxButtonMarker, styles.button, styles[position])}
+        {...stylex.props(styles.button, styles[position])}
         onClick={onClick}
       >
-        <Icon size={18} {...stylex.props(styles.icon)} />
+        <Icon size={18} />
       </button>
     </Tooltip>
   )
@@ -259,10 +253,10 @@ export function PhotoPreview() {
                   alt={photo.fileName}
                   fadeIn={photo.id === openedId}
                   menuItems={[
-                    { label: '复制路径', icon: Copy, onSelect: () => void writeText(photo.path) },
+                    { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(photo.path) },
                     {
                       label: '删除',
-                      icon: Trash2,
+                      icon: Delete2Regular,
                       destructive: true,
                       onSelect: () => void deletePhoto([photo]),
                     },
@@ -271,14 +265,14 @@ export function PhotoPreview() {
               )}
           <LightboxButton
             label="关闭"
-            icon={X}
+            icon={CloseRegular}
             position="close"
             onClick={() => setPreviewId(null)}
           />
           {index > 0 && (
             <LightboxButton
               label="上一张"
-              icon={ChevronLeft}
+              icon={LeftRegular}
               position="prev"
               onClick={(e) => {
                 e.stopPropagation()
@@ -289,7 +283,7 @@ export function PhotoPreview() {
           {index !== -1 && index < photos.length - 1 && (
             <LightboxButton
               label="下一张"
-              icon={ChevronRight}
+              icon={RightRegular}
               position="next"
               onClick={(e) => {
                 e.stopPropagation()

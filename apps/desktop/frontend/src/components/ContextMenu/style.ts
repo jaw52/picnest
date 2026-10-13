@@ -46,14 +46,7 @@ export const styles = stylex.create({
   },
   rowDisabled: { opacity: 0.5, pointerEvents: 'none' },
 
-  iconCell: { display: 'inline-grid' },
-  iconSizer: { gridColumnStart: 1, gridRowStart: 1, visibility: 'hidden' },
-  icon: {
-    gridColumnStart: 1,
-    gridRowStart: 1,
-    transitionProperty: 'color, stroke-width',
-    transitionDuration: '80ms',
-  },
+  icon: { flexShrink: 0, transitionProperty: 'color', transitionDuration: '80ms' },
   lit: { color: colors['--ps-foreground'] },
   dim: { color: colors['--ps-muted-foreground'] },
   destructive: { color: colors['--ps-destructive'] },

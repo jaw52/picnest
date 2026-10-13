@@ -1,12 +1,12 @@
-import type { LucideIcon } from 'lucide-react'
 import type { ButtonProps } from '~/components/Button'
+import type { IconComponent } from '~/lib/icon'
 import { Button } from '~/components/Button'
 import { Tooltip } from '~/components/Tooltip'
 
 export interface IconButtonProps extends Omit<ButtonProps, 'children' | 'size'> {
   /** Accessible name, also shown as the tooltip. */
   label: string
-  icon: LucideIcon
+  icon: IconComponent
   iconClassName?: string
 }
 

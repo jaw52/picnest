@@ -57,18 +57,7 @@ function MenuRow({ index, label, icon: Icon, destructive, disabled, onSelect }: 
       // shrink-0 because the popup is a max-height flex column.
       {...stylex.props(styles.row, disabled && styles.rowDisabled, size.control, size.gap, size.itemPx)}
     >
-      {Icon && (
-        <span {...stylex.props(styles.iconCell)}>
-          <span {...stylex.props(styles.iconSizer)}>
-            <Icon size={size.icon} strokeWidth={2} />
-          </span>
-          <Icon
-            size={size.icon}
-            strokeWidth={lit ? 2 : 1.5}
-            {...stylex.props(styles.icon, tone)}
-          />
-        </span>
-      )}
+      {Icon && <Icon size={size.icon} {...stylex.props(styles.icon, tone)} />}
       <span {...stylex.props(styles.label, size.text)}>
         <span
           aria-hidden="true"

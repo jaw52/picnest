@@ -1,5 +1,6 @@
+import { StarFilled } from '@mingcute/react/core-filled'
+import { StarRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
-import { Star } from 'lucide-react'
 import { useState } from 'react'
 import { styles } from './style'
 
@@ -20,6 +21,7 @@ export function StarRating({ rating, onChange, size = 16, onImage = false }: Sta
     <div {...stylex.props(styles.root)} onMouseLeave={() => setHovered(null)}>
       {[1, 2, 3, 4, 5].map((star) => {
         const filled = star <= display
+        const Star = filled ? StarFilled : StarRegular
         return (
           <button
             key={star}
@@ -35,8 +37,6 @@ export function StarRating({ rating, onChange, size = 16, onImage = false }: Sta
           >
             <Star
               size={size}
-              strokeWidth={1.5}
-              fill={filled ? 'currentColor' : 'none'}
               {...stylex.props(
                 styles.star,
                 filled ? styles.filled : onImage ? styles.emptyOnImage : styles.empty,

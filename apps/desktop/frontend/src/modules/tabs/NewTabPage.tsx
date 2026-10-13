@@ -1,6 +1,6 @@
+import { NewFolderRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom } from 'jotai'
-import { FolderPlus } from 'lucide-react'
 import { useMemo } from 'react'
 import { folderRoots, recentFoldersAtom, withFolderRemoved } from '~/atoms/recentFolders'
 import { Button } from '~/components/Button'
@@ -63,7 +63,7 @@ export function NewTabPage() {
         </div>
         <Button
           variant="secondary"
-          leadingIcon={FolderPlus}
+          leadingIcon={NewFolderRegular}
           onClick={() => void addFolder()}
           xstyle={styles.addButton}
         >

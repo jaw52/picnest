@@ -1,8 +1,8 @@
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { Photo } from '~/types/photo'
+import { CloudRegular, CopyRegular, Delete2Regular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Cloud, Copy, FolderInput, LoaderCircle, Trash2 } from 'lucide-react'
 import { memo } from 'react'
 import {
   bulkDeleteBlockedAtom,
@@ -173,18 +173,18 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
 
   const menuItems: ContextMenuItem[] = [
     ...(selectedCount === 1
-      ? [{ label: '复制路径', icon: Copy, onSelect: () => void writeText(data.path) }]
+      ? [{ label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(data.path) }]
       : []),
     {
       label: selectedCount > 1 ? `移动 ${selectedCount} 张照片到…` : '移动到…',
-      icon: FolderInput,
+      icon: MoveRegular,
       onSelect: handleMove,
     },
     {
       label: selectedCount > 1
         ? bulkDeleteBlocked ? '缩略图生成中，暂不能批量删除' : `删除 ${selectedCount} 张照片`
         : '删除',
-      icon: Trash2,
+      icon: Delete2Regular,
       destructive: true,
       disabled: selectedCount > 1 && bulkDeleteBlocked,
       onSelect: handleDelete,
@@ -228,13 +228,13 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
         {data.isCloudPlaceholder
           ? (
               <div {...stylex.props(styles.placeholder)}>
-                <Cloud size={20} strokeWidth={1.5} />
+                <CloudRegular size={20} />
                 <span {...stylex.props(text.caption)}>iCloud 未下载</span>
                 <Button
                   variant="secondary"
                   size="compact"
                   xstyle={styles.aboveOverlay}
-                  leadingIcon={downloading ? LoaderCircle : undefined}
+                  leadingIcon={downloading ? LoadingRegular : undefined}
                   disabled={downloading}
                   onClick={(e) => {
                     e.stopPropagation()

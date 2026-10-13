@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
 import type { Photo } from '~/types/photo'
+import { CopyRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
-import { Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import {
   currentFolderAtom,
@@ -170,7 +170,7 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
       </div>
       <IconButton
         label="复制文件名"
-        icon={Copy}
+        icon={CopyRegular}
         xstyle={styles.shrink}
         onClick={() => void writeText(photo.fileName)}
       />

@@ -1,7 +1,7 @@
 import type { FolderEntry } from '~/types/folder'
+import { FolderRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
-import { ChevronRight, Folder } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
 import { activeTabPathAtom } from '~/atoms/tabs'
@@ -101,7 +101,7 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
       }}
       items={(subfolders ?? []).map(entry => ({
         label: entry.name,
-        icon: Folder,
+        icon: FolderRegular,
         onSelect: () => openInNewTab(entry.path),
       }))}
       trigger={(
@@ -110,7 +110,7 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
           aria-label={`${folderNameFromPath(folder)} 的子文件夹`}
           {...stylex.props(styles.chevron)}
         >
-          <ChevronRight size={14} strokeWidth={2} />
+          <RightRegular size={14} />
         </button>
       )}
     />
@@ -145,7 +145,7 @@ export function PathBar() {
               }}
               {...stylex.props(styles.segment, isCurrent && styles.current, text.caption)}
             >
-              {i === 0 && <Folder size={14} strokeWidth={1.5} {...stylex.props(styles.icon)} />}
+              {i === 0 && <FolderRegular size={14} {...stylex.props(styles.icon)} />}
               <span {...stylex.props(utility.truncate, isCurrent ? weight.semibold : weight.normal)}>
                 {folderNameFromPath(segment)}
               </span>

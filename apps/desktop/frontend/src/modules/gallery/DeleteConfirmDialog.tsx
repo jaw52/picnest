@@ -2,10 +2,10 @@ import type { RefObject } from 'react'
 import type { DeleteConfirmRequest } from '~/atoms/gallery'
 import type { Photo } from '~/types/photo'
 import { AlertDialog } from '@base-ui/react/alert-dialog'
+import { CloseRegular, CloudRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
-import { Cloud, X } from 'lucide-react'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { deleteConfirmRequestAtom } from '~/atoms/gallery'
 import { Button } from '~/components/Button'
@@ -169,7 +169,7 @@ function DeleteConfirmTile({
       {photo.isCloudPlaceholder
         ? (
             <div {...stylex.props(styles.placeholder)}>
-              <Cloud size={20} strokeWidth={1.5} />
+              <CloudRegular size={20} />
             </div>
           )
         : thumbnailUrl && (
@@ -191,7 +191,7 @@ function DeleteConfirmTile({
         {...stylex.props(styles.remove, styles.revealed)}
         onClick={onRemove}
       >
-        <X size={14} strokeWidth={2} />
+        <CloseRegular size={14} />
       </button>
     </div>
   )

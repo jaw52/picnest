@@ -1,6 +1,6 @@
+import { Delete2Regular, LayoutRightbarCloseRegular, LayoutRightbarOpenRegular, Refresh2Regular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
-import { PanelRightClose, PanelRightOpen, RefreshCw, Trash2 } from 'lucide-react'
 import {
   bulkDeleteBlockedAtom,
   currentFolderAtom,
@@ -84,7 +84,7 @@ export function Toolbar() {
       {currentFolder && (
         <IconButton
           label={bulkDeleteBlocked ? '缩略图生成完后才能批量删除' : '删除选中项'}
-          icon={Trash2}
+          icon={Delete2Regular}
           disabled={selectedIds.size === 0 || bulkDeleteBlocked}
           onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
         />
@@ -92,7 +92,7 @@ export function Toolbar() {
       {currentFolder && (
         <IconButton
           label="重新扫描"
-          icon={RefreshCw}
+          icon={Refresh2Regular}
           iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
           disabled={isScanning}
           onClick={() => navigateToFolder(currentFolder)}
@@ -101,7 +101,7 @@ export function Toolbar() {
       {tabPath !== null && (
         <IconButton
           label={infoCollapsed ? '展开信息栏' : '收起信息栏'}
-          icon={infoCollapsed ? PanelRightOpen : PanelRightClose}
+          icon={infoCollapsed ? LayoutRightbarOpenRegular : LayoutRightbarCloseRegular}
           onClick={() => setInfoCollapsed(v => !v)}
         />
       )}

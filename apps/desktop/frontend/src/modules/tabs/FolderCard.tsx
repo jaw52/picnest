@@ -1,6 +1,6 @@
+import { CloseRegular, CopyRegular, FolderDeleteRegular, FolderOpenRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
-import { Copy, FolderOpen, FolderX, X } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useThumbnail } from '~/hooks/useThumbnail'
@@ -312,15 +312,15 @@ export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCar
   return (
     <ContextMenu
       items={[
-        { label: '复制路径', icon: Copy, onSelect: () => void writeText(path) },
+        { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
         {
           label: '在访达中打开',
-          icon: FolderOpen,
+          icon: FolderOpenRegular,
           onSelect: () =>
             void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
         },
-        ...(onRemove ? [{ label: '从列表中移除', icon: X, onSelect: onRemove }] : []),
-        { label: '删除文件夹', icon: FolderX, destructive: true, onSelect: onDelete },
+        ...(onRemove ? [{ label: '从列表中移除', icon: CloseRegular, onSelect: onRemove }] : []),
+        { label: '删除文件夹', icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
       ]}
     >
       <button

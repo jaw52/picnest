@@ -157,20 +157,6 @@ body {
   }
 }
 
-/* Stroke weight of icons inside buttons: 1.5 at rest, 2 while the button is
-   hovered. Lucide sets stroke-width as a presentation attribute, which any rule
-   here overrides, so the buttons can't style the icons they merely wrap. */
-:where([data-icon-only]) svg,
-:where(.ps-icon-stroke) {
-  stroke-width: 1.5;
-  transition: stroke-width 80ms;
-}
-
-:where([data-icon-only]:hover) svg,
-:where(button:hover .ps-icon-stroke) {
-  stroke-width: 2;
-}
-
 :where([data-icon-only='default']) svg {
   width: 16px;
   height: 16px;

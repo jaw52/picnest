@@ -1,8 +1,9 @@
 import type { Tab } from '~/lib/tabs'
+import { FolderFilled, LayoutGridFilled } from '@mingcute/react/core-filled'
+import { AddRegular, CloseRegular, CopyRegular, FolderOpenRegular, FolderRegular, LayoutGridRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
-import { Copy, Folder, FolderOpen, LayoutGrid, Plus, X } from 'lucide-react'
 import { folderNameFromPath } from '~/atoms/recentFolders'
 import { tabsStateAtom } from '~/atoms/tabs'
 import { ContextMenu } from '~/components/ContextMenu'
@@ -87,7 +88,9 @@ const styles = stylex.create({
 function TabItem({ tab, active }: { tab: Tab, active: boolean }) {
   const { activateTab, closeTab } = useTabs()
   const title = tab.path ? folderNameFromPath(tab.path) : NEW_TAB_TITLE
-  const Icon = tab.path ? Folder : LayoutGrid
+  const Icon = tab.path
+    ? (active ? FolderFilled : FolderRegular)
+    : (active ? LayoutGridFilled : LayoutGridRegular)
 
   const item = (
     <motion.div
@@ -110,7 +113,7 @@ function TabItem({ tab, active }: { tab: Tab, active: boolean }) {
         }
       }}
     >
-      <Icon size={14} strokeWidth={active ? 2 : 1.5} {...stylex.props(styles.icon)} />
+      <Icon size={14} {...stylex.props(styles.icon)} />
       <span
         {...stylex.props(styles.label, utility.truncate, active ? weight.semibold : weight.normal)}
       >
@@ -123,7 +126,7 @@ function TabItem({ tab, active }: { tab: Tab, active: boolean }) {
         onMouseDown={e => e.stopPropagation()}
         onClick={() => closeTab(tab.id)}
       >
-        <X size={12} strokeWidth={2} />
+        <CloseRegular size={12} />
       </button>
     </motion.div>
   )
@@ -134,10 +137,10 @@ function TabItem({ tab, active }: { tab: Tab, active: boolean }) {
   return (
     <ContextMenu
       items={[
-        { label: '复制路径', icon: Copy, onSelect: () => void writeText(path) },
+        { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
         {
           label: '在访达中打开',
-          icon: FolderOpen,
+          icon: FolderOpenRegular,
           onSelect: () =>
             void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
         },
@@ -164,7 +167,7 @@ export function TabStrip() {
           ))}
         </AnimatePresence>
       </motion.div>
-      <IconButton label="新标签页 (⌘T)" icon={Plus} onClick={newTab} />
+      <IconButton label="新标签页 (⌘T)" icon={AddRegular} onClick={newTab} />
     </div>
   )
 }
