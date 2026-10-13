@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 import type { DeleteConfirmRequest } from '~/atoms/gallery'
 import type { Photo } from '~/types/photo'
 import { AlertDialog } from '@base-ui/react/alert-dialog'
-import { CloseRegular, CloudRegular } from '@mingcute/react/core-regular'
+import { BackRegular, CloudRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
@@ -64,7 +64,6 @@ const styles = stylex.create({
     paddingTop: 20,
     paddingBottom: 12,
   },
-  description: { color: colors['--ps-muted-foreground'] },
   // The masonry scrolls on its own, so the header and buttons stay put.
   scroller: {
     flexGrow: 1,
@@ -191,7 +190,7 @@ function DeleteConfirmTile({
         {...stylex.props(styles.remove, styles.revealed)}
         onClick={onRemove}
       >
-        <CloseRegular size={14} />
+        <BackRegular size={14} />
       </button>
     </div>
   )
@@ -293,9 +292,6 @@ function DeleteConfirmContent({
         <AlertDialog.Title {...stylex.props(text.title, weight.semibold)}>
           {`删除 ${remaining.length} 张照片`}
         </AlertDialog.Title>
-        <AlertDialog.Description {...stylex.props(styles.description, text.body)}>
-          这些照片将被移到废纸篓。点击照片右上角的 × 可以把它从本次删除中移出。
-        </AlertDialog.Description>
       </div>
       <DeleteConfirmGrid
         photos={remaining}
