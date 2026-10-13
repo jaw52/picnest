@@ -20,10 +20,16 @@ const { rate } = vi.hoisted(() => ({ rate: vi.fn() }))
 vi.mock('~/hooks/useRatePhoto', () => ({ useRatePhoto: () => rate }))
 vi.mock('./MasonryPhotoItem', () => ({ MasonryPhotoItem: () => null }))
 vi.mock('~/lib/native', () => ({ convertFileSrc: (path: string) => path, writeText: vi.fn() }))
+const { listSubfolders } = vi.hoisted(() => ({ listSubfolders: vi.fn() }))
+vi.mock('~/lib/backend', () => ({ listSubfolders }))
+vi.mock('~/modules/tabs/FolderCard', () => ({
+  FolderCard: ({ name }: { name: string }) => <span>{name}</span>,
+}))
 
 beforeEach(() => {
   deletePhoto.mockClear()
   rate.mockClear()
+  listSubfolders.mockReset().mockResolvedValue([])
 })
 
 it.each(['Delete', 'Backspace'])(
@@ -102,7 +108,7 @@ it('rates the grid selection, then only the previewed photo, with the 0-5 keys',
   expect(rate.mock.calls).toEqual([[b, 5]])
 })
 
-it('stays blank until a folder loads, then notes an empty folder', () => {
+it('stays blank until a folder loads, then notes an empty folder', async () => {
   const store = createStore()
   const { rerender } = render(
     <Provider store={store}>
@@ -117,7 +123,24 @@ it('stays blank until a folder loads, then notes an empty folder', () => {
       <MasonryView />
     </Provider>,
   )
-  expect(document.body.textContent).toContain('这个文件夹里没有图片')
+  expect(await screen.findByText('这个文件夹里没有图片')).toBeInTheDocument()
+})
+
+it('lays out the subfolders of a folder with no photos of its own', async () => {
+  listSubfolders.mockResolvedValue([
+    { name: '星云', path: '/parent/星云' },
+    { name: '花卉', path: '/parent/花卉' },
+  ])
+  const store = createStore()
+  store.set(currentFolderAtom, '/parent')
+  render(
+    <Provider store={store}>
+      <MasonryView />
+    </Provider>,
+  )
+  expect(await screen.findByText('星云')).toBeInTheDocument()
+  expect(screen.getByText('花卉')).toBeInTheDocument()
+  expect(document.body.textContent).not.toContain('这个文件夹里没有图片')
 })
 
 it('reveals a collapsed info panel when selecting everything', () => {

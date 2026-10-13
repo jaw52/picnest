@@ -4,7 +4,7 @@ import { Copy, FolderOpen, FolderX, X } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useThumbnail } from '~/hooks/useThumbnail'
-import { scanFolderPage } from '~/lib/backend'
+import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
@@ -18,6 +18,11 @@ import { cardMarker } from './markers.stylex'
  * are undownloaded iCloud placeholders with nothing to show.
  */
 const COVER_CANDIDATES = 6
+/**
+ * Subfolders looked into, in order, for a folder with no photos of its own,
+ * so a folder that only groups others still shows what it holds.
+ */
+const SUBFOLDER_CANDIDATES = 6
 /** Thumbnail edge for the previews: small, and shared with nothing else. */
 const PREVIEW_EDGE = 256
 
@@ -132,22 +137,47 @@ const styles = stylex.create({
   },
 })
 
-/** The folder's first photo, for its icon; null until it loads or if there is none. */
-function useCoverPath(folderPath: string) {
-  const [path, setPath] = useState<string | null>(null)
+interface Cover {
+  /** The folder the photo is in, which owns its thumbnail. */
+  folder: string
+  path: string
+}
+
+async function firstPhoto(folderPath: string) {
+  const page = await scanFolderPage(folderPath, 0, COVER_CANDIDATES)
+  return page.photos.find(p => !p.isCloudPlaceholder)?.path ?? null
+}
+
+/** The folder's first photo, or failing that the first one in a subfolder. */
+async function findCover(folderPath: string): Promise<Cover | null> {
+  const own = await firstPhoto(folderPath)
+  if (own)
+    return { folder: folderPath, path: own }
+  const subfolders = await listSubfolders(folderPath)
+  for (const sub of subfolders.slice(0, SUBFOLDER_CANDIDATES)) {
+    const path = await firstPhoto(sub.path)
+    if (path)
+      return { folder: sub.path, path }
+  }
+  return null
+}
+
+/** The photo for the folder's icon; null until it loads or if there is none. */
+function useCover(folderPath: string) {
+  const [cover, setCover] = useState<Cover | null>(null)
   useEffect(() => {
     let cancelled = false
-    scanFolderPage(folderPath, 0, COVER_CANDIDATES)
-      .then((page) => {
+    findCover(folderPath)
+      .then((found) => {
         if (!cancelled)
-          setPath(page.photos.find(p => !p.isCloudPlaceholder)?.path ?? null)
+          setCover(found)
       })
       .catch(error => console.warn(`failed to preview ${folderPath}:`, error))
     return () => {
       cancelled = true
     }
   }, [folderPath])
-  return path
+  return cover
 }
 
 /**
@@ -266,17 +296,18 @@ interface FolderCardProps {
   path: string
   name: string
   onOpen: () => void
-  onRemove: () => void
+  /** Forgets the folder from a list; the menu item is left out without it. */
+  onRemove?: () => void
   onDelete: () => void
 }
 
-/** A folder on the new-tab page, drawn like a Finder folder icon with its first photo inside. */
+/** A folder drawn like a Finder folder icon with its first photo inside. */
 export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCardProps) {
-  const cover = useCoverPath(path)
+  const cover = useCover(path)
   // The folder opens while pointed at or focused from the keyboard.
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
-  const coverUrl = useThumbnail(path, cover ?? '', PREVIEW_EDGE, cover !== null)
+  const coverUrl = useThumbnail(cover?.folder ?? path, cover?.path ?? '', PREVIEW_EDGE, cover !== null)
 
   return (
     <ContextMenu
@@ -288,7 +319,7 @@ export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCar
           onSelect: () =>
             void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
         },
-        { label: '从列表中移除', icon: X, onSelect: onRemove },
+        ...(onRemove ? [{ label: '从列表中移除', icon: X, onSelect: onRemove }] : []),
         { label: '删除文件夹', icon: FolderX, destructive: true, onSelect: onDelete },
       ]}
     >

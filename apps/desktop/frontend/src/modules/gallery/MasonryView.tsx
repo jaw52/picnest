@@ -15,6 +15,7 @@ import { cellsInRange, layoutMasonry } from '~/lib/masonry'
 import { colors } from '~/theme/colors.stylex'
 import { text } from '~/theme/text'
 
+import { EmptyFolder } from './EmptyFolder'
 import { MasonryPhotoItem } from './MasonryPhotoItem'
 
 // The selection ring sits 4px outside a tile, so neighbours need more than
@@ -110,11 +111,9 @@ export function MasonryView() {
     // (the new-tab page replaces this view otherwise).
     if (!folderPath || isScanning)
       return null
-    return (
-      <div {...stylex.props(styles.empty, text.body)}>
-        {photosTotal === 0 ? '这个文件夹里没有图片' : '没有匹配当前筛选条件的图片'}
-      </div>
-    )
+    if (photosTotal === 0)
+      return <EmptyFolder folderPath={folderPath} />
+    return <div {...stylex.props(styles.empty, text.body)}>没有匹配当前筛选条件的图片</div>
   }
 
   return (

@@ -63,9 +63,12 @@ const styles = stylex.create({
   },
 })
 
-/** A chevron after a folder that drops down that folder's subfolders. */
+/**
+ * A chevron after a folder that drops down that folder's subfolders; picking
+ * one opens it in its own tab, next to this one.
+ */
 function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: boolean }) {
-  const { openInActiveTab } = useTabs()
+  const { openInNewTab } = useTabs()
   const [subfolders, setSubfolders] = useState<FolderEntry[] | null>(null)
   // Bumped on every open, so folders created since show up.
   const [version, setVersion] = useState(0)
@@ -99,7 +102,7 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
       items={(subfolders ?? []).map(entry => ({
         label: entry.name,
         icon: Folder,
-        onSelect: () => openInActiveTab(entry.path),
+        onSelect: () => openInNewTab(entry.path),
       }))}
       trigger={(
         <button
@@ -116,7 +119,7 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
 
 /**
  * Breadcrumbs for the active tab's folder: click a parent to go up, or a
- * chevron to pick one of that folder's subfolders and go down.
+ * chevron to open one of that folder's subfolders in a new tab.
  */
 export function PathBar() {
   const path = useAtomValue(activeTabPathAtom)
