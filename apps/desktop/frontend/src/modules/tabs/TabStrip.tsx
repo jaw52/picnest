@@ -154,13 +154,16 @@ export function TabStrip() {
 
   return (
     <div {...stylex.props(styles.strip)}>
-      <div role="tablist" aria-label="文件夹标签页" {...stylex.props(styles.tabs)}>
+      {/* In the sticky header, a shorter page clamping the window's scroll
+       * would look to framer like the tabs moving by that much. layoutRoot
+       * measures them against the strip; it needs `layout` to be measured. */}
+      <motion.div layout layoutRoot role="tablist" aria-label="文件夹标签页" {...stylex.props(styles.tabs)}>
         <AnimatePresence initial={false}>
           {tabs.map(tab => (
             <TabItem key={tab.id} tab={tab} active={tab.id === activeId} />
           ))}
         </AnimatePresence>
-      </div>
+      </motion.div>
       <IconButton label="新标签页 (⌘T)" icon={Plus} onClick={newTab} />
     </div>
   )
