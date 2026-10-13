@@ -23,3 +23,7 @@ window.matchMedia ??= (query: string) =>
     removeListener() {},
     dispatchEvent: () => false,
   }) as MediaQueryList
+
+// jsdom doesn't implement HTMLImageElement.decode; the lightbox decodes
+// photos before showing them. Resolving at once stands in for a decoded image.
+HTMLImageElement.prototype.decode ??= () => Promise.resolve()

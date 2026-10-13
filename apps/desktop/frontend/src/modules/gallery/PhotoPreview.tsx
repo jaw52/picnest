@@ -1,10 +1,10 @@
 import type { LucideIcon } from 'lucide-react'
-import type { MouseEvent } from 'react'
+import type { MouseEvent, WheelEvent } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai'
 import { ChevronLeft, ChevronRight, Copy, Trash2, X } from 'lucide-react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   currentFolderAtom,
   filteredPhotosAtom,
@@ -13,11 +13,13 @@ import {
 } from '~/atoms/gallery'
 import { StarRating } from '~/components/StarRating'
 import { Tooltip } from '~/components/Tooltip'
+import { useDecodedImages } from '~/hooks/useDecodedImages'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { convertFileSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
+import { createSwipeDetector } from '~/lib/swipe'
 import { motion as motionTokens, radius } from '~/theme/layout.stylex'
 import { text } from '~/theme/text'
 import { lightboxButtonMarker } from './markers.stylex'
@@ -138,17 +140,64 @@ export function PhotoPreview() {
     return () => opener?.focus()
   }, [isOpen])
 
+  // The lightbox fades its photo in when it opens, but swaps photos in place
+  // after that: fading each one in would blink the backdrop through.
+  const [openedId, setOpenedId] = useState<string | null>(null)
+  if (!photo && openedId !== null)
+    setOpenedId(null)
+  if (photo && openedId === null)
+    setOpenedId(photo.id)
+
   const index = photo ? photos.findIndex(p => p.id === photo.id) : -1
+
+  // Neighbours are decoded in the background, and a switch waits for the next
+  // photo to decode, so the current one stays up until the next can paint.
+  const { decode, retain } = useDecodedImages()
+  useEffect(() => {
+    if (index === -1)
+      return
+    const srcs = [photos[index - 1], photos[index], photos[index + 1]]
+      .filter(p => p && !p.isCloudPlaceholder)
+      .map(p => convertFileSrc(p!.path))
+    retain(srcs)
+    for (const src of srcs)
+      void decode(src)
+  }, [index, photos, decode, retain])
+  useEffect(() => {
+    if (!isOpen)
+      retain([])
+  }, [isOpen, retain])
+
+  // Only the latest switch lands, should several be waiting on decodes.
+  const switchRef = useRef(0)
   const goTo = useCallback(
     (delta: number) => {
       if (index === -1)
         return
       const next = photos[index + delta]
-      if (next)
-        setPreviewId(next.id)
+      if (!next)
+        return
+      const token = ++switchRef.current
+      const ready = next.isCloudPlaceholder ? Promise.resolve() : decode(convertFileSrc(next.path))
+      void ready.then(() => {
+        if (switchRef.current === token)
+          setPreviewId(next.id)
+      })
     },
-    [index, photos, setPreviewId],
+    [index, photos, setPreviewId, decode],
   )
+
+  // Two-finger horizontal swipe, one photo per gesture. Lives here rather
+  // than in ZoomableImage because that remounts with every photo, which would
+  // lose track of the gesture mid-momentum.
+  const [swipe] = useState(createSwipeDetector)
+  function onWheel(e: WheelEvent<HTMLDivElement>) {
+    if (e.ctrlKey)
+      return
+    const direction = swipe.push(e.deltaX, e.deltaY, e.timeStamp)
+    if (direction !== 0)
+      goTo(direction)
+  }
 
   useEffect(() => {
     if (!photo)
@@ -197,6 +246,7 @@ export function PhotoPreview() {
           exit={{ opacity: 0, transition: spring.slow.exit }}
           transition={spring.slow}
           onClick={() => setPreviewId(null)}
+          onWheel={onWheel}
         >
           {photo.isCloudPlaceholder
             ? (
@@ -207,6 +257,7 @@ export function PhotoPreview() {
                   key={photo.id}
                   src={convertFileSrc(photo.path)}
                   alt={photo.fileName}
+                  fadeIn={photo.id === openedId}
                   menuItems={[
                     { label: '复制路径', icon: Copy, onSelect: () => void writeText(photo.path) },
                     {

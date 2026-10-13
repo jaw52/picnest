@@ -49,16 +49,19 @@ interface WebKitGestureEvent extends UIEvent {
 interface ZoomableImageProps {
   src: string
   alt: string
+  /** Fade and scale the photo in on mount; off when it replaces another. */
+  fadeIn: boolean
   menuItems: ContextMenuItem[]
 }
 
 /**
  * The lightbox photo with trackpad zoom: pinch to zoom around the cursor,
- * two-finger scroll to pan once zoomed, drag to pan, click to jump between
+ * two-finger scroll to pan once zoomed (at fit it bubbles up, for swiping
+ * between photos), drag to pan, click to jump between
  * fit and actual size. Pinch arrives as `gesture*` events in WebKit (the
  * macOS webview) and as ctrl+wheel in Chromium; both are handled.
  */
-export function ZoomableImage({ src, alt, menuItems }: ZoomableImageProps) {
+export function ZoomableImage({ src, alt, fadeIn, menuItems }: ZoomableImageProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -119,6 +122,10 @@ export function ZoomableImage({ src, alt, menuItems }: ZoomableImageProps) {
   const onWheel = useEffectEvent((e: WheelEvent) => {
     // Stops the page scrolling, or WebKit zooming the whole page.
     e.preventDefault()
+    // At fit, a plain two-finger scroll is left to bubble up to the
+    // lightbox, which turns a horizontal swipe into the next or previous photo.
+    if (gestureRef.current || e.ctrlKey || viewRef.current.scale > 1)
+      e.stopPropagation()
     if (gestureRef.current)
       return
     if (e.ctrlKey) {
@@ -224,7 +231,7 @@ export function ZoomableImage({ src, alt, menuItems }: ZoomableImageProps) {
             alt={alt}
             {...stylex.props(styles.image, dragging ? styles.dragging : zoomed ? styles.zoomed : styles.fit)}
             draggable={false}
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={fadeIn ? { opacity: 0, scale: 0.98 } : false}
             animate={{ opacity: 1, scale: 1 }}
             transition={spring.slow}
             onClick={(e) => {
