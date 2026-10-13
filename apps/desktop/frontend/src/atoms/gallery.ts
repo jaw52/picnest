@@ -1,4 +1,5 @@
 import type { RatingFilter } from '~/lib/photo'
+import type { FolderEntry } from '~/types/folder'
 import type { Photo } from '~/types/photo'
 
 import { atom } from 'jotai'
@@ -7,6 +8,8 @@ import { filterPhotosByRating } from '~/lib/photo'
 
 export const currentFolderAtom = atom<string | null>(null)
 export const photosAtom = atom<Photo[]>([])
+/** The open folder's subfolders, laid out ahead of its photos. */
+export const subfoldersAtom = atom<FolderEntry[]>([])
 /** Total photo count reported by the backend, ahead of `photosAtom` fully loading in via pagination. */
 export const photosTotalAtom = atom<number>(0)
 export const isScanningAtom = atom<boolean>(false)

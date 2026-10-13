@@ -1,4 +1,5 @@
-import { CloseRegular, CopyRegular, FolderDeleteRegular, FolderOpenRegular } from '@mingcute/react/core-regular'
+import type { ContextMenuItem } from '~/components/ContextMenu'
+import { CloseRegular, CopyRegular, ExternalLinkRegular, FolderDeleteRegular, FolderOpenRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
@@ -8,8 +9,8 @@ import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
-import { radius } from '~/theme/layout.stylex'
-import { text } from '~/theme/text'
+import { motion as motionTokens, radius } from '~/theme/layout.stylex'
+import { text, utility } from '~/theme/text'
 
 import { cardMarker } from './markers.stylex'
 
@@ -39,6 +40,8 @@ const FRONT_TAPER = 10
 /** How much higher the right part of the front's top edge sits than the left. */
 const FRONT_RISE = 5
 const CORNER = 5
+/** How much of a masonry tile's width its folder icon takes. */
+const TILE_ICON_SHARE = 0.56
 const GOLDEN_RATIO = (1 + Math.sqrt(5)) / 2
 
 /** The back panel: a rectangle (plus its tab) exactly as wide as the front's bottom edge. */
@@ -126,6 +129,28 @@ const styles = stylex.create({
     transitionDuration: '80ms',
   },
   icon: { display: 'block', width: W, height: H },
+  // In a tile the icon scales with the column instead.
+  fluidIcon: { width: '100%', height: 'auto' },
+  tile: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingInline: 12,
+    borderWidth: 0,
+    borderRadius: 4,
+    cursor: 'pointer',
+    color: colors['--ps-foreground'],
+    backgroundColor: { 'default': colors['--ps-muted'], ':hover': colors['--ps-hover'] },
+    transitionProperty: 'background-color',
+    transitionDuration: motionTokens.fast,
+    outline: { 'default': 'none', ':focus-visible': `2px solid ${colors['--ps-focus-ring']}` },
+    outlineOffset: 6,
+  },
+  tileSize: (width: number, height: number) => ({ width, height }),
+  tileIcon: { width: `${TILE_ICON_SHARE * 100}%` },
+  tileName: { maxWidth: '100%' },
   name: {
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -185,7 +210,7 @@ function useCover(folderPath: string) {
  * and a frosted front - the photo blurred and clipped to the front's shape
  * under a translucent blue, which is what Finder's glass looks like.
  */
-function FolderIcon({ coverUrl, open }: { coverUrl: string | undefined, open: boolean }) {
+function FolderIcon({ coverUrl, open, fluid = false }: { coverUrl: string | undefined, open: boolean, fluid?: boolean }) {
   // One value drives the front's height; its outline, highlight and the glass
   // clip are all rebuilt from it each frame, so they move as one.
   const high = useMotionValue(FRONT_HIGH_CLOSED)
@@ -213,7 +238,7 @@ function FolderIcon({ coverUrl, open }: { coverUrl: string | undefined, open: bo
   }
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} {...stylex.props(styles.icon)}>
+    <svg viewBox={`0 0 ${W} ${H}`} {...stylex.props(styles.icon, fluid && styles.fluidIcon)}>
       <defs>
         <linearGradient id={`${id}back`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#5fb5f4" />
@@ -292,6 +317,46 @@ function FolderIcon({ coverUrl, open }: { coverUrl: string | undefined, open: bo
   )
 }
 
+/** The menu every folder gets; `onRemove` and `onOpenInNewTab` add their items. */
+function folderMenuItems(
+  path: string,
+  { onOpenInNewTab, onRemove, onDelete }: { onOpenInNewTab?: () => void, onRemove?: () => void, onDelete: () => void },
+): ContextMenuItem[] {
+  return [
+    ...(onOpenInNewTab ? [{ label: '在新标签页中打开', icon: ExternalLinkRegular, onSelect: onOpenInNewTab }] : []),
+    { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
+    {
+      label: '在访达中打开',
+      icon: FolderOpenRegular,
+      onSelect: () =>
+        void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
+    },
+    ...(onRemove ? [{ label: '从列表中移除', icon: CloseRegular, onSelect: onRemove }] : []),
+    { label: '删除文件夹', icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
+  ]
+}
+
+/** Whether the folder icon should be open: while pointed at or focused from the keyboard. */
+function useOpenOnHover() {
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  return {
+    open: hovered || focused,
+    handlers: {
+      onPointerEnter: () => setHovered(true),
+      onPointerLeave: () => setHovered(false),
+      onFocus: (e: React.FocusEvent<HTMLElement>) => setFocused(e.currentTarget.matches(':focus-visible')),
+      onBlur: () => setFocused(false),
+    },
+  }
+}
+
+function useCoverUrl(path: string) {
+  const cover = useCover(path)
+  const coverUrl = useThumbnail(cover?.folder ?? path, cover?.path ?? '', PREVIEW_EDGE, cover !== null)
+  return cover ? coverUrl : undefined
+}
+
 interface FolderCardProps {
   path: string
   name: string
@@ -303,39 +368,68 @@ interface FolderCardProps {
 
 /** A folder drawn like a Finder folder icon with its first photo inside. */
 export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCardProps) {
-  const cover = useCover(path)
-  // The folder opens while pointed at or focused from the keyboard.
-  const [hovered, setHovered] = useState(false)
-  const [focused, setFocused] = useState(false)
-  const coverUrl = useThumbnail(cover?.folder ?? path, cover?.path ?? '', PREVIEW_EDGE, cover !== null)
+  const coverUrl = useCoverUrl(path)
+  const { open, handlers } = useOpenOnHover()
+
+  return (
+    <ContextMenu items={folderMenuItems(path, { onRemove, onDelete })}>
+      <button
+        type="button"
+        onClick={onOpen}
+        {...handlers}
+        {...stylex.props(cardMarker, styles.card)}
+      >
+        <span aria-hidden {...stylex.props(styles.iconWell)}>
+          <FolderIcon coverUrl={coverUrl} open={open} />
+        </span>
+        <span {...stylex.props(styles.name, text.caption)}>{name}</span>
+      </button>
+    </ContextMenu>
+  )
+}
+
+interface FolderTileProps {
+  path: string
+  name: string
+  width: number
+  height: number
+  /** Opens the folder in place, or in a background tab for ⌘ and middle clicks. */
+  onOpen: (e: { metaKey: boolean, button: number }) => void
+  onDelete: () => void
+}
+
+/** A subfolder in the masonry, sized like a photo tile, that opens like a link. */
+export function FolderTile({ path, name, width, height, onOpen, onDelete }: FolderTileProps) {
+  const coverUrl = useCoverUrl(path)
+  const { open, handlers } = useOpenOnHover()
 
   return (
     <ContextMenu
-      items={[
-        { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
-        {
-          label: '在访达中打开',
-          icon: FolderOpenRegular,
-          onSelect: () =>
-            void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
-        },
-        ...(onRemove ? [{ label: '从列表中移除', icon: CloseRegular, onSelect: onRemove }] : []),
-        { label: '删除文件夹', icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
-      ]}
+      items={folderMenuItems(path, {
+        onOpenInNewTab: () => onOpen({ metaKey: true, button: 0 }),
+        onDelete,
+      })}
     >
       <button
         type="button"
         onClick={onOpen}
-        onPointerEnter={() => setHovered(true)}
-        onPointerLeave={() => setHovered(false)}
-        onFocus={e => setFocused(e.currentTarget.matches(':focus-visible'))}
-        onBlur={() => setFocused(false)}
-        {...stylex.props(cardMarker, styles.card)}
+        // The middle button never fires a click; it is a new tab, as on a link.
+        onAuxClick={(e) => {
+          if (e.button === 1)
+            onOpen(e)
+        }}
+        // Keeps the middle button from starting autoscroll.
+        onMouseDown={(e) => {
+          if (e.button === 1)
+            e.preventDefault()
+        }}
+        {...handlers}
+        {...stylex.props(styles.tile, styles.tileSize(width, height))}
       >
-        <span aria-hidden {...stylex.props(styles.iconWell)}>
-          <FolderIcon coverUrl={cover ? coverUrl : undefined} open={hovered || focused} />
+        <span aria-hidden {...stylex.props(styles.tileIcon)}>
+          <FolderIcon coverUrl={coverUrl} open={open} fluid />
         </span>
-        <span {...stylex.props(styles.name, text.caption)}>{name}</span>
+        <span {...stylex.props(styles.tileName, utility.truncate, text.caption)}>{name}</span>
       </button>
     </ContextMenu>
   )

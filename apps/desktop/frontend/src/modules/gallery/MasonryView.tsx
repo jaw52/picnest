@@ -6,16 +6,20 @@ import {
   filteredPhotosAtom,
   isScanningAtom,
   photosTotalAtom,
+  subfoldersAtom,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
+import { useDeleteFolder } from '~/hooks/useDeleteFolder'
 import { useGridShortcuts } from '~/hooks/useGridShortcuts'
+import { useOpenFolder } from '~/hooks/useOpenFolder'
+import { useTabs } from '~/hooks/useTabs'
 import { thumbnailEdgeFor } from '~/hooks/useThumbnail'
 import { useThumbnailPrefetch } from '~/hooks/useThumbnailPrefetch'
 import { cellsInRange, layoutMasonry } from '~/lib/masonry'
+import { FolderTile } from '~/modules/tabs/FolderCard'
 import { colors } from '~/theme/colors.stylex'
 import { text } from '~/theme/text'
 
-import { EmptyFolder } from './EmptyFolder'
 import { MasonryPhotoItem } from './MasonryPhotoItem'
 
 // The selection ring sits 4px outside a tile, so neighbours need more than
@@ -23,6 +27,8 @@ import { MasonryPhotoItem } from './MasonryPhotoItem'
 const COLUMN_GUTTER = 12
 /** Scroll position granularity; finer steps re-render the grid for nothing. */
 const SCROLL_STEP = 100
+/** A subfolder tile's width over its height. */
+const FOLDER_TILE_ASPECT_RATIO = 4 / 3
 
 const styles = stylex.create({
   empty: {
@@ -38,18 +44,26 @@ const styles = stylex.create({
   cellPosition: (top: number, left: number) => ({ top, left }),
 })
 
+/**
+ * The open folder's subfolders, then its photos, in one masonry. A subfolder
+ * opens in place, like a link; the rating filter only narrows the photos.
+ */
 export function MasonryView() {
   const photos = useAtomValue(filteredPhotosAtom)
+  const subfolders = useAtomValue(subfoldersAtom)
   const folderPath = useAtomValue(currentFolderAtom)
   const columnWidth = useAtomValue(thumbnailWidthAtom)
   const isScanning = useAtomValue(isScanningAtom)
   const photosTotal = useAtomValue(photosTotalAtom)
+  const { openFromClick } = useTabs()
+  const { refreshFolder } = useOpenFolder()
+  const deleteFolder = useDeleteFolder()
 
   // The grid lays itself out from the photos' aspect ratios, so it only needs
   // the container's width; the window is what scrolls.
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
-  const hasPhotos = photos.length > 0
+  const hasItems = subfolders.length + photos.length > 0
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!el)
@@ -57,11 +71,16 @@ export function MasonryView() {
     const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasPhotos])
+  }, [hasItems])
 
   const layout = useMemo(
-    () => layoutMasonry(photos.map(p => p.aspectRatio), containerWidth, columnWidth, COLUMN_GUTTER),
-    [photos, containerWidth, columnWidth],
+    () => layoutMasonry(
+      [...subfolders.map(() => FOLDER_TILE_ASPECT_RATIO), ...photos.map(p => p.aspectRatio)],
+      containerWidth,
+      columnWidth,
+      COLUMN_GUTTER,
+    ),
+    [subfolders, photos, containerWidth, columnWidth],
   )
   useThumbnailPrefetch(folderPath, containerWidth > 0 ? thumbnailEdgeFor(layout.columnWidth) : 0)
 
@@ -91,7 +110,7 @@ export function MasonryView() {
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
     }
-  }, [hasPhotos])
+  }, [hasItems])
 
   // Mount a screen above and below the visible part, so fast scrolling with
   // 1000+ photos never shows blank gaps.
@@ -106,14 +125,16 @@ export function MasonryView() {
 
   useGridShortcuts()
 
-  if (photos.length === 0) {
+  if (!hasItems) {
     // No folder yet means the active tab's folder is still being scanned
     // (the new-tab page replaces this view otherwise).
     if (!folderPath || isScanning)
       return null
-    if (photosTotal === 0)
-      return <EmptyFolder folderPath={folderPath} />
-    return <div {...stylex.props(styles.empty, text.body)}>没有匹配当前筛选条件的图片</div>
+    return (
+      <div {...stylex.props(styles.empty, text.body)}>
+        {photosTotal === 0 ? '这个文件夹是空的' : '没有匹配当前筛选条件的图片'}
+      </div>
+    )
   }
 
   return (
@@ -125,10 +146,29 @@ export function MasonryView() {
       {...stylex.props(styles.grid, styles.gridHeight(layout.height))}
     >
       {containerWidth > 0 && visible.map((i) => {
-        const photo = photos[i]
         const cell = layout.cells[i]
+        const position = stylex.props(styles.cell, styles.cellPosition(cell.top, cell.left))
+        if (i < subfolders.length) {
+          const folder = subfolders[i]
+          return (
+            <div key={folder.path} {...position}>
+              <FolderTile
+                path={folder.path}
+                name={folder.name}
+                width={layout.columnWidth}
+                height={cell.height}
+                onOpen={e => openFromClick(folder.path, e)}
+                onDelete={() => void deleteFolder(folder.path).then(() => {
+                  if (folderPath)
+                    void refreshFolder(folderPath)
+                })}
+              />
+            </div>
+          )
+        }
+        const photo = photos[i - subfolders.length]
         return (
-          <div key={photo.id} {...stylex.props(styles.cell, styles.cellPosition(cell.top, cell.left))}>
+          <div key={photo.id} {...position}>
             <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} />
           </div>
         )

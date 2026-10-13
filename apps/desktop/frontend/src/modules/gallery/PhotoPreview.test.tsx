@@ -8,6 +8,7 @@ import {
   photosAtom,
   previewPhotoIdAtom,
   selectedPhotoIdsAtom,
+  subfoldersAtom,
 } from '~/atoms/gallery'
 import { infoSidebarCollapsedAtom } from '~/atoms/layout'
 
@@ -20,16 +21,14 @@ const { rate } = vi.hoisted(() => ({ rate: vi.fn() }))
 vi.mock('~/hooks/useRatePhoto', () => ({ useRatePhoto: () => rate }))
 vi.mock('./MasonryPhotoItem', () => ({ MasonryPhotoItem: () => null }))
 vi.mock('~/lib/native', () => ({ convertFileSrc: (path: string) => path, writeText: vi.fn() }))
-const { listSubfolders } = vi.hoisted(() => ({ listSubfolders: vi.fn() }))
-vi.mock('~/lib/backend', () => ({ listSubfolders }))
+vi.mock('~/lib/backend', () => ({}))
 vi.mock('~/modules/tabs/FolderCard', () => ({
-  FolderCard: ({ name }: { name: string }) => <span>{name}</span>,
+  FolderTile: ({ name }: { name: string }) => <span>{name}</span>,
 }))
 
 beforeEach(() => {
   deletePhoto.mockClear()
   rate.mockClear()
-  listSubfolders.mockReset().mockResolvedValue([])
 })
 
 it.each(['Delete', 'Backspace'])(
@@ -123,24 +122,20 @@ it('stays blank until a folder loads, then notes an empty folder', async () => {
       <MasonryView />
     </Provider>,
   )
-  expect(await screen.findByText('这个文件夹里没有图片')).toBeInTheDocument()
+  expect(await screen.findByText('这个文件夹是空的')).toBeInTheDocument()
 })
 
-it('lays out the subfolders of a folder with no photos of its own', async () => {
-  listSubfolders.mockResolvedValue([
-    { name: '星云', path: '/parent/星云' },
-    { name: '花卉', path: '/parent/花卉' },
-  ])
+it('lays out a folder that only holds other folders instead of calling it empty', () => {
   const store = createStore()
   store.set(currentFolderAtom, '/parent')
+  store.set(subfoldersAtom, [{ name: '星云', path: '/parent/星云' }])
   render(
     <Provider store={store}>
       <MasonryView />
     </Provider>,
   )
-  expect(await screen.findByText('星云')).toBeInTheDocument()
-  expect(screen.getByText('花卉')).toBeInTheDocument()
-  expect(document.body.textContent).not.toContain('这个文件夹里没有图片')
+  expect(screen.getByRole('listbox')).toBeInTheDocument()
+  expect(document.body.textContent).not.toContain('这个文件夹是空的')
 })
 
 it('reveals a collapsed info panel when selecting everything', () => {

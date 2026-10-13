@@ -9,9 +9,10 @@ import {
   previewPhotoIdAtom,
   selectedPhotoIdAtom,
   selectedPhotoIdsAtom,
+  subfoldersAtom,
 } from '~/atoms/gallery'
 import { recentFoldersAtom, withFolderRemoved } from '~/atoms/recentFolders'
-import { scanFolderPage, unwatchFolder, watchFolder } from '~/lib/backend'
+import { listSubfolders, scanFolderPage, unwatchFolder, watchFolder } from '~/lib/backend'
 import { toPhoto } from '~/lib/photo'
 
 // How many photos to fetch per backend round-trip. Keeps a single scan from
@@ -26,10 +27,19 @@ const PAGE_SIZE = 300
 // to agree on which scan is the latest one.
 let latestScanId = 0
 
+/** A folder's subfolders, or none if they can't be listed; the photos still show. */
+function subfoldersOf(folder: string) {
+  return listSubfolders(folder).catch((error) => {
+    console.warn(`failed to list subfolders of ${folder}:`, error)
+    return []
+  })
+}
+
 export function useOpenFolder() {
   const store = useStore()
   const [currentFolder, setCurrentFolder] = useAtom(currentFolderAtom)
   const setPhotos = useSetAtom(photosAtom)
+  const setSubfolders = useSetAtom(subfoldersAtom)
   const setPhotosTotal = useSetAtom(photosTotalAtom)
   const [isScanning, setIsScanning] = useAtom(isScanningAtom)
   const setRecentFolders = useSetAtom(recentFoldersAtom)
@@ -42,14 +52,19 @@ export function useOpenFolder() {
       const scanId = ++latestScanId
       setIsScanning(true)
       setPhotos([])
+      setSubfolders([])
       setPhotosTotal(0)
       setSelectedIds(new Set())
       setAnchorId(null)
       setPreviewId(null)
       try {
-        const first = await scanFolderPage(folder, 0, PAGE_SIZE)
+        const [first, subfolders] = await Promise.all([
+          scanFolderPage(folder, 0, PAGE_SIZE),
+          subfoldersOf(folder),
+        ])
         if (scanId !== latestScanId)
           return true
+        setSubfolders(subfolders)
         setPhotos(first.photos.map(toPhoto))
         setPhotosTotal(first.total)
         setCurrentFolder(folder)
@@ -81,6 +96,7 @@ export function useOpenFolder() {
     [
       setCurrentFolder,
       setPhotos,
+      setSubfolders,
       setPhotosTotal,
       setIsScanning,
       setSelectedIds,
@@ -100,7 +116,10 @@ export function useOpenFolder() {
     async (folder: string): Promise<boolean> => {
       const scanId = ++latestScanId
       try {
-        const first = await scanFolderPage(folder, 0, PAGE_SIZE)
+        const [first, subfolders] = await Promise.all([
+          scanFolderPage(folder, 0, PAGE_SIZE),
+          subfoldersOf(folder),
+        ])
         const photos = first.photos.map(toPhoto)
         while (photos.length < first.total) {
           const page = await scanFolderPage(folder, photos.length, PAGE_SIZE)
@@ -112,6 +131,7 @@ export function useOpenFolder() {
           return true
 
         const ids = new Set(photos.map(p => p.id))
+        setSubfolders(subfolders)
         setPhotos(photos)
         setPhotosTotal(first.total)
         setSelectedIds(prev =>
@@ -132,7 +152,7 @@ export function useOpenFolder() {
         return false
       }
     },
-    [store, setPhotos, setPhotosTotal, setSelectedIds, setAnchorId, setPreviewId],
+    [store, setPhotos, setSubfolders, setPhotosTotal, setSelectedIds, setAnchorId, setPreviewId],
   )
 
   /**
@@ -161,6 +181,7 @@ export function useOpenFolder() {
     latestScanId++ // Invalidate any in-flight scan for the folder being closed.
     setCurrentFolder(null)
     setPhotos([])
+    setSubfolders([])
     setPhotosTotal(0)
     setSelectedIds(new Set())
     setAnchorId(null)
@@ -172,6 +193,7 @@ export function useOpenFolder() {
   }, [
     setCurrentFolder,
     setPhotos,
+    setSubfolders,
     setPhotosTotal,
     setSelectedIds,
     setAnchorId,

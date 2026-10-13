@@ -5,8 +5,11 @@ import { recentFoldersAtom, withFolderAdded } from '~/atoms/recentFolders'
 import { activeTabPathAtom, tabsStateAtom } from '~/atoms/tabs'
 import { pickFolder } from '~/lib/backend'
 import {
+  withBack,
   withFolderClosed,
+  withForward,
   withPathOpened,
+  withPathOpenedInBackground,
   withPathOpenedInNewTab,
   withTabActivated,
   withTabClosed,
@@ -20,11 +23,34 @@ export function useTabs() {
   const setTabs = useSetAtom(tabsStateAtom)
   const setRecentFolders = useSetAtom(recentFoldersAtom)
 
-  /** Shows `path` in the active tab (moving up or down folders in the path bar). */
+  /** Shows `path` in the active tab, which can then go back to where it was. */
   const openInActiveTab = useCallback(
     (path: string) => setTabs(state => withPathOpened(state, path)),
     [setTabs],
   )
+
+  /** Opens `path` in a new tab without leaving this one (⌘-click). */
+  const openInBackground = useCallback(
+    (path: string) => setTabs(state => withPathOpenedInBackground(state, path)),
+    [setTabs],
+  )
+
+  /**
+   * Follows a click on a folder like a browser follows a link: ⌘ or the
+   * middle button opens it in a background tab, a plain click in this one.
+   */
+  const openFromClick = useCallback(
+    (path: string, e: { metaKey: boolean, button: number }) => {
+      if (e.metaKey || e.button === 1)
+        openInBackground(path)
+      else
+        openInActiveTab(path)
+    },
+    [openInActiveTab, openInBackground],
+  )
+
+  const goBack = useCallback(() => setTabs(withBack), [setTabs])
+  const goForward = useCallback(() => setTabs(withForward), [setTabs])
 
   /** Opens `path` in its own tab; the new-tab page it was picked from stays open. */
   const openInNewTab = useCallback(
@@ -78,6 +104,10 @@ export function useTabs() {
 
   return {
     openInActiveTab,
+    openInBackground,
+    openFromClick,
+    goBack,
+    goForward,
     openInNewTab,
     addFolder,
     addFolderByPath,

@@ -9,6 +9,7 @@ import { useOpenFolder } from './useOpenFolder'
 vi.mock('~/lib/backend', () => ({
   scanFolderPage: vi.fn().mockResolvedValue({ photos: [], total: 0 }),
   watchFolder: vi.fn().mockResolvedValue(undefined),
+  listSubfolders: vi.fn().mockResolvedValue([]),
 }))
 
 function renderWithStore(store: ReturnType<typeof createStore>) {

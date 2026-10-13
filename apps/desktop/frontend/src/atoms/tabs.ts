@@ -9,7 +9,7 @@ import { activeTab, initialTabsState } from '~/lib/tabs'
  * scan the default tab first.
  */
 export const tabsStateAtom = atomWithStorage<TabsState>(
-  'picnest.tabs',
+  'picnest.openTabs',
   initialTabsState(),
   undefined,
   { getOnInit: true },
@@ -17,3 +17,6 @@ export const tabsStateAtom = atomWithStorage<TabsState>(
 
 /** The folder the active tab shows; null on the new-tab page. */
 export const activeTabPathAtom = atom(get => activeTab(get(tabsStateAtom)).path)
+
+export const canGoBackAtom = atom(get => activeTab(get(tabsStateAtom)).back.length > 0)
+export const canGoForwardAtom = atom(get => activeTab(get(tabsStateAtom)).forward.length > 0)

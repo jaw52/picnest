@@ -28,7 +28,12 @@ const { deletePhotos, scanFolderPage, watchFolder } = vi.hoisted(() => ({
   watchFolder: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock('~/lib/backend', () => ({ deletePhotos, scanFolderPage, watchFolder }))
+vi.mock('~/lib/backend', () => ({
+  deletePhotos,
+  scanFolderPage,
+  watchFolder,
+  listSubfolders: vi.fn().mockResolvedValue([]),
+}))
 
 function makePhoto(id: string): Photo {
   return {

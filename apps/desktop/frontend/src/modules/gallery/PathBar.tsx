@@ -1,11 +1,12 @@
 import type { FolderEntry } from '~/types/folder'
-import { FolderRegular, RightRegular } from '@mingcute/react/core-regular'
+import { ArrowLeftRegular, ArrowRightRegular, FolderRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
-import { activeTabPathAtom } from '~/atoms/tabs'
+import { activeTabPathAtom, canGoBackAtom, canGoForwardAtom } from '~/atoms/tabs'
 import { DropdownMenu } from '~/components/ContextMenu'
+import { IconButton } from '~/components/IconButton'
 import { useTabs } from '~/hooks/useTabs'
 import { listSubfolders } from '~/lib/backend'
 import { colors } from '~/theme/colors.stylex'
@@ -19,6 +20,7 @@ const styles = stylex.create({
     gap: 2,
     minWidth: 0,
   },
+  history: { display: 'flex', gap: 2, marginRight: 6, flexShrink: 0 },
   segment: {
     display: 'flex',
     alignItems: 'center',
@@ -64,11 +66,11 @@ const styles = stylex.create({
 })
 
 /**
- * A chevron after a folder that drops down that folder's subfolders; picking
- * one opens it in its own tab, next to this one.
+ * A chevron between two folders of the path that drops down the first one's
+ * subfolders, to jump to a sibling of the folder after it.
  */
-function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: boolean }) {
-  const { openInNewTab } = useTabs()
+function SubfolderMenu({ folder }: { folder: string }) {
+  const { openInActiveTab } = useTabs()
   const [subfolders, setSubfolders] = useState<FolderEntry[] | null>(null)
   // Bumped on every open, so folders created since show up.
   const [version, setVersion] = useState(0)
@@ -90,9 +92,6 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
     }
   }, [folder, version])
 
-  if (hideIfEmpty && !subfolders?.length)
-    return null
-
   return (
     <DropdownMenu
       onOpenChange={(open) => {
@@ -102,7 +101,7 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
       items={(subfolders ?? []).map(entry => ({
         label: entry.name,
         icon: FolderRegular,
-        onSelect: () => openInNewTab(entry.path),
+        onSelect: () => openInActiveTab(entry.path),
       }))}
       trigger={(
         <button
@@ -118,13 +117,16 @@ function SubfolderMenu({ folder, hideIfEmpty }: { folder: string, hideIfEmpty: b
 }
 
 /**
- * Breadcrumbs for the active tab's folder: click a parent to go up, or a
- * chevron to open one of that folder's subfolders in a new tab.
+ * Back and forward through the folders the tab showed, then breadcrumbs for
+ * the one it shows: click a parent to go up (⌘-click for a new tab), or a
+ * chevron to jump to a sibling.
  */
 export function PathBar() {
   const path = useAtomValue(activeTabPathAtom)
   const recentFolders = useAtomValue(recentFoldersAtom)
-  const { openInActiveTab } = useTabs()
+  const canGoBack = useAtomValue(canGoBackAtom)
+  const canGoForward = useAtomValue(canGoForwardAtom)
+  const { openFromClick, goBack, goForward } = useTabs()
   const segments = useMemo(
     () => (path ? pathSegments(path, folderRoots(recentFolders).map(f => f.path)) : []),
     [path, recentFolders],
@@ -132,6 +134,10 @@ export function PathBar() {
 
   return (
     <nav aria-label="文件夹路径" {...stylex.props(styles.bar)}>
+      <div {...stylex.props(styles.history)}>
+        <IconButton label="后退" icon={ArrowLeftRegular} disabled={!canGoBack} onClick={goBack} />
+        <IconButton label="前进" icon={ArrowRightRegular} disabled={!canGoForward} onClick={goForward} />
+      </div>
       {segments.map((segment, i) => {
         const isCurrent = i === segments.length - 1
         return (
@@ -139,9 +145,13 @@ export function PathBar() {
             <button
               type="button"
               aria-current={isCurrent ? 'page' : undefined}
-              onClick={() => {
+              onClick={(e) => {
                 if (!isCurrent)
-                  openInActiveTab(segment)
+                  openFromClick(segment, e)
+              }}
+              onAuxClick={(e) => {
+                if (!isCurrent && e.button === 1)
+                  openFromClick(segment, e)
               }}
               {...stylex.props(styles.segment, isCurrent && styles.current, text.caption)}
             >
@@ -150,7 +160,8 @@ export function PathBar() {
                 {folderNameFromPath(segment)}
               </span>
             </button>
-            <SubfolderMenu folder={segment} hideIfEmpty={isCurrent} />
+            {/* The current folder's subfolders are in the grid below. */}
+            {!isCurrent && <SubfolderMenu folder={segment} />}
           </Fragment>
         )
       })}

@@ -4,6 +4,12 @@ import { isDescendantPath } from '~/atoms/recentFolders'
 export interface Tab {
   id: string
   path: string | null
+  /** Folders this tab showed before, most recent last. */
+  back: string[]
+  /** Folders gone back from, most recent last; cleared by opening a new one. */
+  forward: string[]
+  /** The tab this one was ⌘-clicked open from, which keeps a run of them in order. */
+  openerId?: string
 }
 
 export interface TabsState {
@@ -11,8 +17,8 @@ export interface TabsState {
   activeId: string
 }
 
-export function createTab(path: string | null = null): Tab {
-  return { id: crypto.randomUUID(), path }
+export function createTab(path: string | null = null, openerId?: string): Tab {
+  return { id: crypto.randomUUID(), path, back: [], forward: [], openerId }
 }
 
 export function initialTabsState(): TabsState {
@@ -63,22 +69,63 @@ export function withTabCycled(state: TabsState, offset: number): TabsState {
   return { ...state, activeId: state.tabs[(((index + offset) % count) + count) % count].id }
 }
 
-/**
- * Shows `path` in the active tab (moving up or down folders). If another tab
- * already shows it, that tab is focused instead, so one folder never ends up
- * open twice.
- */
-export function withPathOpened(state: TabsState, path: string): TabsState {
+function withActiveTab(state: TabsState, update: (tab: Tab) => Tab): TabsState {
   const current = activeTab(state)
-  if (current.path === path)
+  return { ...state, tabs: state.tabs.map(t => (t.id === current.id ? update(t) : t)) }
+}
+
+/** Shows `path` in the active tab, as a browser follows a link: the folder it left is one step back. */
+export function withPathOpened(state: TabsState, path: string): TabsState {
+  if (activeTab(state).path === path)
     return state
-  const existing = state.tabs.find(t => t.path === path)
-  if (existing)
-    return { ...state, activeId: existing.id }
-  return {
-    ...state,
-    tabs: state.tabs.map(t => (t.id === current.id ? { ...t, path } : t)),
-  }
+  return withActiveTab(state, tab => ({
+    ...tab,
+    path,
+    back: tab.path === null ? tab.back : [...tab.back, tab.path],
+    forward: [],
+  }))
+}
+
+/** Steps the active tab back through the folders it showed; a no-op at the start. */
+export function withBack(state: TabsState): TabsState {
+  const tab = activeTab(state)
+  const previous = tab.back.at(-1)
+  if (previous === undefined || tab.path === null)
+    return state
+  return withActiveTab(state, t => ({
+    ...t,
+    path: previous,
+    back: t.back.slice(0, -1),
+    forward: [...t.forward, tab.path as string],
+  }))
+}
+
+/** Undoes a `withBack`; a no-op unless the active tab went back. */
+export function withForward(state: TabsState): TabsState {
+  const tab = activeTab(state)
+  const next = tab.forward.at(-1)
+  if (next === undefined || tab.path === null)
+    return state
+  return withActiveTab(state, t => ({
+    ...t,
+    path: next,
+    back: [...t.back, tab.path as string],
+    forward: t.forward.slice(0, -1),
+  }))
+}
+
+/**
+ * Opens `path` in a new tab behind the active one, as ⌘-click does in a
+ * browser. Successive ones line up after the active tab in the order they
+ * were opened.
+ */
+export function withPathOpenedInBackground(state: TabsState, path: string): TabsState {
+  let at = state.tabs.findIndex(t => t.id === state.activeId) + 1
+  while (at < state.tabs.length && state.tabs[at].openerId === state.activeId)
+    at++
+  const tabs = [...state.tabs]
+  tabs.splice(at, 0, createTab(path, state.activeId))
+  return { ...state, tabs }
 }
 
 /**
@@ -99,11 +146,28 @@ export function withPathOpenedInNewTab(state: TabsState, path: string): TabsStat
 }
 
 /**
- * Closes every tab showing `folder` (or anything inside it) - for when that
- * folder is gone from disk or can't be read.
+ * Closes every tab showing `folder` (or anything inside it) and drops it from
+ * the other tabs' history - for when that folder is gone from disk or can't
+ * be read.
  */
 export function withFolderClosed(state: TabsState, folder: string): TabsState {
-  return state.tabs
-    .filter(t => t.path !== null && (t.path === folder || isDescendantPath(t.path, folder)))
-    .reduce((next, tab) => withTabClosed(next, tab.id), state)
+  const isGone = (path: string | null) =>
+    path !== null && (path === folder || isDescendantPath(path, folder))
+  // Dropping a folder can leave the same one twice in a row (or next to
+  // the tab's own), which would make a step back go nowhere.
+  const prune = (paths: string[], current: string | null) =>
+    paths
+      .filter(path => !isGone(path))
+      .filter((path, i, kept) => path !== (i === kept.length - 1 ? current : kept[i + 1]))
+  const pruned = {
+    ...state,
+    tabs: state.tabs.map(t => ({
+      ...t,
+      back: prune(t.back, t.path),
+      forward: prune(t.forward, t.path),
+    })),
+  }
+  return pruned.tabs
+    .filter(t => isGone(t.path))
+    .reduce((next, tab) => withTabClosed(next, tab.id), pruned)
 }
