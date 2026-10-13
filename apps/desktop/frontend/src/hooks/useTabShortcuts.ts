@@ -59,7 +59,7 @@ export function useTabShortcuts() {
 }
 
 /**
- * Folders dropped anywhere on the window are added and opened (see
+ * Folders dropped anywhere on the window are added to the new-tab page (see
  * `addFolderByPath`). Returns whether files are being dragged over the window.
  */
 export function useFolderDrop() {

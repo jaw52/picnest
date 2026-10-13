@@ -1,8 +1,7 @@
 import { NewFolderRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom } from 'jotai'
-import { useMemo } from 'react'
-import { folderRoots, recentFoldersAtom, withFolderRemoved } from '~/atoms/recentFolders'
+import { recentFoldersAtom, withFolderForgotten } from '~/atoms/recentFolders'
 import { Button } from '~/components/Button'
 import { useSize } from '~/context/size'
 import { useDeleteFolder } from '~/hooks/useDeleteFolder'
@@ -47,7 +46,6 @@ const styles = stylex.create({
  */
 export function NewTabPage() {
   const [recentFolders, setRecentFolders] = useAtom(recentFoldersAtom)
-  const roots = useMemo(() => folderRoots(recentFolders), [recentFolders])
   const { addFolder, openInNewTab } = useTabs()
   const deleteFolder = useDeleteFolder()
   const size = useSize()
@@ -69,20 +67,20 @@ export function NewTabPage() {
         >
           添加文件夹
         </Button>
-        {roots.length > 0 && (
+        {recentFolders.length > 0 && (
           <div {...stylex.props(styles.section)}>
             <div {...stylex.props(styles.heading, size.type.caption, weight.semibold)}>
               已添加的文件夹
             </div>
             <div {...stylex.props(styles.grid)}>
-              {roots.map(folder => (
+              {recentFolders.map(folder => (
                 <FolderCard
                   key={folder.path}
                   path={folder.path}
                   name={folder.name}
                   onOpen={() => openInNewTab(folder.path)}
                   // Only forgets the shortcut; tabs showing it stay open.
-                  onRemove={() => setRecentFolders(prev => withFolderRemoved(prev, folder.path))}
+                  onRemove={() => setRecentFolders(prev => withFolderForgotten(prev, folder.path))}
                   onDelete={() => void deleteFolder(folder.path)}
                 />
               ))}

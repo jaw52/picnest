@@ -58,13 +58,10 @@ export function useTabs() {
     [setTabs],
   )
 
-  /** Bookmarks `path` and opens it in its own tab. */
+  /** Lists `path` on the new-tab page, without opening it. */
   const addFolderByPath = useCallback(
-    (path: string) => {
-      setRecentFolders(prev => withFolderAdded(prev, path))
-      openInNewTab(path)
-    },
-    [setRecentFolders, openInNewTab],
+    (path: string) => setRecentFolders(prev => withFolderAdded(prev, path)),
+    [setRecentFolders],
   )
 
   const addFolder = useCallback(async () => {

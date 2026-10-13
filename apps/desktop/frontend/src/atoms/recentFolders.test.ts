@@ -1,7 +1,7 @@
 import type { RecentFolder } from './recentFolders'
 
 import { describe, expect, it } from 'vitest'
-import { folderNameFromPath, pathSegments, withFolderAdded, withFolderRemoved } from './recentFolders'
+import { folderNameFromPath, pathSegments, withFolderAdded, withFolderForgotten, withFolderRemoved } from './recentFolders'
 
 describe('folderNameFromPath', () => {
   it('returns the last path segment', () => {
@@ -44,13 +44,13 @@ describe('withFolderAdded', () => {
     expect(result.at(-1)?.path).toBe('/new')
   })
 
-  it('keeps a child under its existing parent', () => {
-    expect(withFolderAdded(existing, '/a/child').map(f => f.path)).toEqual(['/a', '/b'])
+  it('adds a folder inside an added one', () => {
+    expect(withFolderAdded(existing, '/a/child').map(f => f.path)).toEqual(['/a', '/b', '/a/child'])
   })
 
-  it('replaces child roots when their parent is added', () => {
+  it('keeps the folders inside one that is added after them', () => {
     const children = [{ lastOpenedAt: 1, name: 'child', path: '/photos/child' }]
-    expect(withFolderAdded(children, '/photos').map(f => f.path)).toEqual(['/photos'])
+    expect(withFolderAdded(children, '/photos').map(f => f.path)).toEqual(['/photos/child', '/photos'])
   })
 
   it('does not confuse similarly named siblings with descendants', () => {
@@ -65,6 +65,16 @@ describe('withFolderRemoved', () => {
       { lastOpenedAt: 2, name: 'b', path: '/b' },
     ]
     expect(withFolderRemoved(existing, '/a').map(f => f.path)).toEqual(['/b'])
+  })
+})
+
+describe('withFolderForgotten', () => {
+  it('forgets only that folder, not the ones added inside it', () => {
+    const existing: RecentFolder[] = [
+      { lastOpenedAt: 1, name: 'a', path: '/a' },
+      { lastOpenedAt: 2, name: 'child', path: '/a/child' },
+    ]
+    expect(withFolderForgotten(existing, '/a').map(f => f.path)).toEqual(['/a/child'])
   })
 })
 

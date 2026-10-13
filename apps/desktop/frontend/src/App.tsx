@@ -123,7 +123,7 @@ export default function App() {
             exit={{ opacity: 0, transition: spring.moderate.exit }}
             transition={spring.moderate}
           >
-            松开以添加并打开文件夹
+            松开以添加文件夹
           </motion.div>
         )}
       </AnimatePresence>

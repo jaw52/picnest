@@ -34,18 +34,27 @@ export function folderNameFromPath(path: string): string {
   return parts.at(-1) ?? path
 }
 
+/**
+ * Appends `path` unless it is already listed. Folders inside or around an
+ * added one are added too: each is its own shortcut.
+ */
 export function withFolderAdded(folders: RecentFolder[], path: string): RecentFolder[] {
-  const roots = folderRoots(folders)
-  if (roots.some(f => f.path === path || isDescendantPath(path, f.path)))
-    return roots
+  if (folders.some(f => f.path === path))
+    return folders
   const entry: RecentFolder = {
     path,
     name: folderNameFromPath(path),
     lastOpenedAt: Date.now(),
   }
-  return folderRoots([...roots, entry])
+  return [...folders, entry]
 }
 
+/** Forgets just the shortcut to `path`; those to folders inside it stay. */
+export function withFolderForgotten(folders: RecentFolder[], path: string): RecentFolder[] {
+  return folders.filter(f => f.path !== path)
+}
+
+/** Drops `path` and everything inside it - for a folder gone from disk. */
 export function withFolderRemoved(folders: RecentFolder[], path: string): RecentFolder[] {
   return folders.filter(f => f.path !== path && !isDescendantPath(f.path, path))
 }
