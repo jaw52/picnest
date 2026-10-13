@@ -56,6 +56,21 @@ export function withTabClosed(state: TabsState, id: string): TabsState {
   return { tabs, activeId: tabs[Math.min(index, tabs.length - 1)].id }
 }
 
+/** Closes every tab but `id`, which becomes the active one. */
+export function withOtherTabsClosed(state: TabsState, id: string): TabsState {
+  const tab = state.tabs.find(t => t.id === id)
+  return tab ? { tabs: [tab], activeId: id } : state
+}
+
+/** Closes the tabs after `id`; if the active one goes with them, `id` takes over. */
+export function withTabsToRightClosed(state: TabsState, id: string): TabsState {
+  const index = state.tabs.findIndex(t => t.id === id)
+  if (index === -1)
+    return state
+  const tabs = state.tabs.slice(0, index + 1)
+  return { tabs, activeId: tabs.some(t => t.id === state.activeId) ? state.activeId : id }
+}
+
 export function withTabActivated(state: TabsState, id: string): TabsState {
   if (state.activeId === id || !state.tabs.some(t => t.id === id))
     return state

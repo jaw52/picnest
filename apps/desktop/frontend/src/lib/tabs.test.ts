@@ -5,12 +5,14 @@ import {
   withBack,
   withFolderClosed,
   withForward,
+  withOtherTabsClosed,
   withPathOpened,
   withPathOpenedInBackground,
   withPathOpenedInNewTab,
   withTabClosed,
   withTabCycled,
   withTabOpened,
+  withTabsToRightClosed,
 } from './tabs'
 
 function state(paths: (string | null)[], activeIndex = 0): TabsState {
@@ -40,6 +42,18 @@ describe('tabs', () => {
     const next = withTabClosed(state(['/a']), 't0')
     expect(paths(next)).toEqual([null])
     expect(activeTab(next).path).toBeNull()
+  })
+
+  it('closes the other tabs, focusing the one kept', () => {
+    const next = withOtherTabsClosed(state(['/a', '/b', '/c'], 0), 't1')
+    expect(paths(next)).toEqual(['/b'])
+    expect(next.activeId).toBe('t1')
+  })
+
+  it('closes the tabs to the right, focusing the clicked one only if the active one went', () => {
+    expect(paths(withTabsToRightClosed(state(['/a', '/b', '/c'], 0), 't1'))).toEqual(['/a', '/b'])
+    expect(withTabsToRightClosed(state(['/a', '/b', '/c'], 0), 't1').activeId).toBe('t0')
+    expect(withTabsToRightClosed(state(['/a', '/b', '/c'], 2), 't0').activeId).toBe('t0')
   })
 
   it('cycles through tabs, wrapping around both ends', () => {

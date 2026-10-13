@@ -18,6 +18,8 @@ export interface ContextMenuItem {
   /** Tints the row red, for actions that remove files. */
   destructive?: boolean
   disabled?: boolean
+  /** A key combination that does the same, shown at the row's end (e.g. ⌘W). */
+  shortcut?: string
   onSelect: () => void
 }
 
@@ -32,7 +34,7 @@ interface MenuRowProps extends ContextMenuItem {
   index: number
 }
 
-function MenuRow({ index, label, icon: Icon, destructive, disabled, onSelect }: MenuRowProps) {
+function MenuRow({ index, label, icon: Icon, destructive, disabled, shortcut, onSelect }: MenuRowProps) {
   const ref = useRef<HTMLDivElement>(null)
   const hover = use(MenuHoverContext)
   const size = useSize()
@@ -71,6 +73,9 @@ function MenuRow({ index, label, icon: Icon, destructive, disabled, onSelect }: 
           {label}
         </span>
       </span>
+      {shortcut && (
+        <span {...stylex.props(styles.shortcut, size.text, trim.capAlphabetic)}>{shortcut}</span>
+      )}
     </BaseMenu.Item>
   )
 }

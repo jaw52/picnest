@@ -52,6 +52,7 @@ export const styles = stylex.create({
   destructive: { color: colors['--ps-destructive'] },
 
   label: { display: 'inline-grid', flexGrow: 1 },
+  shortcut: { flexShrink: 0, color: colors['--ps-muted-foreground'] },
   // Both stacked spans carry the text-box trim so the invisible bold sizer and
   // the visible label keep identical boxes.
   labelSizer: {

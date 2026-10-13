@@ -1,6 +1,6 @@
 import type { Tab } from '~/lib/tabs'
 import { FolderFilled, LayoutGridFilled } from '@mingcute/react/core-filled'
-import { AddRegular, CloseRegular, CopyRegular, FolderOpenRegular, FolderRegular, LayoutGridRegular } from '@mingcute/react/core-regular'
+import { AddRegular, AlignArrowRightRegular, CloseRegular, CloseSquareRegular, CopyRegular, FolderOpenRegular, FolderRegular, LayoutGridRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
@@ -85,8 +85,8 @@ const styles = stylex.create({
   closeVisible: { opacity: 1 },
 })
 
-function TabItem({ tab, active }: { tab: Tab, active: boolean }) {
-  const { activateTab, closeTab } = useTabs()
+function TabItem({ tab, active, isOnly, isLast }: { tab: Tab, active: boolean, isOnly: boolean, isLast: boolean }) {
+  const { activateTab, closeTab, closeOtherTabs, closeTabsToRight } = useTabs()
   const title = tab.path ? folderNameFromPath(tab.path) : NEW_TAB_TITLE
   const Icon = tab.path
     ? (active ? FolderFilled : FolderRegular)
@@ -132,18 +132,23 @@ function TabItem({ tab, active }: { tab: Tab, active: boolean }) {
   )
 
   const path = tab.path
-  if (!path)
-    return item
   return (
     <ContextMenu
       items={[
-        { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
-        {
-          label: '在访达中打开',
-          icon: FolderOpenRegular,
-          onSelect: () =>
-            void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
-        },
+        { label: '关闭', icon: CloseRegular, shortcut: active ? '⌘W' : undefined, onSelect: () => closeTab(tab.id) },
+        { label: '关闭其他标签页', icon: CloseSquareRegular, disabled: isOnly, onSelect: () => closeOtherTabs(tab.id) },
+        { label: '关闭右侧标签页', icon: AlignArrowRightRegular, disabled: isLast, onSelect: () => closeTabsToRight(tab.id) },
+        ...(path
+          ? [
+              { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
+              {
+                label: '在访达中打开',
+                icon: FolderOpenRegular,
+                onSelect: () =>
+                  void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
+              },
+            ]
+          : []),
       ]}
     >
       {item}
@@ -162,8 +167,14 @@ export function TabStrip() {
        * measures them against the strip; it needs `layout` to be measured. */}
       <motion.div layout layoutRoot role="tablist" aria-label="文件夹标签页" {...stylex.props(styles.tabs)}>
         <AnimatePresence initial={false}>
-          {tabs.map(tab => (
-            <TabItem key={tab.id} tab={tab} active={tab.id === activeId} />
+          {tabs.map((tab, i) => (
+            <TabItem
+              key={tab.id}
+              tab={tab}
+              active={tab.id === activeId}
+              isOnly={tabs.length === 1}
+              isLast={i === tabs.length - 1}
+            />
           ))}
         </AnimatePresence>
       </motion.div>

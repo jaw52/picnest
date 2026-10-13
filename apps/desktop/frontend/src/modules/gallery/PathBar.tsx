@@ -3,6 +3,7 @@ import { ArrowLeftRegular, ArrowRightRegular, FolderRegular, RightRegular } from
 import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { subfoldersAtom } from '~/atoms/gallery'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
 import { activeTabPathAtom, canGoBackAtom, canGoForwardAtom } from '~/atoms/tabs'
 import { DropdownMenu } from '~/components/ContextMenu'
@@ -119,18 +120,23 @@ function SubfolderMenu({ folder }: { folder: string }) {
 /**
  * Back and forward through the folders the tab showed, then breadcrumbs for
  * the one it shows: click a parent to go up (⌘-click for a new tab), or a
- * chevron to jump to a sibling.
+ * chevron to jump to a sibling. Left out while there is nowhere to go: a
+ * top-level folder with no subfolders and no history.
  */
 export function PathBar() {
   const path = useAtomValue(activeTabPathAtom)
   const recentFolders = useAtomValue(recentFoldersAtom)
   const canGoBack = useAtomValue(canGoBackAtom)
   const canGoForward = useAtomValue(canGoForwardAtom)
+  const hasSubfolders = useAtomValue(subfoldersAtom).length > 0
   const { openFromClick, goBack, goForward } = useTabs()
   const segments = useMemo(
     () => (path ? pathSegments(path, folderRoots(recentFolders).map(f => f.path)) : []),
     [path, recentFolders],
   )
+
+  if (segments.length <= 1 && !hasSubfolders && !canGoBack && !canGoForward)
+    return null
 
   return (
     <nav aria-label="文件夹路径" {...stylex.props(styles.bar)}>

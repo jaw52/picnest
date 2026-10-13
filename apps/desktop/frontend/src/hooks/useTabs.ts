@@ -8,6 +8,7 @@ import {
   withBack,
   withFolderClosed,
   withForward,
+  withOtherTabsClosed,
   withPathOpened,
   withPathOpenedInBackground,
   withPathOpenedInNewTab,
@@ -15,6 +16,7 @@ import {
   withTabClosed,
   withTabCycled,
   withTabOpened,
+  withTabsToRightClosed,
 } from '~/lib/tabs'
 
 import { useOpenFolder } from './useOpenFolder'
@@ -72,6 +74,14 @@ export function useTabs() {
 
   const newTab = useCallback(() => setTabs(state => withTabOpened(state)), [setTabs])
   const closeTab = useCallback((id: string) => setTabs(state => withTabClosed(state, id)), [setTabs])
+  const closeOtherTabs = useCallback(
+    (id: string) => setTabs(state => withOtherTabsClosed(state, id)),
+    [setTabs],
+  )
+  const closeTabsToRight = useCallback(
+    (id: string) => setTabs(state => withTabsToRightClosed(state, id)),
+    [setTabs],
+  )
   const activateTab = useCallback(
     (id: string) => setTabs(state => withTabActivated(state, id)),
     [setTabs],
@@ -111,6 +121,8 @@ export function useTabs() {
     newTab,
     closeTab,
     closeActiveTab,
+    closeOtherTabs,
+    closeTabsToRight,
     activateTab,
     activateTabAt,
     cycleTab,
