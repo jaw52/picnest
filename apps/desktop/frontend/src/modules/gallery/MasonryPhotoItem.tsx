@@ -5,6 +5,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Cloud, Copy, FolderInput, LoaderCircle, Trash2 } from 'lucide-react'
 import { memo } from 'react'
 import {
+  bulkDeleteBlockedAtom,
   filteredPhotosAtom,
   previewPhotoIdAtom,
   selectedPhotoIdAtom,
@@ -126,6 +127,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const [anchorId, setAnchorId] = useAtom(selectedPhotoIdAtom)
   const photos = useAtomValue(filteredPhotosAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
+  const bulkDeleteBlocked = useAtomValue(bulkDeleteBlockedAtom)
   const setInfoCollapsed = useSetAtom(infoSidebarCollapsedAtom)
   const selected = selectedIds.has(data.id)
   const height = width / data.aspectRatio
@@ -179,9 +181,12 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
       onSelect: handleMove,
     },
     {
-      label: selectedCount > 1 ? `删除 ${selectedCount} 张照片` : '删除',
+      label: selectedCount > 1
+        ? bulkDeleteBlocked ? '缩略图生成中，暂不能批量删除' : `删除 ${selectedCount} 张照片`
+        : '删除',
       icon: Trash2,
       destructive: true,
+      disabled: selectedCount > 1 && bulkDeleteBlocked,
       onSelect: handleDelete,
     },
   ]

@@ -8,7 +8,7 @@ import { trim } from '~/theme/text'
 import { buttonMarker } from './marker.stylex'
 import { styles } from './style'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost'
+export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'destructive'
 export type ButtonSize = 'default' | 'compact' | 'icon' | 'icon-compact'
 
 export interface ButtonProps extends Omit<ComponentProps<typeof BaseButton>, 'className' | 'style' | 'children'> {
@@ -36,6 +36,7 @@ const surfaceByVariant = {
   secondary: styles.surfaceSecondary,
   tertiary: styles.surfaceTertiary,
   ghost: styles.surfaceGhost,
+  destructive: styles.surfaceDestructive,
 }
 
 const forcedByVariant = {
@@ -43,6 +44,7 @@ const forcedByVariant = {
   secondary: styles.forcedSecondary,
   tertiary: styles.forcedTertiary,
   ghost: styles.forcedGhost,
+  destructive: styles.forcedDestructive,
 }
 
 const sizeStyles = {

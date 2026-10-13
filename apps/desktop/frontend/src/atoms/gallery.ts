@@ -21,6 +21,11 @@ export const thumbnailProgressAtom = atom<{ total: number, done: number }>({
   total: 0,
   done: 0,
 })
+/**
+ * Deleting several photos waits for the prefetch: its confirmation dialog
+ * shows every photo's thumbnail, which must not mean decoding originals.
+ */
+export const bulkDeleteBlockedAtom = atom(get => get(thumbnailProgressAtom).total > 0)
 export const ratingFilterAtom = atom<RatingFilter>(null)
 /**
  * Anchor of the grid selection - the last photo clicked without a modifier
@@ -32,6 +37,19 @@ export const selectedPhotoIdAtom = atom<string | null>(null)
 export const selectedPhotoIdsAtom = atom(new Set<string>())
 /** Non-null while the full-size single-photo viewer is open. */
 export const previewPhotoIdAtom = atom<string | null>(null)
+
+export interface DeleteConfirmRequest {
+  folderPath: string
+  photos: Photo[]
+  /** The photos the user still wants deleted, or null if they cancelled. */
+  resolve: (photos: Photo[] | null) => void
+}
+
+/**
+ * Non-null while the bulk-delete confirmation (see DeleteConfirmDialog) is open.
+ * A single photo is confirmed with the native dialog instead.
+ */
+export const deleteConfirmRequestAtom = atom<DeleteConfirmRequest | null>(null)
 
 export const filteredPhotosAtom = atom((get) => {
   const photos = get(photosAtom)

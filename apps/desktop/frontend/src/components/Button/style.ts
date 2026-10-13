@@ -34,6 +34,7 @@ export const styles = stylex.create({
 
   // Text color per variant.
   primary: { color: colors['--ps-background'] },
+  destructive: { color: colors['--ps-background'] },
   secondary: { color: colors['--ps-foreground'] },
   tertiary: { color: colors['--ps-foreground'] },
   ghost: {
@@ -90,6 +91,19 @@ export const styles = stylex.create({
       [stylex.when.ancestor(':active', buttonMarker)]: `0 0 0 0px color-mix(in oklab, ${colors['--ps-foreground']} 80%, ${colors['--ps-background']})`,
     },
   },
+  // Primary's recipe in the destructive color, for actions that remove files.
+  surfaceDestructive: {
+    backgroundColor: {
+      default: colors['--ps-destructive'],
+      [stylex.when.ancestor(':hover', buttonMarker)]: `color-mix(in oklab, ${colors['--ps-destructive']} 90%, ${colors['--ps-background']})`,
+      [stylex.when.ancestor(':active', buttonMarker)]: `color-mix(in oklab, ${colors['--ps-destructive']} 80%, ${colors['--ps-background']})`,
+    },
+    boxShadow: {
+      default: `0 0 0 1px ${colors['--ps-destructive']}`,
+      [stylex.when.ancestor(':hover', buttonMarker)]: `0 0 0 1px color-mix(in oklab, ${colors['--ps-destructive']} 90%, ${colors['--ps-background']})`,
+      [stylex.when.ancestor(':active', buttonMarker)]: `0 0 0 0px color-mix(in oklab, ${colors['--ps-destructive']} 80%, ${colors['--ps-background']})`,
+    },
+  },
   surfaceSecondary: {
     backgroundColor: {
       default: colors['--ps-tint'],
@@ -139,6 +153,13 @@ export const styles = stylex.create({
     boxShadow: {
       default: `0 0 0 1px color-mix(in oklab, ${colors['--ps-foreground']} 80%, ${colors['--ps-background']})`,
       [stylex.when.ancestor(':active', buttonMarker)]: `0 0 0 0px color-mix(in oklab, ${colors['--ps-foreground']} 80%, ${colors['--ps-background']})`,
+    },
+  },
+  forcedDestructive: {
+    backgroundColor: `color-mix(in oklab, ${colors['--ps-destructive']} 80%, ${colors['--ps-background']})`,
+    boxShadow: {
+      default: `0 0 0 1px color-mix(in oklab, ${colors['--ps-destructive']} 80%, ${colors['--ps-background']})`,
+      [stylex.when.ancestor(':active', buttonMarker)]: `0 0 0 0px color-mix(in oklab, ${colors['--ps-destructive']} 80%, ${colors['--ps-background']})`,
     },
   },
   forcedSecondary: {

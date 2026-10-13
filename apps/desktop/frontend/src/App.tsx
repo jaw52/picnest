@@ -12,6 +12,7 @@ import { useOpenFolder } from '~/hooks/useOpenFolder'
 import { useActiveTabSync } from '~/hooks/useTabs'
 import { useFolderDrop, useTabShortcuts } from '~/hooks/useTabShortcuts'
 import { spring } from '~/lib/springs'
+import { DeleteConfirmDialog } from '~/modules/gallery/DeleteConfirmDialog'
 import { FilterBar } from '~/modules/gallery/FilterBar'
 import { InfoPanel } from '~/modules/gallery/InfoPanel'
 import { MasonryView } from '~/modules/gallery/MasonryView'
@@ -112,6 +113,7 @@ export default function App() {
             )}
       </motion.div>
       <PhotoPreview />
+      <DeleteConfirmDialog />
       <AnimatePresence>
         {isDraggingOver && (
           <motion.div

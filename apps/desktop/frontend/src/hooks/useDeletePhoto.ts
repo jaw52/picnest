@@ -2,7 +2,7 @@ import type { Photo } from '~/types/photo'
 import { atom, useStore } from 'jotai'
 import { useCallback } from 'react'
 
-import { currentFolderAtom } from '~/atoms/gallery'
+import { bulkDeleteBlockedAtom, currentFolderAtom, deleteConfirmRequestAtom } from '~/atoms/gallery'
 import { deletePhotos } from '~/lib/backend'
 import { ask, message } from '~/lib/native'
 
@@ -10,6 +10,24 @@ import { useOpenFolder } from './useOpenFolder'
 
 // Shared by every deletion entry point in the same application store.
 const deletionPendingAtom = atom(false)
+
+/** The photos the user confirmed for deletion, or null if they cancelled. */
+async function confirmTargets(
+  store: ReturnType<typeof useStore>,
+  folderPath: string,
+  photos: Photo[],
+): Promise<Photo[] | null> {
+  if (photos.length > 1) {
+    return new Promise((resolve) => {
+      store.set(deleteConfirmRequestAtom, { folderPath, photos, resolve })
+    })
+  }
+  const confirmed = await ask(`确定要将「${photos[0].fileName}」移到废纸篓吗？`, {
+    title: '删除照片',
+    kind: 'warning',
+  })
+  return confirmed ? photos : null
+}
 
 export function useDeletePhoto(folderPath: string | null) {
   const store = useStore()
@@ -19,26 +37,20 @@ export function useDeletePhoto(folderPath: string | null) {
     async (photos: Photo[]) => {
       if (!folderPath || photos.length === 0 || store.get(deletionPendingAtom))
         return
+      if (photos.length > 1 && store.get(bulkDeleteBlockedAtom))
+        return
 
       store.set(deletionPendingAtom, true)
       try {
-        const confirmMessage
-          = photos.length === 1
-            ? `确定要将「${photos[0].fileName}」移到废纸篓吗？`
-            : `确定要将选中的 ${photos.length} 张照片移到废纸篓吗？`
-
-        const confirmed = await ask(confirmMessage, {
-          title: '删除照片',
-          kind: 'warning',
-        })
-        if (!confirmed)
+        const targets = await confirmTargets(store, folderPath, photos)
+        if (!targets || targets.length === 0)
           return
 
         const errors: string[] = []
         try {
           await deletePhotos(
             folderPath,
-            photos.map(p => p.path),
+            targets.map(p => p.path),
           )
         }
         catch (error) {

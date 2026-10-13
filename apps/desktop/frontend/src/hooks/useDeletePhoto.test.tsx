@@ -5,10 +5,12 @@ import { createStore, Provider, useAtomValue } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   currentFolderAtom,
+  deleteConfirmRequestAtom,
   photosAtom,
   previewPhotoIdAtom,
   selectedPhotoIdAtom,
   selectedPhotoIdsAtom,
+  thumbnailProgressAtom,
 } from '~/atoms/gallery'
 
 import { useDeletePhoto } from './useDeletePhoto'
@@ -40,6 +42,15 @@ function makePhoto(id: string): Photo {
     isCloudPlaceholder: false,
     aspectRatio: 1,
   }
+}
+
+/** Answers the bulk-delete dialog once the hook has opened it. */
+async function answerDialog(store: ReturnType<typeof createStore>, keep: (photos: Photo[]) => Photo[] | null) {
+  await Promise.resolve()
+  const request = store.get(deleteConfirmRequestAtom)
+  expect(request).not.toBeNull()
+  request!.resolve(keep(request!.photos))
+  store.set(deleteConfirmRequestAtom, null)
 }
 
 function renderWithStore(store: ReturnType<typeof createStore>) {
@@ -98,7 +109,6 @@ describe('useDeletePhoto', () => {
   })
 
   it('bulk-deletes every selected photo in one call and clears them from selection', async () => {
-    ask.mockResolvedValueOnce(true)
     const store = createStore()
     const a = makePhoto('a')
     const b = makePhoto('b')
@@ -111,9 +121,12 @@ describe('useDeletePhoto', () => {
     const { result } = renderWithStore(store)
 
     await act(async () => {
-      await result.current.deletePhoto([a, b])
+      const pending = result.current.deletePhoto([a, b])
+      await answerDialog(store, photos => photos)
+      await pending
     })
 
+    expect(ask).not.toHaveBeenCalled()
     expect(deletePhotos).toHaveBeenCalledTimes(1)
     expect(deletePhotos).toHaveBeenCalledWith('/folder', [a.path, b.path])
     expect(result.current.photos).toEqual([c])
@@ -142,7 +155,6 @@ describe('useDeletePhoto', () => {
   })
 
   it('refreshes actual remaining files after a partial deletion failure', async () => {
-    ask.mockResolvedValueOnce(true)
     deletePhotos.mockRejectedValueOnce(new Error('Finder busy'))
     const store = createStore()
     const a = makePhoto('a')
@@ -152,7 +164,9 @@ describe('useDeletePhoto', () => {
     const { result } = renderWithStore(store)
 
     await act(async () => {
-      await result.current.deletePhoto([a, b])
+      const pending = result.current.deletePhoto([a, b])
+      await answerDialog(store, photos => photos)
+      await pending
     })
 
     expect(result.current.photos).toEqual([b])
@@ -220,6 +234,57 @@ describe('useDeletePhoto', () => {
     })
     expect(ask).toHaveBeenCalledTimes(2)
     expect(deletePhotos).toHaveBeenCalledTimes(1)
+  })
+
+  it('deletes only the photos still in the bulk dialog', async () => {
+    const store = createStore()
+    const a = makePhoto('a')
+    const b = makePhoto('b')
+    const c = makePhoto('c')
+    const { result } = renderWithStore(store)
+
+    await act(async () => {
+      const pending = result.current.deletePhoto([a, b, c])
+      await answerDialog(store, photos => photos.filter(p => p.id !== b.id))
+      await pending
+    })
+
+    expect(deletePhotos).toHaveBeenCalledWith('/folder', [a.path, c.path])
+  })
+
+  it('does nothing when the bulk dialog is cancelled or emptied', async () => {
+    const store = createStore()
+    const { result } = renderWithStore(store)
+    const photos = [makePhoto('a'), makePhoto('b')]
+
+    await act(async () => {
+      const cancelled = result.current.deletePhoto(photos)
+      await answerDialog(store, () => null)
+      await cancelled
+      const emptied = result.current.deletePhoto(photos)
+      await answerDialog(store, () => [])
+      await emptied
+    })
+
+    expect(deletePhotos).not.toHaveBeenCalled()
+  })
+
+  it('blocks bulk deletion, but not a single photo, while thumbnails prefetch', async () => {
+    ask.mockResolvedValueOnce(true)
+    const store = createStore()
+    store.set(thumbnailProgressAtom, { total: 10, done: 3 })
+    const { result } = renderWithStore(store)
+    const a = makePhoto('a')
+
+    await act(async () => {
+      await result.current.deletePhoto([a, makePhoto('b')])
+    })
+    expect(store.get(deleteConfirmRequestAtom)).toBeNull()
+
+    await act(async () => {
+      await result.current.deletePhoto([a])
+    })
+    expect(deletePhotos).toHaveBeenCalledWith('/folder', [a.path])
   })
 
   it('is a no-op with an empty selection', async () => {

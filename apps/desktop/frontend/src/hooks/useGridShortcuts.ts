@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { useEffect } from 'react'
 import {
   currentFolderAtom,
+  deleteConfirmRequestAtom,
   filteredPhotosAtom,
   previewPhotoIdAtom,
   selectedPhotoIdAtom,
@@ -27,12 +28,14 @@ function previewTarget(photos: Photo[], selectedIds: ReadonlySet<string>, anchor
 }
 
 /**
- * Grid keyboard shortcuts, active while no photo is being previewed:
+ * Grid keyboard shortcuts, active while no photo is being previewed and the
+ * bulk-delete confirmation is closed:
  * Cmd/Ctrl+A selects every photo shown (respecting the filter), Space previews
  * the selection (as Quick Look does in Finder), 0-5 rate it, Delete removes it.
  */
 export function useGridShortcuts() {
   const previewId = useAtomValue(previewPhotoIdAtom)
+  const confirmingDelete = useAtomValue(deleteConfirmRequestAtom) !== null
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
   const photos = useAtomValue(filteredPhotosAtom)
   const folderPath = useAtomValue(currentFolderAtom)
@@ -44,7 +47,7 @@ export function useGridShortcuts() {
   const rate = useRatePhoto(folderPath)
 
   useEffect(() => {
-    if (previewId !== null)
+    if (previewId !== null || confirmingDelete)
       return
 
     const selected = () => photos.filter(p => selectedIds.has(p.id))
@@ -80,5 +83,5 @@ export function useGridShortcuts() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [previewId, selectedIds, anchorId, photos, deletePhoto, rate, setSelectedIds, setInfoCollapsed, setPreviewId])
+  }, [previewId, confirmingDelete, selectedIds, anchorId, photos, deletePhoto, rate, setSelectedIds, setInfoCollapsed, setPreviewId])
 }

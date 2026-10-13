@@ -2,6 +2,7 @@ import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
 import { PanelRightClose, PanelRightOpen, RefreshCw, Trash2 } from 'lucide-react'
 import {
+  bulkDeleteBlockedAtom,
   currentFolderAtom,
   filteredPhotosAtom,
   isScanningAtom,
@@ -55,6 +56,7 @@ export function Toolbar() {
   const isScanning = useAtomValue(isScanningAtom)
   const selectedIds = useAtomValue(selectedPhotoIdsAtom)
   const photos = useAtomValue(filteredPhotosAtom)
+  const bulkDeleteBlocked = useAtomValue(bulkDeleteBlockedAtom) && selectedIds.size > 1
   const [infoCollapsed, setInfoCollapsed] = useAtom(infoSidebarCollapsedAtom)
   const [thumbnailWidth, setThumbnailWidth] = useAtom(thumbnailWidthAtom)
   const { navigateToFolder } = useOpenFolder()
@@ -81,9 +83,9 @@ export function Toolbar() {
       )}
       {currentFolder && (
         <IconButton
-          label="删除选中项"
+          label={bulkDeleteBlocked ? '缩略图生成完后才能批量删除' : '删除选中项'}
           icon={Trash2}
-          disabled={selectedIds.size === 0}
+          disabled={selectedIds.size === 0 || bulkDeleteBlocked}
           onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
         />
       )}

@@ -17,6 +17,7 @@ export interface ContextMenuItem {
   icon?: IconComponent
   /** Tints the row red, for actions that remove files. */
   destructive?: boolean
+  disabled?: boolean
   onSelect: () => void
 }
 
@@ -31,7 +32,7 @@ interface MenuRowProps extends ContextMenuItem {
   index: number
 }
 
-function MenuRow({ index, label, icon: Icon, destructive, onSelect }: MenuRowProps) {
+function MenuRow({ index, label, icon: Icon, destructive, disabled, onSelect }: MenuRowProps) {
   const ref = useRef<HTMLDivElement>(null)
   const hover = use(MenuHoverContext)
   const size = useSize()
@@ -48,12 +49,13 @@ function MenuRow({ index, label, icon: Icon, destructive, onSelect }: MenuRowPro
     <BaseMenu.Item
       ref={ref}
       label={label}
+      disabled={disabled}
       onClick={onSelect}
       data-fluid-hover-index={index}
       aria-label={label}
       // Fixed height so the text-box trim on the label doesn't shrink the row;
       // shrink-0 because the popup is a max-height flex column.
-      {...stylex.props(styles.row, size.control, size.gap, size.itemPx)}
+      {...stylex.props(styles.row, disabled && styles.rowDisabled, size.control, size.gap, size.itemPx)}
     >
       {Icon && (
         <span {...stylex.props(styles.iconCell)}>
