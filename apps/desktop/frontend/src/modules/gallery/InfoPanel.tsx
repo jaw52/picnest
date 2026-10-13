@@ -26,10 +26,9 @@ const styles = stylex.create({
   // while the panel slides).
   frame: {
     position: 'fixed',
-    top: 0,
     right: 0,
+    bottom: 0,
     overflow: 'clip',
-    height: '100vh',
   },
   content: {
     position: 'absolute',
@@ -62,11 +61,13 @@ const styles = stylex.create({
 interface InfoPanelProps {
   /** Visible width, animated by the parent so the neighbouring column follows. */
   extent: MotionValue<number>
-  /** Space above the content, so it starts level with the main column. */
+  /** Where the panel starts: below the tab bar, which spans the window. */
+  top: number
+  /** Space above the content, so it starts level with the grid. */
   paddingTop: number
 }
 
-export function InfoPanel({ extent, paddingTop }: InfoPanelProps) {
+export function InfoPanel({ extent, top, paddingTop }: InfoPanelProps) {
   const [width, setWidth] = useAtom(infoSidebarWidthAtom)
   const [collapsed, setCollapsed] = useAtom(infoSidebarCollapsedAtom)
   const [dragging, setDragging] = useState(false)
@@ -129,7 +130,7 @@ export function InfoPanel({ extent, paddingTop }: InfoPanelProps) {
   }
 
   return (
-    <motion.aside className={stylex.props(styles.frame).className} style={{ width: extent }}>
+    <motion.aside className={stylex.props(styles.frame).className} style={{ top, width: extent }}>
       <div
         role="separator"
         aria-orientation="vertical"

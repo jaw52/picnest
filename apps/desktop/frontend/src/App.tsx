@@ -1,3 +1,4 @@
+import type { RefObject } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
@@ -29,6 +30,20 @@ import { weight } from '~/theme/text'
 // Toolbar - the tab bar - reserves space to their right.
 const TITLEBAR_HEIGHT = 38
 
+/** An element's height, kept up to date as it changes. */
+function useHeight(ref: RefObject<HTMLElement | null>, initial: number) {
+  const [height, setHeight] = useState(initial)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el)
+      return
+    const observer = new ResizeObserver(([entry]) => setHeight(entry.contentRect.height))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ref])
+  return height
+}
+
 const styles = stylex.create({
   root: {
     minHeight: '100vh',
@@ -41,6 +56,8 @@ const styles = stylex.create({
     zIndex: 10,
     backgroundColor: colors['--ps-background'],
   },
+  // The filter bar sticks just below the tab bar.
+  stickAt: (top: number) => ({ top }),
   main: { padding: 12 },
   dropOverlay: {
     pointerEvents: 'none',
@@ -74,31 +91,27 @@ export default function App() {
       void refreshFolder(folder)
   })
 
-  // The info sidebar's content should start level with the main column's
-  // content (below Toolbar + FilterBar + the progress bar), not just below
-  // the traffic lights - that header's height isn't fixed (the progress bar
-  // only renders while scanning), so measure it rather than hardcoding it.
-  const headerRef = useRef<HTMLDivElement>(null)
-  const [headerHeight, setHeaderHeight] = useState(TITLEBAR_HEIGHT)
-  useLayoutEffect(() => {
-    const el = headerRef.current
-    if (!el)
-      return
-    const observer = new ResizeObserver(([entry]) => setHeaderHeight(entry.contentRect.height))
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+  // The tab bar spans the window and the info panel hangs below it. The
+  // panel's content starts level with the grid, below FilterBar and the
+  // progress bar - whose height isn't fixed (the progress bar only renders
+  // while thumbnails generate, the filter bar can wrap), so both are measured.
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const toolbarHeight = useHeight(toolbarRef, TITLEBAR_HEIGHT)
+  const subheaderRef = useRef<HTMLDivElement>(null)
+  const subheaderHeight = useHeight(subheaderRef, 0)
 
   return (
     <div {...stylex.props(styles.root)}>
-      {tabPath !== null && <InfoPanel extent={infoExtent} paddingTop={headerHeight} />}
+      <div ref={toolbarRef} {...stylex.props(styles.header)}>
+        {/* The tab bar doubles as a drag handle, like a native app's
+         * title bar - clicking a tab or button still works, only
+         * click+drag on empty space moves the window. Toolbar marks itself
+         * with data-drag-region (see theme/theme.css). */}
+        <Toolbar />
+      </div>
+      {tabPath !== null && <InfoPanel extent={infoExtent} top={toolbarHeight} paddingTop={subheaderHeight} />}
       <motion.div style={{ marginRight: infoExtent }}>
-        <div ref={headerRef} {...stylex.props(styles.header)}>
-          {/* The tab bar doubles as a drag handle, like a native app's
-           * title bar - clicking a tab or button still works, only
-           * click+drag on empty space moves the window. Toolbar marks itself
-           * with data-drag-region (see theme/theme.css). */}
-          <Toolbar />
+        <div ref={subheaderRef} {...stylex.props(styles.header, styles.stickAt(toolbarHeight))}>
           {tabPath !== null && <FilterBar />}
           <ThumbnailProgressBar />
         </div>

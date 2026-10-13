@@ -25,7 +25,7 @@ function setup() {
   const extent = motionValue(INFO_SIDEBAR_DEFAULT_WIDTH)
   render(
     <Provider store={store}>
-      <InfoPanel extent={extent} paddingTop={0} />
+      <InfoPanel extent={extent} top={0} paddingTop={0} />
     </Provider>,
   )
   return { store, extent, handle: screen.getByRole('separator') }
