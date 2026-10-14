@@ -5,6 +5,8 @@
 **A fast, keyboard-friendly photo browser for macOS.**
 **一款为 macOS 打造的快速、键盘友好的图片浏览器。**
 
+Built with [mygo](https://github.com/egoist/mygo) · 基于 [mygo](https://github.com/egoist/mygo) 构建
+
 [English](#english) · [简体中文](#简体中文)
 
 ![Picnest screenshot](docs/screenshot.png)
@@ -16,6 +18,8 @@
 ## English
 
 Picnest is a native-feeling **macOS** app for browsing and culling folders of photos. Point it at any folder on disk and it lays your pictures out in a masonry grid — no import step, no library to manage.
+
+It is built with [mygo](https://github.com/egoist/mygo): a Go backend with a React frontend rendered in the system WebView.
 
 ### Features
 
@@ -43,13 +47,23 @@ Picnest is a native-feeling **macOS** app for browsing and culling folders of ph
 | `⌘=` / `⌘-` / `⌘0` | Bigger / smaller / default thumbnails |
 | `⌘T` / `⌘W` | New tab / close tab |
 
+### Install
+
+Download the `.dmg` from [Releases](https://github.com/jaw52/picnest/releases) and drag Picnest into Applications.
+
+The app is not notarized yet, so macOS may say it is damaged or from an unidentified developer. Clear the quarantine flag once:
+
+```sh
+xattr -cr /Applications/Picnest.app
+```
+
 ### Requirements
 
 - macOS on Apple silicon (arm64)
 
 ### Build from source
 
-Requires [Bun](https://bun.sh) and [Go](https://go.dev).
+Requires [Bun](https://bun.sh) and [Go](https://go.dev). The [mygo](https://github.com/egoist/mygo) CLI is pinned as a Go tool in `apps/desktop/go.mod`, so there is nothing else to install.
 
 ```sh
 bun install
@@ -62,6 +76,8 @@ bun run build   # build Picnest.app and a .dmg into apps/desktop/bin
 ## 简体中文
 
 Picnest 是一款专为 **macOS** 打造的图片浏览与筛片工具。选中磁盘上任意文件夹，它就会把图片以瀑布流排开——无需导入，也不用维护图库。
+
+Picnest 基于 [mygo](https://github.com/egoist/mygo) 构建：后端用 Go，前端用 React，由系统 WebView 渲染。
 
 ### 功能
 
@@ -89,13 +105,23 @@ Picnest 是一款专为 **macOS** 打造的图片浏览与筛片工具。选中�
 | `⌘=` / `⌘-` / `⌘0` | 放大 / 缩小 / 恢复默认缩略图 |
 | `⌘T` / `⌘W` | 新建标签页 / 关闭标签页 |
 
+### 安装
+
+从 [Releases](https://github.com/jaw52/picnest/releases) 下载 `.dmg`，把 Picnest 拖进“应用程序”。
+
+应用暂未公证，macOS 可能提示“已损坏”或“无法验证开发者”。执行一次以下命令清除隔离标记即可：
+
+```sh
+xattr -cr /Applications/Picnest.app
+```
+
 ### 系统要求
 
 - 搭载 Apple 芯片（arm64）的 macOS
 
 ### 从源码构建
 
-需要安装 [Bun](https://bun.sh) 与 [Go](https://go.dev)。
+需要安装 [Bun](https://bun.sh) 与 [Go](https://go.dev)。[mygo](https://github.com/egoist/mygo) CLI 已作为 Go tool 固定在 `apps/desktop/go.mod` 中，无需额外安装。
 
 ```sh
 bun install
