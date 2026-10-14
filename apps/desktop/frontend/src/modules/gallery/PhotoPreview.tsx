@@ -20,7 +20,9 @@ import { StarRating } from '~/components/StarRating'
 import { Tooltip } from '~/components/Tooltip'
 import { useDecodedImages } from '~/hooks/useDecodedImages'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
+import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
+import { useThumbnail } from '~/hooks/useThumbnail'
 import { convertFileSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
@@ -108,7 +110,27 @@ const styles = stylex.create({
     color: 'rgb(255 255 255 / 0.6)',
   },
   captionRating: { display: 'flex', flexShrink: 0 },
+  captionCloud: { flexShrink: 0, whiteSpace: 'nowrap', color: 'rgb(255 255 255 / 0.6)' },
+  captionAction: {
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    borderWidth: 0,
+    borderRadius: radius.item,
+    paddingInline: 8,
+    paddingBlock: 2,
+    backgroundColor: { 'default': 'rgb(255 255 255 / 0.12)', ':hover': 'rgb(255 255 255 / 0.24)' },
+    color: 'white',
+    transitionProperty: 'background-color',
+    transitionDuration: motionTokens.fast,
+  },
 })
+
+/**
+ * The longest edge iCloud keeps a thumbnail at. An undownloaded photo is
+ * previewed from that, upscaled to fit.
+ */
+const CLOUD_PREVIEW_EDGE = 1024
 
 type LightboxPosition = 'close' | 'prev' | 'next'
 
@@ -142,11 +164,37 @@ function CloudNotice() {
   return <div {...stylex.props(styles.notice, text.body)}>{t('preview.notDownloaded')}</div>
 }
 
+/** An undownloaded photo, shown from iCloud's thumbnail when it has one. */
+function CloudPreview({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
+  const url = useThumbnail(folderPath, photo.path, CLOUD_PREVIEW_EDGE, true, true)
+  return url ? <FittedImage src={url} alt={photo.fileName} /> : <CloudNotice />
+}
+
 /** The photo either side of the one shown, in place for a swipe to slide in. */
-function Neighbour({ photo }: { photo: Photo }) {
+function Neighbour({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
   return photo.isCloudPlaceholder
-    ? <CloudNotice />
+    ? <CloudPreview photo={photo} folderPath={folderPath} />
     : <FittedImage src={convertFileSrc(photo.path)} alt={photo.fileName} />
+}
+
+/** Marks an undownloaded photo in the caption, with a button to download it. */
+function CloudCaption({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
+  const { t } = useTranslation()
+  const downloadPlaceholder = useDownloadPlaceholder(folderPath)
+  const downloading = useAtomValue(downloadingIdsAtom).has(photo.id)
+  return (
+    <>
+      <span {...stylex.props(styles.captionCloud)}>{t('preview.cloudOnly')}</span>
+      <button
+        type="button"
+        disabled={downloading}
+        {...stylex.props(styles.captionAction, text.caption)}
+        onClick={() => void downloadPlaceholder(photo)}
+      >
+        {downloading ? t('gallery.downloading') : t('preview.downloadOriginal')}
+      </button>
+    </>
+  )
 }
 
 export function PhotoPreview() {
@@ -332,12 +380,12 @@ export function PhotoPreview() {
           <motion.div className={stylex.props(styles.track).className} style={{ x: slide }}>
             {index > 0 && (
               <div {...stylex.props(styles.page, styles.before)}>
-                <Neighbour photo={photos[index - 1]} />
+                <Neighbour photo={photos[index - 1]} folderPath={folderPath} />
               </div>
             )}
             <div {...stylex.props(styles.page)}>
               {photo.isCloudPlaceholder
-                ? <CloudNotice />
+                ? <CloudPreview photo={photo} folderPath={folderPath} />
                 : (
                     <ZoomableImage
                       key={photo.id}
@@ -358,7 +406,7 @@ export function PhotoPreview() {
             </div>
             {index !== -1 && index < photos.length - 1 && (
               <div {...stylex.props(styles.page, styles.after)}>
-                <Neighbour photo={photos[index + 1]} />
+                <Neighbour photo={photos[index + 1]} folderPath={folderPath} />
               </div>
             )}
           </motion.div>
@@ -398,6 +446,7 @@ export function PhotoPreview() {
             <span {...stylex.props(styles.captionRating)}>
               <StarRating rating={photo.rating} onChange={r => rate([photo], r)} size={14} />
             </span>
+            {photo.isCloudPlaceholder && <CloudCaption photo={photo} folderPath={folderPath} />}
           </div>
           {index !== -1 && (
             <Filmstrip

@@ -85,30 +85,28 @@ export function TileCaption({ photo, onRate }: TileCaptionProps) {
         <span {...stylex.props(utility.truncate, styles.fileName, text.caption)}>
           {photo.fileName}
         </span>
-        {!photo.isCloudPlaceholder && (
-          <button
-            type="button"
-            aria-label={t('rating.label')}
-            aria-expanded={rating}
-            // The tile is the grid's tab stop; keys 0-5 rate from there.
-            tabIndex={-1}
-            {...stylex.props(styles.ratingButton, text.caption, weight.semibold)}
-            onMouseEnter={() => setRating(true)}
-            onClick={(e) => {
-              e.stopPropagation()
-              setRating(open => !open)
-            }}
-          >
-            {photo.rating > 0
-              ? (
-                  <>
-                    <StarFilled size={12} />
-                    {photo.rating}
-                  </>
-                )
-              : <StarRegular size={12} />}
-          </button>
-        )}
+        <button
+          type="button"
+          aria-label={t('rating.label')}
+          aria-expanded={rating}
+          // The tile is the grid's tab stop; keys 0-5 rate from there.
+          tabIndex={-1}
+          {...stylex.props(styles.ratingButton, text.caption, weight.semibold)}
+          onMouseEnter={() => setRating(true)}
+          onClick={(e) => {
+            e.stopPropagation()
+            setRating(open => !open)
+          }}
+        >
+          {photo.rating > 0
+            ? (
+                <>
+                  <StarFilled size={12} />
+                  {photo.rating}
+                </>
+              )
+            : <StarRegular size={12} />}
+        </button>
       </div>
       <div {...stylex.props(styles.fold, rating && styles.unfolded)}>
         <div {...stylex.props(styles.foldInner)} inert={!rating}>

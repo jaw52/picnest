@@ -24,9 +24,9 @@ func exists(path string) bool {
 func TestPruneThumbnails(t *testing.T) {
 	dir := t.TempDir()
 	live := fileStat{path: "/p/a.jpg", size: 10, modTime: 5}
-	liveKey := thumbKey(live.path, live.modTime, live.size)
-	goneKey := thumbKey("/p/gone.jpg", 1, 1)
-	newKey := thumbKey("/p/new.jpg", 1, 1)
+	liveKey := thumbKey(live.path, live.modTime, live.size, false)
+	goneKey := thumbKey("/p/gone.jpg", 1, 1, false)
+	newKey := thumbKey("/p/new.jpg", 1, 1, false)
 
 	small := filepath.Join(dir, thumbFileName(liveKey, 512))
 	big := filepath.Join(dir, thumbFileName(liveKey, 2048))

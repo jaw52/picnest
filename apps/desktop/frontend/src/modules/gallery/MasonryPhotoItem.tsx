@@ -18,6 +18,7 @@ import {
 } from '~/atoms/gallery'
 import { Button } from '~/components/Button'
 import { ContextMenu } from '~/components/ContextMenu'
+import { IconButton } from '~/components/IconButton'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
 import { useMovePhotos } from '~/hooks/useMovePhotos'
@@ -75,6 +76,13 @@ const styles = stylex.create({
   },
   // Above the hover overlay, which would otherwise swallow the click.
   aboveOverlay: { position: 'relative', zIndex: 1 },
+  // The download button over an undownloaded file's iCloud thumbnail.
+  cloudBadge: {
+    position: 'absolute',
+    zIndex: 1,
+    top: 6,
+    left: 6,
+  },
   fill: { width: '100%', height: '100%' },
   cover: { objectFit: 'cover' },
   loading: {
@@ -122,17 +130,74 @@ function selectOnKeyboardFocus(e: React.FocusEvent<HTMLElement>, selected: boole
     select()
 }
 
+/**
+ * The tile's picture: the thumbnail, iCloud's thumbnail with a download
+ * button for an undownloaded file, or a "not downloaded" tile if iCloud has
+ * none.
+ */
+function TileImage({ photo, thumbnailUrl, folderPath }: { photo: Photo, thumbnailUrl: string | undefined, folderPath: string | null }) {
+  const { t } = useTranslation()
+  const downloadPlaceholder = useDownloadPlaceholder(folderPath)
+  const downloading = useAtomValue(downloadingIdsAtom).has(photo.id)
+  const download = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    void downloadPlaceholder(photo)
+  }
+  const downloadLabel = downloading ? t('gallery.downloading') : t('gallery.download')
+
+  const image = thumbnailUrl && (
+    <img
+      src={thumbnailUrl}
+      alt={photo.fileName}
+      decoding="async"
+      {...stylex.props(styles.fill, styles.cover)}
+      draggable={false}
+    />
+  )
+  if (!photo.isCloudPlaceholder)
+    return image || <div {...stylex.props(styles.fill, styles.loading)} />
+  if (image) {
+    return (
+      <>
+        {image}
+        <div {...stylex.props(styles.cloudBadge)}>
+          <IconButton
+            variant="secondary"
+            label={downloadLabel}
+            icon={downloading ? LoadingRegular : CloudRegular}
+            disabled={downloading}
+            onClick={download}
+          />
+        </div>
+      </>
+    )
+  }
+  return (
+    <div {...stylex.props(styles.placeholder)}>
+      <CloudRegular size={20} />
+      <span {...stylex.props(text.caption)}>{t('gallery.notDownloaded')}</span>
+      <Button
+        variant="secondary"
+        size="compact"
+        xstyle={styles.aboveOverlay}
+        leadingIcon={downloading ? LoadingRegular : undefined}
+        disabled={downloading}
+        onClick={download}
+      >
+        {downloadLabel}
+      </Button>
+    </div>
+  )
+}
+
 function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProps) {
   const { t } = useTranslation()
-  // Cloud placeholders (undownloaded iCloud Drive files) never get a
-  // thumbnail request - decoding them would force a synchronous download.
+  // Undownloaded iCloud files get iCloud's own thumbnail, without a download.
   const maxEdge = thumbnailEdgeFor(width)
-  const thumbnailUrl = useThumbnail(folderPath, data.path, maxEdge, !data.isCloudPlaceholder)
+  const thumbnailUrl = useThumbnail(folderPath, data.path, maxEdge, true, data.isCloudPlaceholder)
   const deletePhoto = useDeletePhoto(folderPath)
   const movePhotos = useMovePhotos(folderPath)
   const rate = useRatePhoto(folderPath)
-  const downloadPlaceholder = useDownloadPlaceholder(folderPath)
-  const downloading = useAtomValue(downloadingIdsAtom).has(data.id)
   // Read selection here (rather than taking it as a prop) so a selection
   // change re-renders only the tiles whose state changed, not the grid.
   const [selectedIds, setSelectedIds] = useAtom(selectedPhotoIdsAtom)
@@ -176,10 +241,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
 
   const selectedCount = selected ? selectedIds.size : 1
   const targets = () => (selected ? photos.filter(p => selectedIds.has(p.id)) : [data])
-  const openPreview = () => {
-    if (!data.isCloudPlaceholder)
-      setPreviewId(data.id)
-  }
+  const openPreview = () => setPreviewId(data.id)
   const handleDelete = () => void deletePhoto(targets())
   const handleMove = () => void movePhotos(targets())
 
@@ -253,39 +315,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
         }}
         onDoubleClick={openPreview}
       >
-        {data.isCloudPlaceholder
-          ? (
-              <div {...stylex.props(styles.placeholder)}>
-                <CloudRegular size={20} />
-                <span {...stylex.props(text.caption)}>{t('gallery.notDownloaded')}</span>
-                <Button
-                  variant="secondary"
-                  size="compact"
-                  xstyle={styles.aboveOverlay}
-                  leadingIcon={downloading ? LoadingRegular : undefined}
-                  disabled={downloading}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void downloadPlaceholder(data)
-                  }}
-                >
-                  {downloading ? t('gallery.downloading') : t('gallery.download')}
-                </Button>
-              </div>
-            )
-          : thumbnailUrl
-            ? (
-                <img
-                  src={thumbnailUrl}
-                  alt={data.fileName}
-                  decoding="async"
-                  {...stylex.props(styles.fill, styles.cover)}
-                  draggable={false}
-                />
-              )
-            : (
-                <div {...stylex.props(styles.fill, styles.loading)} />
-              )}
+        <TileImage photo={data} thumbnailUrl={thumbnailUrl} folderPath={folderPath} />
         <TileCaption photo={data} onRate={r => rate([data], r)} />
         {data.rating > 0 && (
           <div {...stylex.props(styles.ratingBadge, text.caption, weight.semibold)}>

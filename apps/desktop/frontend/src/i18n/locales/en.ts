@@ -86,6 +86,8 @@ export const en = {
   },
   preview: {
     notDownloaded: 'Not downloaded from iCloud, so it can\'t be previewed',
+    cloudOnly: 'Not downloaded, showing a preview',
+    downloadOriginal: 'Download original',
     previous: 'Previous',
     next: 'Next',
   },

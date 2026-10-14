@@ -84,6 +84,8 @@ export const zhCN = {
   },
   preview: {
     notDownloaded: 'iCloud 未下载，无法预览',
+    cloudOnly: 'iCloud 未下载，当前为预览图',
+    downloadOriginal: '下载原图',
     previous: '上一张',
     next: '下一张',
   },

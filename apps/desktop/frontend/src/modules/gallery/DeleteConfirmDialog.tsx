@@ -163,11 +163,11 @@ function DeleteConfirmTile({
   onRemove: () => void
 }) {
   const { t } = useTranslation()
-  const thumbnailUrl = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(width), !photo.isCloudPlaceholder)
+  const thumbnailUrl = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(width), true, photo.isCloudPlaceholder)
 
   return (
     <div {...stylex.props(tileMarker, styles.tile, styles.size(width, height))}>
-      {photo.isCloudPlaceholder
+      {photo.isCloudPlaceholder && !thumbnailUrl
         ? (
             <div {...stylex.props(styles.placeholder)}>
               <CloudRegular size={20} />

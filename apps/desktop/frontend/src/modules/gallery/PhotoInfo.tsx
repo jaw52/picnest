@@ -190,7 +190,7 @@ function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | n
       </div>
 
       <Section title={t('photoInfo.basics')}>
-        <Row label={t('photoInfo.dimensions')} value={`${photo.width} × ${photo.height}`} />
+        <Row label={t('photoInfo.dimensions')} value={photo.isCloudPlaceholder ? t('photoInfo.unknown') : `${photo.width} × ${photo.height}`} />
         <Row label={t('photoInfo.type')} value={fileExtension(photo.fileName) || t('photoInfo.unknown')} />
         <Row label={t('photoInfo.size')} value={details ? formatFileSize(details.fileSize) : '...'} />
         {details?.created !== undefined && (

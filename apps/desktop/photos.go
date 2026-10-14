@@ -125,8 +125,13 @@ func scanFolderPage(folder string, offset, limit int) (PhotoPage, error) {
 			}
 			switch c, ok := cached[f.name]; {
 			case f.placeholder:
-				// Neutral aspect ratio until the file is actually on disk.
+				// The cloud thumbnail gives the aspect ratio without a
+				// download; neutral if there is none. Not cached, since these
+				// aren't the photo's real dimensions.
 				meta.Width, meta.Height = 1, 1
+				if w, h, err := cloudThumbnailSize(f.path); err == nil && w > 0 && h > 0 {
+					meta.Width, meta.Height = w, h
+				}
 			case ok && c.Size == f.size && c.Mtime == f.modTime:
 				meta.Width, meta.Height = c.Width, c.Height
 			default:
@@ -160,8 +165,6 @@ const (
 	thumbMinEdge     = 480
 	thumbMaxEdge     = 2048
 	thumbJPEGQuality = 0.82
-	// The frontend matches this exact string to show a "not downloaded" tile.
-	cloudPlaceholderError = "cloud-placeholder"
 )
 
 // thumbnailTarget resolves where a thumbnail lives and whether it already
@@ -173,16 +176,12 @@ func thumbnailTarget(folder, filePath string, maxEdge int) (thumbPath string, ca
 	if err != nil {
 		return "", false, err
 	}
-	if isCloudPlaceholder(info) {
-		return "", false, errors.New(cloudPlaceholderError)
-	}
-
 	waitForPrune(folder)
 	thumbsDir := filepath.Join(sidecarDir(folder), "thumbs")
 	if err := os.MkdirAll(thumbsDir, 0o755); err != nil {
 		return "", false, err
 	}
-	key := thumbKey(filePath, info.ModTime().Unix(), info.Size())
+	key := thumbKey(filePath, info.ModTime().Unix(), info.Size(), isCloudPlaceholder(info))
 	thumbPath = filepath.Join(thumbsDir, thumbFileName(key, maxEdge))
 	if _, statErr := os.Stat(thumbPath); statErr == nil {
 		return thumbPath, true, nil
@@ -198,15 +197,25 @@ var thumbTmpSeq atomic.Uint64
 // generateThumbnail writes the thumbnail at thumbPath unless another request
 // finished it while this one waited for a slot.
 func generateThumbnail(filePath, thumbPath string, maxEdge int) (string, error) {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return "", err
+	}
 	if _, err := os.Stat(thumbPath); err == nil {
 		return thumbPath, nil
 	}
 	maxEdge = min(max(maxEdge, thumbMinEdge), thumbMaxEdge)
+	// Decoding an undownloaded iCloud file would download it; its cloud
+	// thumbnail doesn't.
+	write := writeThumbnail
+	if isCloudPlaceholder(info) {
+		write = writeCloudThumbnail
+	}
 
 	// Write to a unique temp name first so a concurrent request for the same
 	// thumbnail never sees (or clobbers) a half-written file.
 	tmp := fmt.Sprintf("%s.tmp%d-%d", thumbPath, os.Getpid(), thumbTmpSeq.Add(1))
-	if err := writeThumbnail(filePath, tmp, maxEdge, thumbJPEGQuality); err != nil {
+	if err := write(filePath, tmp, maxEdge, thumbJPEGQuality); err != nil {
 		os.Remove(tmp)
 		return "", err
 	}

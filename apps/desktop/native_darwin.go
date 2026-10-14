@@ -51,6 +51,8 @@ var (
 		DestinationAddImage      func(dest, img, props cfRef)
 		DestinationFinalize      func(dest cfRef) bool
 		ImageRelease             func(cfRef)
+		ImageGetWidth            func(cfRef) int
+		ImageGetHeight           func(cfRef) int
 	}
 
 	kCFAllocatorDefault cfRef
@@ -117,6 +119,8 @@ func loadFrameworks() error {
 		purego.RegisterLibFunc(&imgio.DestinationAddImage, imageIO, "CGImageDestinationAddImage")
 		purego.RegisterLibFunc(&imgio.DestinationFinalize, imageIO, "CGImageDestinationFinalize")
 		purego.RegisterLibFunc(&imgio.ImageRelease, coreGraphics, "CGImageRelease")
+		purego.RegisterLibFunc(&imgio.ImageGetWidth, coreGraphics, "CGImageGetWidth")
+		purego.RegisterLibFunc(&imgio.ImageGetHeight, coreGraphics, "CGImageGetHeight")
 
 		// Exported constants are variables holding a CFTypeRef: read through the symbol address.
 		sym := func(lib uintptr, name string) cfRef {
@@ -310,7 +314,11 @@ func writeThumbnail(src, dst string, maxEdge int, quality float64) error {
 		return errors.New("failed to decode image")
 	}
 	defer imgio.ImageRelease(thumb)
+	return writeJPEG(thumb, dst, quality)
+}
 
+// writeJPEG encodes a CGImage to dst.
+func writeJPEG(img cfRef, dst string, quality float64) error {
 	url := newURL(dst)
 	if url == 0 {
 		return errors.New("failed to create thumbnail file")
@@ -328,7 +336,7 @@ func writeThumbnail(src, dst string, maxEdge int, quality float64) error {
 	defer cf.Release(q)
 	props := newCFDict([]cfRef{kLossyQuality}, []cfRef{q})
 	defer cf.Release(props)
-	imgio.DestinationAddImage(dest, thumb, props)
+	imgio.DestinationAddImage(dest, img, props)
 	if !imgio.DestinationFinalize(dest) {
 		return errors.New("failed to encode thumbnail")
 	}

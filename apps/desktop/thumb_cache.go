@@ -14,7 +14,9 @@ import (
 )
 
 // Thumbnails live at <sidecar>/thumbs/<key>_<edge>.jpg, where key hashes the
-// source's path + mtime + size (so edits invalidate it) and edge is the
+// source's path + mtime + size (so edits invalidate it) and whether it came
+// from an undownloaded iCloud file's cloud thumbnail (so downloading the file
+// replaces it with one decoded from the file itself), and edge is the
 // longest side in pixels. Several edges can exist for one photo as the column
 // width changes.
 
@@ -26,11 +28,14 @@ const thumbReuseFactor = 4
 // added after the folder listing was taken.
 const thumbGrace = time.Minute
 
-func thumbKey(path string, modTime, size int64) string {
+func thumbKey(path string, modTime, size int64, cloud bool) string {
 	h := sha256.New()
 	h.Write([]byte(path))
 	binary.Write(h, binary.LittleEndian, modTime)
 	binary.Write(h, binary.LittleEndian, uint64(size))
+	if cloud {
+		h.Write([]byte("cloud"))
+	}
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -102,7 +107,7 @@ func pruneThumbnails(thumbsDir string, files []fileStat) {
 	}
 	valid := make(map[string]bool, len(files))
 	for _, f := range files {
-		valid[thumbKey(f.path, f.modTime, f.size)] = true
+		valid[thumbKey(f.path, f.modTime, f.size, f.placeholder)] = true
 	}
 
 	old := func(e os.DirEntry, age time.Duration) bool {

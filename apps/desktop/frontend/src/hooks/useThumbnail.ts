@@ -9,8 +9,12 @@ import { ensureThumbnailUrl, THUMBNAIL_CANCELLED } from '~/lib/backend'
  */
 export const thumbnailCache = new Map<string, string>()
 
-export function thumbnailCacheKey(folderPath: string | null, filePath: string, maxEdge: number) {
-  return `${folderPath ?? ''}:${filePath}:${maxEdge}`
+/**
+ * `cloud` marks an undownloaded iCloud file, whose thumbnail comes from
+ * iCloud and is replaced by a decoded one once the file is downloaded.
+ */
+export function thumbnailCacheKey(folderPath: string | null, filePath: string, maxEdge: number, cloud = false) {
+  return `${folderPath ?? ''}:${filePath}:${maxEdge}${cloud ? ':cloud' : ''}`
 }
 
 /**
@@ -27,8 +31,9 @@ export function useThumbnail(
   filePath: string,
   maxEdge: number,
   enabled = true,
+  cloud = false,
 ): string | undefined {
-  const cacheKey = thumbnailCacheKey(folderPath, filePath, maxEdge)
+  const cacheKey = thumbnailCacheKey(folderPath, filePath, maxEdge, cloud)
   const cachedUrl = thumbnailCache.get(cacheKey)
 
   // Adjusts state during render when the key changes, rather than in an
@@ -65,8 +70,8 @@ export function useThumbnail(
       catch (error) {
         if (error === THUMBNAIL_CANCELLED)
           return
-        // Expected for e.g. undownloaded iCloud placeholders; the UI
-        // already renders a distinct tile for those via isCloudPlaceholder.
+        // Expected for e.g. an undownloaded iCloud file iCloud has no
+        // thumbnail of; the UI renders a distinct tile for those.
         console.warn(`thumbnail failed for ${filePath}:`, error)
       }
     }

@@ -49,7 +49,9 @@ func TestScanFolderReadsDimensionsAndJoinsRatings(t *testing.T) {
 	}
 }
 
-func TestCloudPlaceholderGetsNeutralAspectAndNoThumbnail(t *testing.T) {
+// A sparse file reads as a placeholder but has no cloud thumbnail, so it
+// falls back to a neutral aspect ratio and no thumbnail.
+func TestCloudPlaceholderWithoutCloudThumbnail(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "placeholder.jpg")
 	f, _ := os.Create(path)
@@ -63,8 +65,8 @@ func TestCloudPlaceholderGetsNeutralAspectAndNoThumbnail(t *testing.T) {
 	if len(page.Photos) != 1 || !page.Photos[0].IsCloudPlaceholder || page.Photos[0].Width != 1 {
 		t.Fatalf("unexpected page: %+v", page)
 	}
-	if _, err := ensureThumbnail(dir, path, 480); err == nil || err.Error() != cloudPlaceholderError {
-		t.Fatalf("expected cloud-placeholder error, got %v", err)
+	if _, err := ensureThumbnail(dir, path, 480); err == nil {
+		t.Fatal("expected no thumbnail")
 	}
 }
 

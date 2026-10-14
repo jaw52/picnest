@@ -43,9 +43,8 @@ function isGridTarget(target: EventTarget | null) {
 
 /** The photo to preview for a selection: the one last clicked if still selected, else the first. */
 function previewTarget(photos: Photo[], selectedIds: ReadonlySet<string>, anchorId: string | null) {
-  const photo = photos.find(p => p.id === anchorId && selectedIds.has(p.id))
+  return photos.find(p => p.id === anchorId && selectedIds.has(p.id))
     ?? photos.find(p => selectedIds.has(p.id))
-  return photo && !photo.isCloudPlaceholder ? photo : undefined
 }
 
 const THUMBNAIL_WIDTH_STEPS: Partial<Record<string, number>> = {

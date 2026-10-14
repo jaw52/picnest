@@ -64,8 +64,8 @@ const styles = stylex.create({
 })
 
 function FilmThumb({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
-  const url = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(FILM_THUMB), !photo.isCloudPlaceholder)
-  if (photo.isCloudPlaceholder) {
+  const url = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(FILM_THUMB), true, photo.isCloudPlaceholder)
+  if (photo.isCloudPlaceholder && !url) {
     return (
       <span {...stylex.props(styles.cloud)}>
         <CloudRegular size={16} />
