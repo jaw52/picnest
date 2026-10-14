@@ -7,6 +7,8 @@ import { ContextMenu } from '~/components/ContextMenu'
 import { spring } from '~/lib/springs'
 import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
 
+/** Height kept clear above the photo: the title bar row, where the traffic lights sit. */
+const TITLEBAR_STRIP = 40
 /** Height reserved under the photo for the caption: its 16px offset, its own height, and a gap. */
 const CAPTION_STRIP = 64
 /** Width kept clear on each side for the previous/next buttons: their 16px offset, 36px size, and a gap. */
@@ -17,15 +19,16 @@ const DRAG_THRESHOLD = 3
 const WHEEL_ZOOM_RATE = 0.01
 
 const styles = stylex.create({
-  // Fills the overlay. The bottom padding leaves the caption a strip of its
-  // own, so a tall photo is fitted above it instead of running underneath.
+  // Fills the overlay. The padding leaves the traffic lights and the caption
+  // strips of their own, so a tall photo is fitted between them instead of
+  // running underneath.
   viewport: {
     position: 'absolute',
     inset: 0,
     display: 'flex',
     overflow: 'hidden',
     boxSizing: 'border-box',
-    paddingTop: 16,
+    paddingTop: TITLEBAR_STRIP,
     paddingBottom: CAPTION_STRIP,
     touchAction: 'none',
   },
@@ -33,7 +36,7 @@ const styles = stylex.create({
   smooth: { transitionProperty: 'transform', transitionDuration: '200ms', transitionTimingFunction: 'ease-out' },
   image: {
     display: 'block',
-    maxHeight: `calc(100vh - ${16 + CAPTION_STRIP}px)`,
+    maxHeight: `calc(100vh - ${TITLEBAR_STRIP + CAPTION_STRIP}px)`,
     maxWidth: `calc(100vw - ${2 * BUTTON_STRIP}px)`,
     objectFit: 'contain',
   },
