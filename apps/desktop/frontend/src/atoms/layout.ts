@@ -1,3 +1,4 @@
+import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
 export const INFO_SIDEBAR_MIN_WIDTH = 220
@@ -7,7 +8,7 @@ export const INFO_SIDEBAR_DEFAULT_WIDTH = 260
 export const INFO_SIDEBAR_COLLAPSE_THRESHOLD = 160
 
 /**
- * Read on init: the panel's animated width starts from these, so a late
+ * Read on init: the panel's animated width starts from it, so a late
  * storage read would play a spurious collapse/expand on launch.
  */
 export const infoSidebarWidthAtom = atomWithStorage(
@@ -16,13 +17,11 @@ export const infoSidebarWidthAtom = atomWithStorage(
   undefined,
   { getOnInit: true },
 )
-/** Collapsed until something is selected: an empty panel would only take room from the grid. */
-export const infoSidebarCollapsedAtom = atomWithStorage(
-  'picnest.infoSidebarCollapsed',
-  true,
-  undefined,
-  { getOnInit: true },
-)
+/**
+ * Collapsed until something is selected: an empty panel would only take room
+ * from the grid. Not persisted, as nothing is selected at launch.
+ */
+export const infoSidebarCollapsedAtom = atom(true)
 
 /** The photo grid keeps at least this much width, whatever the side panel asks for. */
 export const MAIN_MIN_WIDTH = 360

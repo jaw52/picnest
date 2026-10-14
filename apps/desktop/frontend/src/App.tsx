@@ -1,9 +1,10 @@
 import type { RefObject } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtomValue } from 'jotai'
-import { useLayoutEffect, useRef, useState } from 'react'
-import { currentFolderAtom, ratingFilterAtom } from '~/atoms/gallery'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { currentFolderAtom, ratingFilterAtom, selectedPhotoIdsAtom } from '~/atoms/gallery'
+import { infoSidebarCollapsedAtom } from '~/atoms/layout'
 import { activeTabPathAtom } from '~/atoms/tabs'
 import { ErrorBoundary } from '~/components/ErrorBoundary'
 import { useSize } from '~/context/size'
@@ -86,7 +87,15 @@ export default function App() {
   const tabPath = useAtomValue(activeTabPathAtom)
   const folder = useAtomValue(currentFolderAtom)
   const filter = useAtomValue(ratingFilterAtom)
-  const infoExtent = useInfoPanelExtent(tabPath === null)
+  const infoExtent = useInfoPanelExtent(tabPath)
+  const nothingSelected = useAtomValue(selectedPhotoIdsAtom).size === 0
+  const setInfoCollapsed = useSetAtom(infoSidebarCollapsedAtom)
+  // Selecting opens the info panel; losing the selection (clicking empty
+  // space, switching folder, deleting the last photo) folds it away again.
+  useEffect(() => {
+    if (nothingSelected)
+      setInfoCollapsed(true)
+  }, [nothingSelected, setInfoCollapsed])
   const size = useSize()
   const { refreshFolder } = useOpenFolder()
   useFolderWatcher(() => {

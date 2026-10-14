@@ -1,5 +1,5 @@
 import { animate, useMotionValue } from 'framer-motion'
-import { useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { useEffect, useRef } from 'react'
 import { infoSidebarCollapsedAtom, infoSidebarWidthAtom } from '~/atoms/layout'
 import { panelTransition } from '~/lib/panel-motion'
@@ -8,32 +8,29 @@ import { panelTransition } from '~/lib/panel-motion'
  * The info panel's visible width as a motion value: the panel and the column
  * beside it both read it, so they move together. Collapsing and expanding
  * tween it; dragging the resize handle sets it directly (no tween, the width
- * follows the pointer). `hidden` (a tab with no folder, which has nothing to
- * show in the panel) takes it to 0 at once, like the tab's content switching.
+ * follows the pointer). Switching what the tab shows (`tabPath`) drops the
+ * selection, so it collapses the panel at once, like the tab's content
+ * switching: a tween there would reflow the incoming grid on every frame.
  */
-export function useInfoPanelExtent(hidden: boolean) {
+export function useInfoPanelExtent(tabPath: string | null) {
   const width = useAtomValue(infoSidebarWidthAtom)
-  const collapsed = useAtomValue(infoSidebarCollapsedAtom)
-  const extent = useMotionValue(collapsed || hidden ? 0 : width)
+  const [collapsed, setCollapsed] = useAtom(infoSidebarCollapsedAtom)
+  const extent = useMotionValue(collapsed ? 0 : width)
 
   // Only a collapse toggle animates; a width change must not restart it.
   const widthRef = useRef(width)
-  const collapsedRef = useRef(collapsed)
-  const hiddenRef = useRef(hidden)
   useEffect(() => {
     widthRef.current = width
-    collapsedRef.current = collapsed
-    hiddenRef.current = hidden
   })
   useEffect(() => {
-    if (hiddenRef.current)
-      return
     const controls = animate(extent, collapsed ? 0 : widthRef.current, panelTransition())
     return () => controls.stop()
   }, [collapsed, extent])
   useEffect(() => {
-    extent.jump(hidden || collapsedRef.current ? 0 : widthRef.current)
-  }, [hidden, extent])
+    // The tween this starts runs from 0 to 0, so the jump is what shows.
+    setCollapsed(true)
+    extent.jump(0)
+  }, [tabPath, setCollapsed, extent])
 
   return extent
 }
