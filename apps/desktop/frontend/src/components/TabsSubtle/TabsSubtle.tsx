@@ -215,9 +215,11 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
 export interface TabsSubtleItemProps {
   label: string
   index: number
+  /** Fades the label while neither hovered nor selected, e.g. for a filter that would show nothing. */
+  dimmed?: boolean
 }
 
-export function TabsSubtleItem({ label, index }: TabsSubtleItemProps) {
+export function TabsSubtleItem({ label, index, dimmed = false }: TabsSubtleItemProps) {
   const internalRef = useRef<HTMLElement | null>(null)
   const size = useSize()
   const { registerTab, hoveredIndex, selectedIndex } = useTabsSubtle()
@@ -251,6 +253,7 @@ export function TabsSubtleItem({ label, index }: TabsSubtleItemProps) {
             styles.labelText,
             trim.capAlphabetic,
             isActive ? styles.active : styles.inactive,
+            dimmed && !isActive && styles.dimmed,
             isSelected ? weight.semibold : weight.normal,
           )}
         >

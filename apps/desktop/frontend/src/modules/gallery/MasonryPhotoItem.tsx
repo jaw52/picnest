@@ -1,13 +1,15 @@
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { Photo } from '~/types/photo'
-import { CloudRegular, CopyRegular, Delete2Regular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
+import { CloudRegular, CopyRegular, Delete2Regular, EditRegular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { memo } from 'react'
 import {
   bulkDeleteBlockedAtom,
   filteredPhotosAtom,
+  gridTabStopIdAtom,
   previewPhotoIdAtom,
+  renamingPhotoIdAtom,
   selectedPhotoIdAtom,
   selectedPhotoIdsAtom,
 } from '~/atoms/gallery'
@@ -47,6 +49,8 @@ const styles = stylex.create({
     outline: { 'default': 'none', ':focus-visible': `2px solid ${colors['--ps-focus-ring']}` },
     outlineOffset: 6,
   },
+  // Focus follows the selection, whose ring already marks the tile.
+  noFocusRing: { outline: 'none' },
   size: (width: number, height: number) => ({ width, height }),
   // A 2px gap in the page color, then a 2px ring when selected.
   selected: {
@@ -112,6 +116,23 @@ const styles = stylex.create({
   },
 })
 
+/** The context menu's delete item, for `count` photos. */
+function deleteLabel(count: number, bulkDeleteBlocked: boolean) {
+  if (count === 1)
+    return '删除'
+  return bulkDeleteBlocked ? '缩略图生成中，暂不能批量删除' : `删除 ${count} 张照片`
+}
+
+/**
+ * Selects a tile tabbed onto, so the keys that act on the selection (Space,
+ * 0-5, Delete) act on the focused photo. A click's focus is left to the
+ * click, which may be a ⌘/⇧ one; so is a button's inside the tile.
+ */
+function selectOnKeyboardFocus(e: React.FocusEvent<HTMLElement>, selected: boolean, select: () => void) {
+  if (!selected && e.target === e.currentTarget && e.currentTarget.matches(':focus-visible'))
+    select()
+}
+
 function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProps) {
   // Cloud placeholders (undownloaded iCloud Drive files) never get a
   // thumbnail request - decoding them would force a synchronous download.
@@ -129,8 +150,10 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
   const bulkDeleteBlocked = useAtomValue(bulkDeleteBlockedAtom)
   const setInfoCollapsed = useSetAtom(infoSidebarCollapsedAtom)
+  const setRenamingId = useSetAtom(renamingPhotoIdAtom)
   const selected = selectedIds.has(data.id)
   const height = width / data.aspectRatio
+  const isTabStop = useAtomValue(gridTabStopIdAtom) === data.id
 
   const handleSelect = (e: React.MouseEvent) => {
     // Selecting something is asking to see its details.
@@ -171,9 +194,18 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const handleDelete = () => void deletePhoto(targets())
   const handleMove = () => void movePhotos(targets())
 
+  // Renaming happens in the info panel, which the selection already shows.
+  const handleRename = () => {
+    setInfoCollapsed(false)
+    setRenamingId(data.id)
+  }
+
   const menuItems: ContextMenuItem[] = [
     ...(selectedCount === 1
-      ? [{ label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(data.path) }]
+      ? [
+          { label: '重命名', icon: EditRegular, onSelect: handleRename },
+          { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(data.path) },
+        ]
       : []),
     {
       label: selectedCount > 1 ? `移动 ${selectedCount} 张照片到…` : '移动到…',
@@ -181,9 +213,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
       onSelect: handleMove,
     },
     {
-      label: selectedCount > 1
-        ? bulkDeleteBlocked ? '缩略图生成中，暂不能批量删除' : `删除 ${selectedCount} 张照片`
-        : '删除',
+      label: deleteLabel(selectedCount, bulkDeleteBlocked),
       icon: Delete2Regular,
       destructive: true,
       disabled: selectedCount > 1 && bulkDeleteBlocked,
@@ -208,18 +238,24 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
           styles.item,
           styles.focusRing,
           selected ? styles.selected : styles.unselected,
+          selected && styles.noFocusRing,
           styles.size(width, height),
         )}
         role="option"
-        tabIndex={0}
+        tabIndex={isTabStop ? 0 : -1}
         aria-selected={selected}
         aria-label={data.fileName}
+        data-photo-id={data.id}
         onClick={handleSelect}
+        onFocus={e => selectOnKeyboardFocus(e, selected, () => {
+          setSelectedIds(new Set([data.id]))
+          setAnchorId(data.id)
+        })}
         onKeyDown={(e) => {
           // Keys pressed on a button inside (iCloud download) belong to it.
           if (e.target !== e.currentTarget)
             return
-          // Space (preview) is handled for the whole grid in MasonryView.
+          // Space (preview) is handled for the whole grid in useGridShortcuts.
           if (e.key === 'Enter')
             openPreview()
         }}

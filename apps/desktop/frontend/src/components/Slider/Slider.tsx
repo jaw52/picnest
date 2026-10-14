@@ -15,6 +15,8 @@ export interface SliderProps {
   label?: string
   /** Formats the displayed value. */
   formatValue?: (value: number) => string
+  /** Off, only the label shows, for a value whose number means nothing to the user. */
+  showValue?: boolean
   disabled?: boolean
   xstyle?: StyleXStyles
 }
@@ -38,6 +40,7 @@ export function Slider({
   step = 1,
   label,
   formatValue = String,
+  showValue = true,
   disabled = false,
   xstyle,
 }: SliderProps) {
@@ -74,7 +77,8 @@ export function Slider({
   }
 
   const interacting = hovered || dragging
-  const widest = `${label ? `${label}: ` : ''}${formatValue(max)}`
+  const valueLabel = (v: number) => (showValue ? `${label ? `${label}: ` : ''}${formatValue(v)}` : label ?? '')
+  const widest = valueLabel(max)
 
   return (
     <BaseSlider.Root
@@ -95,10 +99,7 @@ export function Slider({
         <span aria-hidden="true" {...stylex.props(styles.valueCell, styles.valueGhost)}>
           {widest}
         </span>
-        <span {...stylex.props(styles.valueCell)}>
-          {label && `${label}: `}
-          {formatValue(value)}
-        </span>
+        <span {...stylex.props(styles.valueCell)}>{valueLabel(value)}</span>
       </span>
       <BaseSlider.Control
         ref={controlRef}
@@ -124,7 +125,9 @@ export function Slider({
             )}
           />
         </BaseSlider.Track>
-        <BaseSlider.Thumb aria-label={label} {...stylex.props(styles.thumb)}>
+        {/* An explicit tabIndex: WebKit otherwise leaves the range input
+         * out of the Tab order. */}
+        <BaseSlider.Thumb aria-label={label} tabIndex={0} {...stylex.props(styles.thumb)}>
           <span {...stylex.props(styles.knob)} />
         </BaseSlider.Thumb>
       </BaseSlider.Control>

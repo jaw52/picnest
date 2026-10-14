@@ -312,7 +312,7 @@ function DeleteConfirmContent({
   )
 }
 
-/** Final confirmation for deleting several photos, answering `deleteConfirmRequestAtom`. */
+/** Final confirmation for deleting photos, one or many, answering `deleteConfirmRequestAtom`. */
 export function DeleteConfirmDialog() {
   const [request, setRequest] = useAtom(deleteConfirmRequestAtom)
   // Focus starts on the harmless choice, not the first tile's remove button.

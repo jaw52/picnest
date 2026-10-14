@@ -96,7 +96,7 @@ it('rates the grid selection, then only the previewed photo, with the 0-5 keys',
   )
 
   fireEvent.keyDown(window, { key: '4' })
-  expect(rate.mock.calls).toEqual([[a, 4], [b, 4]])
+  expect(rate.mock.calls).toEqual([[[a, b], 4]])
 
   rate.mockClear()
   fireEvent.keyDown(window, { key: '4', metaKey: true })
@@ -104,7 +104,7 @@ it('rates the grid selection, then only the previewed photo, with the 0-5 keys',
 
   act(() => store.set(previewPhotoIdAtom, b.id))
   fireEvent.keyDown(window, { key: '5' })
-  expect(rate.mock.calls).toEqual([[b, 5]])
+  expect(rate.mock.calls).toEqual([[[b], 5]])
 })
 
 it('stays blank until a folder loads, then notes an empty folder', async () => {
@@ -218,4 +218,28 @@ it('leaves Space alone with nothing selected, on buttons, or with a modifier', (
   expect(store.get(previewPhotoIdAtom)).toBeNull()
   fireEvent.keyDown(window, { key: ' ', metaKey: true })
   expect(store.get(previewPhotoIdAtom)).toBeNull()
+})
+
+it('moves the selection with the arrow keys, extending it with Shift', () => {
+  const store = createStore()
+  const [a, b] = twoPhotos()
+  const c: Photo = { ...a, id: '/c.jpg', path: '/c.jpg', fileName: 'c.jpg' }
+  store.set(currentFolderAtom, '/')
+  store.set(photosAtom, [a, b, c])
+  render(
+    <Provider store={store}>
+      <MasonryView />
+    </Provider>,
+  )
+
+  // Nothing selected yet: the first photo.
+  fireEvent.keyDown(window, { key: 'ArrowDown' })
+  expect(store.get(selectedPhotoIdsAtom)).toEqual(new Set([a.id]))
+  // One column here (the test DOM has no width), so down is the next photo.
+  fireEvent.keyDown(window, { key: 'ArrowDown' })
+  expect(store.get(selectedPhotoIdsAtom)).toEqual(new Set([b.id]))
+  fireEvent.keyDown(window, { key: 'ArrowDown', shiftKey: true })
+  expect(store.get(selectedPhotoIdsAtom)).toEqual(new Set([b.id, c.id]))
+  fireEvent.keyDown(window, { key: 'ArrowUp' })
+  expect(store.get(selectedPhotoIdsAtom)).toEqual(new Set([b.id]))
 })

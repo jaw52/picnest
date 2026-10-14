@@ -65,9 +65,14 @@ export function FilterBar() {
           onSelect={index => setFilter(FILTERS[index] ?? null)}
         >
           <TabsSubtleItem index={0} label={`全部 ${photos.length}`} />
-          <TabsSubtleItem index={1} label={`未评分 ${counts[0]}`} />
+          <TabsSubtleItem index={1} label={`未评分 ${counts[0]}`} dimmed={counts[0] === 0} />
           {STARS.map(star => (
-            <TabsSubtleItem key={star} index={star + 1} label={`${star}★ ${counts[star]}`} />
+            <TabsSubtleItem
+              key={star}
+              index={star + 1}
+              label={`${star}★ ${counts[star]}`}
+              dimmed={counts[star] === 0}
+            />
           ))}
         </TabsSubtle>
       </div>

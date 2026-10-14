@@ -9,6 +9,8 @@ import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
 
 /** Height reserved under the photo for the caption: its 16px offset, its own height, and a gap. */
 const CAPTION_STRIP = 64
+/** Width kept clear on each side for the previous/next buttons: their 16px offset, 36px size, and a gap. */
+const BUTTON_STRIP = 64
 /** Movement under this is a click, not a drag. */
 const DRAG_THRESHOLD = 3
 /** Pinch deltas arrive as small wheel `deltaY`s with ctrl held; this turns them into a zoom factor. */
@@ -32,7 +34,7 @@ const styles = stylex.create({
   image: {
     display: 'block',
     maxHeight: `calc(100vh - ${16 + CAPTION_STRIP}px)`,
-    maxWidth: '92vw',
+    maxWidth: `calc(100vw - ${2 * BUTTON_STRIP}px)`,
     objectFit: 'contain',
   },
   fit: { cursor: 'zoom-in' },

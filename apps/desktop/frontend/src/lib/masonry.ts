@@ -7,6 +7,7 @@ export interface MasonryCell {
   top: number
   left: number
   height: number
+  column: number
 }
 
 export interface MasonryLayout {
@@ -30,27 +31,81 @@ export function masonryColumns(containerWidth: number, minColumnWidth: number, g
  * Places each item, in order, at the bottom of the currently shortest column
  * (leftmost on ties). Heights come from aspect ratios, so no measuring is
  * needed and the result depends only on the inputs.
+ *
+ * `pinned[i]`, when set and in range, keeps item i in that column instead:
+ * items that stay put when others leave the grid then only slide up within
+ * their own column, rather than the whole grid reshuffling.
  */
 export function layoutMasonry(
   aspectRatios: readonly number[],
   containerWidth: number,
   minColumnWidth: number,
   gutter: number,
+  pinned: readonly (number | undefined)[] = [],
 ): MasonryLayout {
   const { count, width } = masonryColumns(containerWidth, minColumnWidth, gutter)
   const columnTops = Array.from<number>({ length: count }).fill(0)
-  const cells = aspectRatios.map((ratio) => {
-    let column = 0
-    for (let i = 1; i < count; i++) {
-      if (columnTops[i] < columnTops[column])
-        column = i
+  const cells = aspectRatios.map((ratio, index) => {
+    let column = pinned[index] ?? -1
+    if (column < 0 || column >= count) {
+      column = 0
+      for (let i = 1; i < count; i++) {
+        if (columnTops[i] < columnTops[column])
+          column = i
+      }
     }
     const top = columnTops[column]
     const height = width / ratio
     columnTops[column] = top + height + gutter
-    return { top, left: column * (width + gutter), height }
+    return { top, left: column * (width + gutter), height, column }
   })
   return { columnWidth: width, cells, height: Math.max(Math.max(...columnTops) - gutter, 0) }
+}
+
+export type GridDirection = 'up' | 'down' | 'left' | 'right'
+
+/**
+ * How far an arrow key in `direction` travels from `origin` to `cell`, lower
+ * being nearer; undefined when `cell` is not that way at all.
+ */
+function travel(origin: MasonryCell, cell: MasonryCell, direction: GridDirection): number | undefined {
+  if (direction === 'up' || direction === 'down') {
+    const distance = direction === 'up' ? origin.top - cell.top : cell.top - origin.top
+    return cell.column === origin.column && distance > 0 ? distance : undefined
+  }
+  if (cell.column !== origin.column + (direction === 'left' ? -1 : 1))
+    return undefined
+  // Overlapping the origin's middle beats any distance.
+  const center = origin.top + origin.height / 2
+  if (cell.top <= center && center < cell.top + cell.height)
+    return 0
+  return Math.abs(cell.top + cell.height / 2 - center)
+}
+
+/**
+ * The cell an arrow key moves to from `from`, among `candidates`: up and down
+ * stay in the column, left and right go to the neighbouring column's cell
+ * nearest in height. Undefined at the grid's edge.
+ */
+export function neighborCell(
+  cells: readonly MasonryCell[],
+  from: number,
+  direction: GridDirection,
+  candidates: readonly number[],
+): number | undefined {
+  const origin = cells[from]
+  if (!origin)
+    return undefined
+  let best: number | undefined
+  let bestTravel = Infinity
+  for (const i of candidates) {
+    const distance = i === from ? undefined : travel(origin, cells[i], direction)
+    if (distance !== undefined && distance < bestTravel) {
+      best = i
+      bestTravel = distance
+    }
+  }
+  return best
 }
 
 /** Indices of the cells overlapping the vertical band [top, bottom]. */

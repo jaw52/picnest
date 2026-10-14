@@ -22,6 +22,7 @@ beforeEach(() => {
 
 function setup() {
   const store = createStore()
+  store.set(infoSidebarCollapsedAtom, false)
   const extent = motionValue(INFO_SIDEBAR_DEFAULT_WIDTH)
   render(
     <Provider store={store}>

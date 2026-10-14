@@ -1,3 +1,4 @@
+import type { DeleteResult, TrashedPhoto } from '~/mygo'
 import type { FolderEntry } from '~/types/folder'
 import type { PhotoDetails, PhotoPage } from '~/types/photo'
 
@@ -87,8 +88,14 @@ export function downloadPlaceholder(filePath: string): Promise<void> {
   return call(App.downloadPlaceholder(filePath))
 }
 
-export function deletePhotos(folderPath: string, filePaths: string[]): Promise<void> {
+/** Moves photos to the trash; some may fail while the rest go. */
+export function deletePhotos(folderPath: string, filePaths: string[]): Promise<DeleteResult> {
   return call(App.deletePhotos(folderPath, filePaths))
+}
+
+/** Puts trashed photos back into `folderPath`, ratings and all. */
+export function restorePhotos(folderPath: string, photos: TrashedPhoto[]): Promise<void> {
+  return call(App.restorePhotos(folderPath, photos))
 }
 
 /** Moves `folderPath` itself to the system trash. */

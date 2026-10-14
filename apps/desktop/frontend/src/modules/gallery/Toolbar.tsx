@@ -7,6 +7,8 @@ import {
   filteredPhotosAtom,
   isScanningAtom,
   selectedPhotoIdsAtom,
+  THUMBNAIL_WIDTH_MAX,
+  THUMBNAIL_WIDTH_MIN,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
 import { infoSidebarCollapsedAtom } from '~/atoms/layout'
@@ -70,14 +72,15 @@ export function Toolbar() {
         // The whole track is clickable, not just the thumb, so none of it
         // may drag the window.
         <div data-no-drag {...stylex.props(styles.slider)}>
+          {/* Also ⌘= / ⌘- / ⌘0, or a pinch on the grid. */}
           <Slider
             label="缩略图"
-            min={120}
-            max={480}
+            min={THUMBNAIL_WIDTH_MIN}
+            max={THUMBNAIL_WIDTH_MAX}
             step={10}
             value={thumbnailWidth}
             onChange={setThumbnailWidth}
-            formatValue={value => `${value}px`}
+            showValue={false}
           />
         </div>
       )}

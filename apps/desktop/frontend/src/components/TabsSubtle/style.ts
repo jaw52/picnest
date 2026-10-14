@@ -49,7 +49,8 @@ export const styles = stylex.create({
     outline: 'none',
     borderRadius: radius.item,
   },
-  label: { display: 'inline-grid', whiteSpace: 'nowrap' },
+  // Tabular figures, so a changing count doesn't nudge the tabs after it.
+  label: { display: 'inline-grid', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
   // Both stacked spans carry the text-box trim so the invisible bold sizer and
   // the visible label keep identical boxes.
   labelSizer: {
@@ -65,4 +66,5 @@ export const styles = stylex.create({
   },
   active: { color: colors['--ps-foreground'] },
   inactive: { color: colors['--ps-muted-foreground'] },
+  dimmed: { opacity: 0.45 },
 })

@@ -30,3 +30,18 @@ export function ratingCounts(photos: Pick<Photo, 'rating'>[]): Record<number, nu
   }
   return counts
 }
+
+/**
+ * What to select once the photos in `removed` leave `photos` (deleted, or
+ * rated out of the filter): the first one after them, else the last before.
+ */
+export function successorOf<T extends { id: string }>(
+  photos: readonly T[],
+  removed: ReadonlySet<string>,
+): T | undefined {
+  const last = photos.findLastIndex(p => removed.has(p.id))
+  if (last === -1)
+    return undefined
+  return photos.slice(last + 1).find(p => !removed.has(p.id))
+    ?? photos.slice(0, last).findLast(p => !removed.has(p.id))
+}

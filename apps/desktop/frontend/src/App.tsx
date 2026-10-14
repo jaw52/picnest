@@ -7,6 +7,7 @@ import { currentFolderAtom, ratingFilterAtom } from '~/atoms/gallery'
 import { activeTabPathAtom } from '~/atoms/tabs'
 import { ErrorBoundary } from '~/components/ErrorBoundary'
 import { useSize } from '~/context/size'
+import { useUndoShortcut } from '~/hooks/useDeletePhoto'
 import { useFolderWatcher } from '~/hooks/useFolderWatcher'
 import { useInfoPanelExtent } from '~/hooks/useInfoPanelExtent'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
@@ -20,6 +21,7 @@ import { MasonryView } from '~/modules/gallery/MasonryView'
 import { PhotoPreview } from '~/modules/gallery/PhotoPreview'
 import { ThumbnailProgressBar } from '~/modules/gallery/ThumbnailProgressBar'
 import { Toolbar } from '~/modules/gallery/Toolbar'
+import { UndoToast } from '~/modules/gallery/UndoToast'
 import { NewTabPage } from '~/modules/tabs/NewTabPage'
 import { colors } from '~/theme/colors.stylex'
 import { radius } from '~/theme/layout.stylex'
@@ -79,6 +81,7 @@ const styles = stylex.create({
 export default function App() {
   useActiveTabSync()
   useTabShortcuts()
+  useUndoShortcut()
   const isDraggingOver = useFolderDrop()
   const tabPath = useAtomValue(activeTabPathAtom)
   const folder = useAtomValue(currentFolderAtom)
@@ -111,7 +114,7 @@ export default function App() {
       </div>
       {tabPath !== null && <InfoPanel extent={infoExtent} top={toolbarHeight} paddingTop={subheaderHeight} />}
       <motion.div style={{ marginRight: infoExtent }}>
-        <div ref={subheaderRef} {...stylex.props(styles.header, styles.stickAt(toolbarHeight))}>
+        <div ref={subheaderRef} data-grid-header {...stylex.props(styles.header, styles.stickAt(toolbarHeight))}>
           {tabPath !== null && <FilterBar />}
           <ThumbnailProgressBar />
         </div>
@@ -127,6 +130,7 @@ export default function App() {
       </motion.div>
       <PhotoPreview />
       <DeleteConfirmDialog />
+      <UndoToast />
       <AnimatePresence>
         {isDraggingOver && (
           <motion.div

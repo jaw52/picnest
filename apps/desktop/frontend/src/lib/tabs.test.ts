@@ -29,6 +29,12 @@ describe('tabs', () => {
     expect(activeTab(next).path).toBeNull()
   })
 
+  it('switches to the new-tab page already open rather than opening another', () => {
+    const next = withTabOpened(state(['/a', '/b', null], 0))
+    expect(paths(next)).toEqual(['/a', '/b', null])
+    expect(next.activeId).toBe('t2')
+  })
+
   it('closing the active tab focuses its right neighbour, or the left one at the end', () => {
     expect(withTabClosed(state(['/a', '/b', '/c'], 1), 't1').activeId).toBe('t2')
     expect(withTabClosed(state(['/a', '/b', '/c'], 2), 't2').activeId).toBe('t1')

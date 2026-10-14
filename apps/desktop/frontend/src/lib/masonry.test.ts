@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { cellsInRange, layoutMasonry, masonryColumns } from './masonry'
+import { cellsInRange, layoutMasonry, masonryColumns, neighborCell } from './masonry'
 
 describe('masonryColumns', () => {
   it('fits as many minimum-width columns as possible and stretches them', () => {
@@ -18,12 +18,23 @@ describe('layoutMasonry', () => {
     const layout = layoutMasonry([1, 0.5, 2, 1], 208, 100, 8)
     expect(layout.columnWidth).toBe(100)
     expect(layout.cells).toEqual([
-      { top: 0, left: 0, height: 100 },
-      { top: 0, left: 108, height: 200 },
-      { top: 108, left: 0, height: 50 },
-      { top: 166, left: 0, height: 100 },
+      { top: 0, left: 0, height: 100, column: 0 },
+      { top: 0, left: 108, height: 200, column: 1 },
+      { top: 108, left: 0, height: 50, column: 0 },
+      { top: 166, left: 0, height: 100, column: 0 },
     ])
     expect(layout.height).toBe(266)
+  })
+
+  it('keeps pinned items in their column, placing the rest as usual', () => {
+    const layout = layoutMasonry([1, 1, 1], 208, 100, 8, [1, undefined, 1])
+    expect(layout.cells.map(c => c.column)).toEqual([1, 0, 1])
+    expect(layout.cells[2].top).toBe(108)
+  })
+
+  it('ignores a pinned column that no longer exists', () => {
+    const layout = layoutMasonry([1], 208, 100, 8, [5])
+    expect(layout.cells[0].column).toBe(0)
   })
 
   it('is empty for no items', () => {
@@ -31,12 +42,34 @@ describe('layoutMasonry', () => {
   })
 })
 
+describe('neighborCell', () => {
+  // Column 0: cells 0 (0-100), 2 (108-158), 3 (166-266); column 1: cell 1 (0-200).
+  const { cells } = layoutMasonry([1, 0.5, 2, 1], 208, 100, 8)
+  const all = [0, 1, 2, 3]
+
+  it('moves up and down within the column', () => {
+    expect(neighborCell(cells, 2, 'down', all)).toBe(3)
+    expect(neighborCell(cells, 2, 'up', all)).toBe(0)
+    expect(neighborCell(cells, 0, 'up', all)).toBeUndefined()
+  })
+
+  it('moves sideways to the cell nearest in height', () => {
+    expect(neighborCell(cells, 3, 'right', all)).toBe(1)
+    expect(neighborCell(cells, 1, 'left', all)).toBe(2)
+    expect(neighborCell(cells, 1, 'right', all)).toBeUndefined()
+  })
+
+  it('only lands on candidates', () => {
+    expect(neighborCell(cells, 2, 'up', [1, 2, 3])).toBeUndefined()
+  })
+})
+
 describe('cellsInRange', () => {
   it('returns the cells overlapping the band', () => {
     const cells = [
-      { top: 0, left: 0, height: 100 },
-      { top: 108, left: 0, height: 100 },
-      { top: 216, left: 0, height: 100 },
+      { top: 0, left: 0, height: 100, column: 0 },
+      { top: 108, left: 0, height: 100, column: 0 },
+      { top: 216, left: 0, height: 100, column: 0 },
     ]
     expect(cellsInRange(cells, 150, 220)).toEqual([1, 2])
     expect(cellsInRange(cells, 400, 500)).toEqual([])

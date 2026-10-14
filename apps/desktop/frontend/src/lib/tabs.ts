@@ -30,8 +30,14 @@ export function activeTab(state: TabsState): Tab {
   return state.tabs.find(t => t.id === state.activeId) ?? state.tabs[0]
 }
 
-/** Opens a new tab right after the active one and switches to it. */
+/**
+ * Opens a new tab right after the active one and switches to it. A new-tab
+ * page that is already open is switched to instead of opening another.
+ */
 export function withTabOpened(state: TabsState, path: string | null = null): TabsState {
+  const blank = path === null ? state.tabs.find(t => t.path === null) : undefined
+  if (blank)
+    return withTabActivated(state, blank.id)
   const tab = createTab(path)
   const index = state.tabs.findIndex(t => t.id === state.activeId)
   const tabs = [...state.tabs]

@@ -4,6 +4,13 @@ import { call, event } from "mygo-runtime";
 
 // ---- Types ----
 
+/** DeleteResult reports a batch delete that may have partially succeeded. */
+export interface DeleteResult {
+  /** Trashed are the photos now in the trash, which RestorePhotos can put back. */
+  trashed: TrashedPhoto[];
+  failures: string[];
+}
+
 /** DialogKind selects the icon of a message dialog. */
 export type DialogKind = "info" | "warning" | "error";
 
@@ -45,6 +52,16 @@ export interface PhotoPage {
   total: number;
 }
 
+/**
+ * TrashedPhoto is a photo moved to the trash: where it went there, and the
+ * rating it had, which RestorePhotos puts back with it.
+ */
+export interface TrashedPhoto {
+  path: string;
+  trashPath: string;
+  rating: number;
+}
+
 // ---- Services ----
 
 /** App is the service bound to the frontend. */
@@ -59,7 +76,7 @@ export const App = {
   deleteFolder(folderPath: string): Promise<void> {
     return call("App.DeleteFolder", folderPath);
   },
-  deletePhotos(folderPath: string, filePaths: string[]): Promise<void> {
+  deletePhotos(folderPath: string, filePaths: string[]): Promise<DeleteResult> {
     return call("App.DeletePhotos", folderPath, filePaths);
   },
   /**
@@ -95,6 +112,14 @@ export const App = {
   },
   renamePhoto(folderPath: string, oldName: string, newName: string): Promise<void> {
     return call("App.RenamePhoto", folderPath, oldName, newName);
+  },
+  /**
+   * RestorePhotos moves trashed photos back into folderPath with their
+   * ratings, undoing DeletePhotos. A photo whose name has since been taken
+   * stays in the trash.
+   */
+  restorePhotos(folderPath: string, photos: TrashedPhoto[]): Promise<void> {
+    return call("App.RestorePhotos", folderPath, photos);
   },
   scanFolderPage(folderPath: string, offset: number, limit: number): Promise<PhotoPage> {
     return call("App.ScanFolderPage", folderPath, offset, limit);

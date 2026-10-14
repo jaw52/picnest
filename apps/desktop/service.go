@@ -88,26 +88,80 @@ func (a *App) GetPhotoDetails(filePath string) (PhotoDetails, error) {
 	return readPhotoDetails(filePath)
 }
 
-func (a *App) DeletePhotos(folderPath string, filePaths []string) error {
+// TrashedPhoto is a photo moved to the trash: where it went there, and the
+// rating it had, which RestorePhotos puts back with it.
+type TrashedPhoto struct {
+	Path      string `json:"path"`
+	TrashPath string `json:"trashPath"`
+	Rating    int    `json:"rating"`
+}
+
+// DeleteResult reports a batch delete that may have partially succeeded.
+type DeleteResult struct {
+	// Trashed are the photos now in the trash, which RestorePhotos can put back.
+	Trashed  []TrashedPhoto `json:"trashed"`
+	Failures []string       `json:"failures"`
+}
+
+func (a *App) DeletePhotos(folderPath string, filePaths []string) (DeleteResult, error) {
+	db, err := openRatingsDB(folderPath)
+	if err != nil {
+		return DeleteResult{}, err
+	}
+	defer db.Close()
+	ratings, err := getAllRatings(db)
+	if err != nil {
+		return DeleteResult{}, err
+	}
+	result := DeleteResult{Trashed: []TrashedPhoto{}, Failures: []string{}}
+	for _, path := range filePaths {
+		trashPath, err := trashItem(path)
+		if err != nil {
+			result.Failures = append(result.Failures, fmt.Sprintf("%s: %v", filepath.Base(path), err))
+			continue
+		}
+		result.Trashed = append(result.Trashed, TrashedPhoto{
+			Path:      path,
+			TrashPath: trashPath,
+			Rating:    ratings[filepath.Base(path)],
+		})
+		// The rating goes with the file: a new file taking its name later
+		// mustn't inherit it. Undo puts it back (see RestorePhotos).
+		if err := setRating(db, filepath.Base(path), 0); err != nil {
+			result.Failures = append(result.Failures, err.Error())
+		}
+	}
+	return result, nil
+}
+
+// RestorePhotos moves trashed photos back into folderPath with their
+// ratings, undoing DeletePhotos. A photo whose name has since been taken
+// stays in the trash.
+func (a *App) RestorePhotos(folderPath string, photos []TrashedPhoto) error {
 	db, err := openRatingsDB(folderPath)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	var errs []error
-	for _, path := range filePaths {
-		if err := mygo.Shell.TrashItem(path); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", filepath.Base(path), err))
+	var msgs []string
+	for _, p := range photos {
+		name := filepath.Base(p.Path)
+		if _, err := os.Lstat(p.Path); err == nil {
+			msgs = append(msgs, fmt.Sprintf("「%s」已存在，未能放回", name))
+			continue
 		}
-		// A batch can partially succeed: only clear ratings for files that
-		// are confirmed gone.
-		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-			if err := setRating(db, filepath.Base(path), 0); err != nil {
-				errs = append(errs, err)
-			}
+		if err := moveFile(p.TrashPath, p.Path); err != nil {
+			msgs = append(msgs, fmt.Sprintf("「%s」：%v", name, err))
+			continue
+		}
+		if err := setRating(db, name, p.Rating); err != nil {
+			msgs = append(msgs, fmt.Sprintf("「%s」评分未能恢复：%v", name, err))
 		}
 	}
-	return errors.Join(errs...)
+	if len(msgs) > 0 {
+		return errors.New(strings.Join(msgs, "\n"))
+	}
+	return nil
 }
 
 // DownloadPlaceholder asks iCloud Drive to fetch a not-yet-downloaded file.

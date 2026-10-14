@@ -16,9 +16,10 @@ export const infoSidebarWidthAtom = atomWithStorage(
   undefined,
   { getOnInit: true },
 )
+/** Collapsed until something is selected: an empty panel would only take room from the grid. */
 export const infoSidebarCollapsedAtom = atomWithStorage(
   'picnest.infoSidebarCollapsed',
-  false,
+  true,
   undefined,
   { getOnInit: true },
 )

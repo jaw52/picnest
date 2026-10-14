@@ -1,10 +1,11 @@
 import type { RatingFilter } from '~/lib/photo'
+import type { TrashedPhoto } from '~/mygo'
 import type { FolderEntry } from '~/types/folder'
 import type { Photo } from '~/types/photo'
 
 import { atom } from 'jotai'
 import { atomWithStorage, selectAtom } from 'jotai/utils'
-import { filterPhotosByRating } from '~/lib/photo'
+import { filterPhotosByRating, matchesRatingFilter, successorOf } from '~/lib/photo'
 
 export const currentFolderAtom = atom<string | null>(null)
 export const photosAtom = atom<Photo[]>([])
@@ -13,6 +14,8 @@ export const subfoldersAtom = atom<FolderEntry[]>([])
 /** Total photo count reported by the backend, ahead of `photosAtom` fully loading in via pagination. */
 export const photosTotalAtom = atom<number>(0)
 export const isScanningAtom = atom<boolean>(false)
+export const THUMBNAIL_WIDTH_MIN = 120
+export const THUMBNAIL_WIDTH_MAX = 480
 export const thumbnailWidthAtom = atomWithStorage('picnest.thumbnailWidth', 240)
 /**
  * Tracks the folder's background thumbnail prefetch (see
@@ -38,8 +41,76 @@ export const ratingFilterAtom = atom<RatingFilter>(null)
 export const selectedPhotoIdAtom = atom<string | null>(null)
 /** All photos currently highlighted in the grid. */
 export const selectedPhotoIdsAtom = atom(new Set<string>())
+const previewIdBaseAtom = atom<string | null>(null)
+/**
+ * The photos the viewer pages through: the grid's, as they were when it
+ * opened. Frozen, so rating a photo out of the filter doesn't pull it from
+ * under the viewer.
+ */
+const previewIdsAtom = atom<string[]>([])
+
 /** Non-null while the full-size single-photo viewer is open. */
-export const previewPhotoIdAtom = atom<string | null>(null)
+export const previewPhotoIdAtom = atom(
+  get => get(previewIdBaseAtom),
+  (get, set, id: string | null) => {
+    if (id === null)
+      set(previewIdsAtom, [])
+    else if (get(previewIdBaseAtom) === null)
+      set(previewIdsAtom, get(filteredPhotosAtom).map(p => p.id))
+    set(previewIdBaseAtom, id)
+  },
+)
+
+/** A request for the grid to scroll a photo into view and focus it. */
+export const revealPhotoAtom = atom<{ id: string } | null>(null)
+
+/** Selects just `id`, as a plain click does, and brings it into view. */
+export const selectPhotoAtom = atom(null, (_get, set, id: string) => {
+  set(selectedPhotoIdsAtom, new Set([id]))
+  set(selectedPhotoIdAtom, id)
+  set(revealPhotoAtom, { id })
+})
+
+/** The photo whose name the info panel should start editing. */
+export const renamingPhotoIdAtom = atom<string | null>(null)
+
+/** The last deletion, while it can still be undone. */
+export interface UndoableDeletion {
+  folderPath: string
+  trashed: TrashedPhoto[]
+}
+export const undoableDeletionAtom = atom<UndoableDeletion | null>(null)
+
+/**
+ * Moves the selection on once the photos in `removed` leave the grid, which
+ * showed `before`: selected photos that stay remain selected; if none does,
+ * the photo after the removed ones is selected instead, so a delete or a
+ * rating key can be pressed again for the next photo.
+ */
+export const selectAfterRemovalAtom = atom(
+  null,
+  (get, set, removed: ReadonlySet<string>, before: readonly Photo[]) => {
+    const selected = get(selectedPhotoIdsAtom)
+    if (![...selected].some(id => removed.has(id)))
+      return
+    const kept = new Set([...selected].filter(id => !removed.has(id)))
+    if (kept.size > 0) {
+      set(selectedPhotoIdsAtom, kept)
+      const anchorId = get(selectedPhotoIdAtom)
+      if (anchorId && removed.has(anchorId))
+        set(selectedPhotoIdAtom, null)
+      return
+    }
+    const next = successorOf(before, removed)
+    if (next) {
+      set(selectPhotoAtom, next.id)
+    }
+    else {
+      set(selectedPhotoIdsAtom, new Set())
+      set(selectedPhotoIdAtom, null)
+    }
+  },
+)
 
 export interface DeleteConfirmRequest {
   folderPath: string
@@ -49,8 +120,8 @@ export interface DeleteConfirmRequest {
 }
 
 /**
- * Non-null while the bulk-delete confirmation (see DeleteConfirmDialog) is open.
- * A single photo is confirmed with the native dialog instead.
+ * Non-null while the delete confirmation (see DeleteConfirmDialog) is open,
+ * for one photo or many.
  */
 export const deleteConfirmRequestAtom = atom<DeleteConfirmRequest | null>(null)
 
@@ -71,6 +142,16 @@ export const prefetchPathsAtom = selectAtom(
   (a, b) => a.length === b.length && a.every((path, i) => path === b[i]),
 )
 
+/**
+ * The grid's one Tab stop, as a listbox has: the last photo clicked or moved
+ * to, else the first. Arrow keys move on from there.
+ */
+export const gridTabStopIdAtom = atom((get) => {
+  const photos = get(filteredPhotosAtom)
+  const anchorId = get(selectedPhotoIdAtom)
+  return photos.some(p => p.id === anchorId) ? anchorId : photos[0]?.id ?? null
+})
+
 /** The info sidebar only shows details for a single-photo selection. */
 export const selectedPhotoAtom = atom((get) => {
   const ids = get(selectedPhotoIdsAtom)
@@ -80,19 +161,49 @@ export const selectedPhotoAtom = atom((get) => {
   return get(filteredPhotosAtom).find(p => p.id === id) ?? null
 })
 
+/** The photos the viewer pages through, with their current ratings and names. */
+export const previewPhotosAtom = atom((get) => {
+  const byId = new Map(get(photosAtom).map(p => [p.id, p]))
+  return get(previewIdsAtom).flatMap(id => byId.get(id) ?? [])
+})
+
 export const previewPhotoAtom = atom((get) => {
   const id = get(previewPhotoIdAtom)
   if (!id)
     return null
-  return get(filteredPhotosAtom).find(p => p.id === id) ?? null
+  return get(photosAtom).find(p => p.id === id) ?? null
 })
 
-export const setPhotoRatingAtom = atom(null, (get, set, photoId: string, rating: number) => {
-  const photos = get(photosAtom)
+/**
+ * Closes the viewer and selects, in the grid, the photo it was showing - or
+ * the next one still in the grid, if that one was rated out of the filter.
+ */
+export const closePreviewAtom = atom(null, (get, set) => {
+  const id = get(previewPhotoIdAtom)
+  if (id === null)
+    return
+  const shown = get(previewPhotosAtom)
+  set(previewPhotoIdAtom, null)
+  const inGrid = new Set(get(filteredPhotosAtom).map(p => p.id))
+  const gone = new Set(shown.filter(p => !inGrid.has(p.id)).map(p => p.id))
+  const target = inGrid.has(id) ? id : successorOf(shown, gone)?.id
+  if (target)
+    set(selectPhotoAtom, target)
+})
+
+/**
+ * Rates photos. Selected photos rated out of the filter leave the grid, so
+ * the selection moves on to the photo after them, ready for the next rating.
+ */
+export const setPhotoRatingAtom = atom(null, (get, set, photoIds: string[], rating: number) => {
+  const ids = new Set(photoIds)
+  const before = get(filteredPhotosAtom)
   set(
     photosAtom,
-    photos.map(p => (p.id === photoId ? { ...p, rating } : p)),
+    get(photosAtom).map(p => (ids.has(p.id) ? { ...p, rating } : p)),
   )
+  if (!matchesRatingFilter({ rating }, get(ratingFilterAtom)))
+    set(selectAfterRemovalAtom, ids, before)
 })
 
 /**
@@ -119,28 +230,8 @@ export const renamePhotoAtom = atom(
     })
     if (get(selectedPhotoIdAtom) === photoId)
       set(selectedPhotoIdAtom, newPath)
+    set(previewIdsAtom, ids => ids.map(id => (id === photoId ? newPath : id)))
     if (get(previewPhotoIdAtom) === photoId)
       set(previewPhotoIdAtom, newPath)
   },
 )
-
-export const removePhotosAtom = atom(null, (get, set, photoIds: string[]) => {
-  const ids = new Set(photoIds)
-  set(
-    photosAtom,
-    get(photosAtom).filter(p => !ids.has(p.id)),
-  )
-  set(selectedPhotoIdsAtom, (prev) => {
-    if (![...prev].some(id => ids.has(id)))
-      return prev
-    const next = new Set(prev)
-    ids.forEach(id => next.delete(id))
-    return next
-  })
-  const anchorId = get(selectedPhotoIdAtom)
-  if (anchorId && ids.has(anchorId))
-    set(selectedPhotoIdAtom, null)
-  const previewId = get(previewPhotoIdAtom)
-  if (previewId && ids.has(previewId))
-    set(previewPhotoIdAtom, null)
-})

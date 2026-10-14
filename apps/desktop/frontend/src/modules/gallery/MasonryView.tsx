@@ -1,11 +1,17 @@
+import type { GridDirection, MasonryLayout } from '~/lib/masonry'
+import type { FolderEntry } from '~/types/folder'
+import type { Photo } from '~/types/photo'
 import * as stylex from '@stylexjs/stylex'
-import { useAtomValue } from 'jotai'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useAtom, useAtomValue } from 'jotai'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   currentFolderAtom,
   filteredPhotosAtom,
   isScanningAtom,
   photosTotalAtom,
+  previewPhotoIdAtom,
+  ratingFilterAtom,
+  revealPhotoAtom,
   subfoldersAtom,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
@@ -14,8 +20,9 @@ import { useGridShortcuts } from '~/hooks/useGridShortcuts'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
 import { useTabs } from '~/hooks/useTabs'
 import { thumbnailEdgeFor } from '~/hooks/useThumbnail'
+import { useThumbnailPinch } from '~/hooks/useThumbnailPinch'
 import { useThumbnailPrefetch } from '~/hooks/useThumbnailPrefetch'
-import { cellsInRange, layoutMasonry } from '~/lib/masonry'
+import { cellsInRange, layoutMasonry, masonryColumns, neighborCell } from '~/lib/masonry'
 import { FolderTile } from '~/modules/tabs/FolderCard'
 import { colors } from '~/theme/colors.stylex'
 import { text } from '~/theme/text'
@@ -29,6 +36,51 @@ const COLUMN_GUTTER = 12
 const SCROLL_STEP = 100
 /** A subfolder tile's width over its height. */
 const FOLDER_TILE_ASPECT_RATIO = 4 / 3
+/** Room kept between a revealed photo and the edges of the visible grid. */
+const REVEAL_MARGIN = 12
+
+type GridInputs = readonly [
+  subfolders: FolderEntry[],
+  photos: Photo[],
+  containerWidth: number,
+  columnWidth: number,
+  folderPath: string | null,
+  ratingFilter: number | null,
+]
+
+interface GridLayout {
+  inputs: GridInputs
+  layout: MasonryLayout
+  /** What the tiles' columns were laid out for; a change of it starts afresh. */
+  key: string
+  columnByTile: Map<string, number>
+}
+
+/** Lays out the subfolders, then the photos, keeping tiles in the columns `previous` gave them. */
+function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout {
+  const [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter] = inputs
+  const tiles = [...subfolders.map(f => `folder:${f.path}`), ...photos.map(p => p.id)]
+  const { count } = masonryColumns(containerWidth, columnWidth, COLUMN_GUTTER)
+  const key = `${folderPath}|${ratingFilter}|${count}`
+  const kept = previous?.key === key ? previous.columnByTile : new Map<string, number>()
+  const layout = layoutMasonry(
+    [...subfolders.map(() => FOLDER_TILE_ASPECT_RATIO), ...photos.map(p => p.aspectRatio)],
+    containerWidth,
+    columnWidth,
+    COLUMN_GUTTER,
+    tiles.map(tile => kept.get(tile)),
+  )
+  // Tiles that left keep their column too, so an undone delete (or a rating
+  // undone) puts the photo back where it was.
+  const columnByTile = new Map(kept)
+  tiles.forEach((tile, i) => columnByTile.set(tile, layout.cells[i].column))
+  return { inputs, layout, key, columnByTile }
+}
+
+/** The bottom of the sticky bars over the grid, in viewport coordinates. */
+function gridHeaderBottom() {
+  return document.querySelector('[data-grid-header]')?.getBoundingClientRect().bottom ?? 0
+}
 
 const styles = stylex.create({
   empty: {
@@ -55,6 +107,8 @@ export function MasonryView() {
   const columnWidth = useAtomValue(thumbnailWidthAtom)
   const isScanning = useAtomValue(isScanningAtom)
   const photosTotal = useAtomValue(photosTotalAtom)
+  const ratingFilter = useAtomValue(ratingFilterAtom)
+  const previewId = useAtomValue(previewPhotoIdAtom)
   const { openFromClick } = useTabs()
   const { refreshFolder } = useOpenFolder()
   const deleteFolder = useDeleteFolder()
@@ -73,15 +127,20 @@ export function MasonryView() {
     return () => observer.disconnect()
   }, [hasItems])
 
-  const layout = useMemo(
-    () => layoutMasonry(
-      [...subfolders.map(() => FOLDER_TILE_ASPECT_RATIO), ...photos.map(p => p.aspectRatio)],
-      containerWidth,
-      columnWidth,
-      COLUMN_GUTTER,
-    ),
-    [subfolders, photos, containerWidth, columnWidth],
-  )
+  // Laid out again during render whenever an input changes, keeping each
+  // tile in its column (see layOutGrid): a photo rated out of the filter or
+  // deleted only closes up its own column, not the whole grid.
+  const inputs = [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter] as const
+  const [grid, setGrid] = useState<GridLayout | null>(null)
+  let layout: MasonryLayout
+  if (grid && inputs.every((input, i) => input === grid.inputs[i])) {
+    layout = grid.layout
+  }
+  else {
+    const next = layOutGrid(inputs, grid)
+    setGrid(next)
+    layout = next.layout
+  }
   useThumbnailPrefetch(folderPath, containerWidth > 0 ? thumbnailEdgeFor(layout.columnWidth) : 0)
 
   // Which part of the grid the window shows, in grid coordinates. Tracked
@@ -123,7 +182,67 @@ export function MasonryView() {
     [layout, viewport],
   )
 
-  useGridShortcuts()
+  // Arrow keys: from a photo to its neighbour, or from no selection to the
+  // first photo on screen.
+  const neighbor = useCallback(
+    (id: string | null, direction: GridDirection) => {
+      const offset = subfolders.length
+      const from = id === null ? -1 : photos.findIndex(p => p.id === id)
+      if (from === -1) {
+        // In grid coordinates, the first line not hidden under the bars.
+        const shownFrom = gridHeaderBottom() - (containerRef.current?.getBoundingClientRect().top ?? 0)
+        const onScreen = visible
+          .filter(i => i >= offset && layout.cells[i].top >= shownFrom)
+          .sort((a, b) => layout.cells[a].top - layout.cells[b].top || a - b)[0]
+        return photos[(onScreen ?? offset) - offset]?.id
+      }
+      const candidates = photos.map((_, i) => offset + i)
+      const to = neighborCell(layout.cells, offset + from, direction, candidates)
+      return to === undefined ? undefined : photos[to - offset].id
+    },
+    [subfolders, photos, layout, visible],
+  )
+  useGridShortcuts(neighbor)
+  useThumbnailPinch(previewId === null)
+
+  // Brings a photo into view - scrolling only as far as needed - and moves
+  // focus to it once its tile is mounted (it may be off in the virtualized
+  // part of the grid until the scroll lands).
+  const [reveal, setReveal] = useAtom(revealPhotoAtom)
+  const pendingFocusRef = useRef<string | null>(null)
+  const focusPending = useCallback(() => {
+    const id = pendingFocusRef.current
+    const tile = id === null
+      ? null
+      : containerRef.current?.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(id)}"]`)
+    if (tile) {
+      tile.focus({ preventScroll: true })
+      pendingFocusRef.current = null
+    }
+  }, [])
+  useEffect(() => {
+    if (!reveal)
+      return
+    setReveal(null)
+    const index = photos.findIndex(p => p.id === reveal.id)
+    const el = containerRef.current
+    if (index === -1 || !el)
+      return
+    const cell = layout.cells[subfolders.length + index]
+    const top = el.getBoundingClientRect().top + window.scrollY + cell.top
+    const visibleTop = window.scrollY + gridHeaderBottom() + REVEAL_MARGIN
+    const visibleBottom = window.scrollY + window.innerHeight - REVEAL_MARGIN
+    if (top < visibleTop)
+      window.scrollTo({ top: window.scrollY - (visibleTop - top) })
+    else if (top + cell.height > visibleBottom)
+      window.scrollTo({ top: window.scrollY + Math.min(top - visibleTop, top + cell.height - visibleBottom) })
+    pendingFocusRef.current = reveal.id
+    focusPending()
+  }, [reveal, setReveal, photos, subfolders, layout, focusPending])
+  // A tile scrolled to from afar mounts once the grid catches up with the scroll.
+  useLayoutEffect(() => {
+    focusPending()
+  }, [visible, focusPending])
 
   if (!hasItems) {
     // No folder yet means the active tab's folder is still being scanned

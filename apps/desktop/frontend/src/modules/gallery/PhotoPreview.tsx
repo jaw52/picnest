@@ -3,13 +3,14 @@ import type { IconComponent } from '~/lib/icon'
 import { CloseRegular, CopyRegular, Delete2Regular, LeftRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  closePreviewAtom,
   currentFolderAtom,
-  filteredPhotosAtom,
   previewPhotoAtom,
   previewPhotoIdAtom,
+  previewPhotosAtom,
 } from '~/atoms/gallery'
 import { StarRating } from '~/components/StarRating'
 import { Tooltip } from '~/components/Tooltip'
@@ -115,23 +116,22 @@ function LightboxButton({
 }
 
 export function PhotoPreview() {
-  const photos = useAtomValue(filteredPhotosAtom)
+  const photos = useAtomValue(previewPhotosAtom)
   const photo = useAtomValue(previewPhotoAtom)
-  const [, setPreviewId] = useAtom(previewPhotoIdAtom)
+  const setPreviewId = useSetAtom(previewPhotoIdAtom)
+  // Closing selects the photo last shown in the grid, which takes the focus.
+  const close = useSetAtom(closePreviewAtom)
   const folderPath = useAtomValue(currentFolderAtom)
   const deletePhoto = useDeletePhoto(folderPath)
   const rate = useRatePhoto(folderPath)
 
-  // Move focus into the lightbox while it's open and hand it back to
-  // whatever opened it (usually the tile) on close.
+  // Move focus into the lightbox while it's open; on close the grid focuses
+  // the photo last shown (see closePreviewAtom).
   const overlayRef = useRef<HTMLDivElement>(null)
   const isOpen = photo !== null
   useEffect(() => {
-    if (!isOpen)
-      return
-    const opener = document.activeElement as HTMLElement | null
-    overlayRef.current?.focus()
-    return () => opener?.focus()
+    if (isOpen)
+      overlayRef.current?.focus()
   }, [isOpen])
 
   // The lightbox fades its photo in when it opens, but swaps photos in place
@@ -202,7 +202,7 @@ export function PhotoPreview() {
       if (e.key === 'Escape' || e.key === ' ') {
         e.preventDefault()
         if (!e.repeat)
-          setPreviewId(null)
+          close()
       }
       else if (e.key === 'ArrowLeft') {
         goTo(-1)
@@ -218,12 +218,12 @@ export function PhotoPreview() {
       else {
         const rating = ratingFromKey(e)
         if (rating !== null)
-          rate(current, rating)
+          rate([current], rating)
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [photo, goTo, setPreviewId, deletePhoto, rate])
+  }, [photo, goTo, close, deletePhoto, rate])
 
   return (
     <AnimatePresence>
@@ -239,7 +239,7 @@ export function PhotoPreview() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: spring.slow.exit }}
           transition={spring.slow}
-          onClick={() => setPreviewId(null)}
+          onClick={close}
           onWheel={onWheel}
         >
           {photo.isCloudPlaceholder
@@ -267,7 +267,7 @@ export function PhotoPreview() {
             label="关闭"
             icon={CloseRegular}
             position="close"
-            onClick={() => setPreviewId(null)}
+            onClick={close}
           />
           {index > 0 && (
             <LightboxButton
@@ -297,7 +297,7 @@ export function PhotoPreview() {
               <span {...stylex.props(styles.captionCount)}>{`${index + 1} / ${photos.length}`}</span>
             )}
             <span {...stylex.props(styles.captionRating)}>
-              <StarRating rating={photo.rating} onChange={r => rate(photo, r)} size={14} onImage />
+              <StarRating rating={photo.rating} onChange={r => rate([photo], r)} size={14} onImage />
             </span>
           </div>
         </motion.div>

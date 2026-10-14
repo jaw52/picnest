@@ -2,7 +2,7 @@ import type { Photo, PhotoMeta } from '~/types/photo'
 
 import { describe, expect, it } from 'vitest'
 
-import { filterPhotosByRating, matchesRatingFilter, ratingCounts, toPhoto } from './photo'
+import { filterPhotosByRating, matchesRatingFilter, ratingCounts, successorOf, toPhoto } from './photo'
 
 function photo(overrides: Partial<Photo> = {}): Photo {
   return {
@@ -109,5 +109,26 @@ describe('ratingCounts', () => {
 
   it('returns all-zero buckets for an empty list', () => {
     expect(ratingCounts([])).toEqual({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 })
+  })
+})
+
+describe('successorOf', () => {
+  const photos = ['a', 'b', 'c', 'd', 'e'].map(id => ({ id }))
+  const ids = (...list: string[]) => new Set(list)
+
+  it('picks the first photo after the removed ones', () => {
+    expect(successorOf(photos, ids('b'))?.id).toBe('c')
+    expect(successorOf(photos, ids('b', 'c'))?.id).toBe('d')
+    expect(successorOf(photos, ids('a', 'c'))?.id).toBe('d')
+  })
+
+  it('falls back to the last one before them at the end of the list', () => {
+    expect(successorOf(photos, ids('e'))?.id).toBe('d')
+    expect(successorOf(photos, ids('b', 'd', 'e'))?.id).toBe('c')
+  })
+
+  it('is undefined when nothing is left or nothing was removed', () => {
+    expect(successorOf(photos, ids('a', 'b', 'c', 'd', 'e'))).toBeUndefined()
+    expect(successorOf(photos, ids('z'))).toBeUndefined()
   })
 })

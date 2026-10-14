@@ -2,11 +2,12 @@ import type { ReactNode } from 'react'
 import type { Photo } from '~/types/photo'
 import { CopyRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
-import { useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
 import {
   currentFolderAtom,
   filteredPhotosAtom,
+  renamingPhotoIdAtom,
   selectedPhotoAtom,
   selectedPhotoIdsAtom,
 } from '~/atoms/gallery'
@@ -118,18 +119,30 @@ function Section({ title, children }: { title: string, children: ReactNode }) {
   )
 }
 
-/** Double-click to rename (synced to the real file on disk); click the icon to copy. */
+/**
+ * Double-click (or 重命名 in a photo's context menu) to rename, synced to the
+ * real file on disk; click the icon to copy.
+ */
 function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: string) => void }) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(photo.fileName)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [renamingId, setRenamingId] = useAtom(renamingPhotoIdAtom)
+
+  // A rename asked for from elsewhere (the grid's context menu); the
+  // request is cleared once editing starts.
+  if (renamingId === photo.id && !isEditing) {
+    setDraft(photo.fileName)
+    setIsEditing(true)
+  }
 
   useEffect(() => {
     if (isEditing) {
+      setRenamingId(null)
       inputRef.current?.focus()
       inputRef.current?.select()
     }
-  }, [isEditing])
+  }, [isEditing, setRenamingId])
 
   function startEditing() {
     setDraft(photo.fileName)
@@ -297,7 +310,7 @@ export function InfoSidebar() {
         <FileNameRow photo={photo} onRename={newName => void renamePhoto(photo, newName)} />
         <Tooltip content="选中后按 0–5 键评分" side="bottom">
           <div {...stylex.props(styles.rating)}>
-            <StarRating rating={photo.rating} onChange={r => rate(photo, r)} />
+            <StarRating rating={photo.rating} onChange={r => rate([photo], r)} />
           </div>
         </Tooltip>
       </div>
