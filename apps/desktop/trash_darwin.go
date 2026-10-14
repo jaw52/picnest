@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"runtime"
 	"sync"
 	"unsafe"
 
@@ -89,6 +90,10 @@ func trashItem(path string) (string, error) {
 	if err := loadObjC(); err != nil {
 		return "", err
 	}
+	// An autorelease pool belongs to a thread: pop it on the one it was
+	// pushed on.
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	pool := objc.PoolPush()
 	defer objc.PoolPop(pool)
 
