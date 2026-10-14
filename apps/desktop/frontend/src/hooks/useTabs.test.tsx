@@ -46,14 +46,16 @@ it('puts a tab\'s scroll position, filter and selection back when it is switched
   act(() => store.set(tabsStateAtom, prev => ({ ...prev, activeId: b.id })))
   // The grid keeps the previous folder until the next one has loaded.
   expect(store.get(photosAtom).map(p => p.id)).toEqual(['/a/1.jpg', '/a/2.jpg'])
+  // It loads once the tab strip has painted the switch.
+  await waitFor(() => expect(store.get(photosAtom).map(p => p.id)).toEqual(['/b/1.jpg', '/b/2.jpg']))
   await waitFor(() => expect(store.get(isScanningAtom)).toBe(false))
   // The other tab starts unfiltered, unselected and at the top.
-  expect(store.get(photosAtom).map(p => p.id)).toEqual(['/b/1.jpg', '/b/2.jpg'])
   expect(store.get(ratingFilterAtom)).toBe(null)
   expect(store.get(selectedPhotoIdsAtom).size).toBe(0)
   expect(store.get(pendingScrollAtom)).toBe(0)
 
   act(() => store.set(tabsStateAtom, prev => ({ ...prev, activeId: a.id })))
+  await waitFor(() => expect(store.get(photosAtom).map(p => p.id)).toEqual(['/a/1.jpg', '/a/2.jpg']))
   await waitFor(() => expect(store.get(isScanningAtom)).toBe(false))
   expect(store.get(ratingFilterAtom)).toBe(0)
   expect(store.get(pendingScrollAtom)).toBe(420)

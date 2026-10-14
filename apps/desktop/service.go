@@ -85,6 +85,12 @@ func (a *App) SetRating(folderPath, fileName string, rating int) error {
 	return setRating(db, fileName, rating)
 }
 
+// IsICloudFolder reports whether a folder is in iCloud Drive, including a
+// Desktop or Documents folder synced to it.
+func (a *App) IsICloudFolder(folderPath string) bool {
+	return isICloudItem(folderPath)
+}
+
 func (a *App) ListSubfolders(folderPath string) ([]FolderEntry, error) {
 	return listSubfolders(folderPath)
 }

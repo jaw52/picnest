@@ -27,6 +27,9 @@ export const colors = stylex.defineVars({
   // Light `muted` decouples from surface2: the light ladder is so compressed
   // that anything sitting on it (the tab track) would blend into the page.
   '--ps-muted': { default: '#f4f4f5', [dark]: '#1e1e1e' },
+  // The tab bar, a step below the page so the active tab, in the page's
+  // color, reads as part of it.
+  '--ps-titlebar': { default: '#ebebeb', [dark]: '#0e0e0e' },
   '--ps-muted-foreground': { default: '#737373', [dark]: '#a3a3a3' },
 
   '--ps-accent': { default: '#e5e5e5', [dark]: '#525252' },

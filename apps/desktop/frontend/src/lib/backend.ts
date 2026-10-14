@@ -79,6 +79,11 @@ export async function listSubfolders(folderPath: string): Promise<FolderEntry[]>
   return (await call(App.listSubfolders(folderPath))) ?? []
 }
 
+/** Whether a folder is in iCloud Drive, including a Desktop or Documents folder synced to it. */
+export function isICloudFolder(folderPath: string): Promise<boolean> {
+  return call(App.isICloudFolder(folderPath))
+}
+
 export function getPhotoDetails(filePath: string): Promise<PhotoDetails> {
   return call(App.getPhotoDetails(filePath)) as Promise<PhotoDetails>
 }

@@ -62,9 +62,10 @@ func main() {
 			MinWidth:      900,
 			MinHeight:     600,
 			TitleBarStyle: mygo.TitleBarHidden,
-			// Centers the traffic lights on the toolbar row (40px tall, so
-			// its midline is y=20) instead of hugging the window corner.
-			TrafficLightPosition: &mygo.Point{X: 16, Y: 13},
+			// Centers the traffic lights (14px tall) on the tabs' midline,
+			// y=24 (see the toolbar in Toolbar.tsx), instead of hugging the
+			// window corner.
+			TrafficLightPosition: &mygo.Point{X: 16, Y: 17},
 			URL:                  "/",
 		})
 		unlockFrameRate(w.NativeHandle())

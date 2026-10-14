@@ -6,6 +6,7 @@ import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '~/components/ContextMenu'
+import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
 import { useThumbnail } from '~/hooks/useThumbnail'
 import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { openPath, writeText } from '~/lib/native'
@@ -65,6 +66,86 @@ const PHOTO = {
   height: 60,
   radius: CORNER,
   border: 1.5,
+}
+
+/**
+ * The cloud an iCloud Drive folder has pressed into its front, as in Finder:
+ * three circles on a flat base, in units around (0, 0).
+ */
+const CLOUD_SHAPES = {
+  circles: [
+    { cx: 1, cy: -1, r: 6 },
+    { cx: 6, cy: 2, r: 4 },
+    { cx: -5, cy: 2.5, r: 3.5 },
+  ],
+  base: { left: -5, right: 6, top: 0.5, bottom: 6 },
+}
+
+/**
+ * The cloud's outline as points, found by casting rays from a point inside
+ * it to where the shapes' union ends. Points, unlike arcs, can be bent into
+ * the front's perspective.
+ */
+const CLOUD_OUTLINE = (() => {
+  const origin = { x: 0.5, y: 2 }
+  const { circles, base } = CLOUD_SHAPES
+  const points: { x: number, y: number }[] = []
+  const steps = 120
+  for (let i = 0; i < steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI
+    const dx = Math.cos(angle)
+    const dy = Math.sin(angle)
+    // Each shape covers a stretch of the ray; the outline is where the
+    // stretches, chained from the origin, run out.
+    const spans: [number, number][] = circles.flatMap(({ cx, cy, r }) => {
+      const ox = origin.x - cx
+      const oy = origin.y - cy
+      const b = dx * ox + dy * oy
+      const disc = b * b - (ox * ox + oy * oy - r * r)
+      return disc < 0 ? [] : [[-b - Math.sqrt(disc), -b + Math.sqrt(disc)] as [number, number]]
+    })
+    const slab = (lo: number, hi: number, o: number, d: number): [number, number] =>
+      d === 0 ? (o >= lo && o <= hi ? [-Infinity, Infinity] : [Infinity, -Infinity]) : [Math.min((lo - o) / d, (hi - o) / d), Math.max((lo - o) / d, (hi - o) / d)]
+    const sx = slab(base.left, base.right, origin.x, dx)
+    const sy = slab(base.top, base.bottom, origin.y, dy)
+    spans.push([Math.max(sx[0], sy[0]), Math.min(sx[1], sy[1])])
+    let end = 0
+    for (let grew = true; grew;) {
+      grew = false
+      for (const [from, to] of spans) {
+        if (from <= end + 1e-6 && to > end + 1e-6) {
+          end = to
+          grew = true
+        }
+      }
+    }
+    points.push({ x: origin.x + dx * end, y: origin.y + dy * end })
+  }
+  return points
+})()
+
+const FRONT_LOW_CLOSED = FRONT_HIGH_CLOSED + FRONT_RISE
+/** Where on the closed front the cloud's center sits, 0 at its top edge to 1 at its bottom. */
+const CLOUD_DEPTH = (H - 15 - FRONT_LOW_CLOSED) / (H - FRONT_LOW_CLOSED)
+/** Px per cloud unit, across the front's full top width and down the closed front. */
+const CLOUD_SCALE = 1.2
+
+/**
+ * The cloud laid on the front at `high`: narrowing toward the bottom with
+ * the front's taper, and squashed as the front tips open. `dy` shifts it
+ * down the front, in cloud units.
+ */
+function cloudOnFront(high: number, dy = 0) {
+  const low = high + FRONT_RISE
+  const depth = H - low
+  const closedDepth = H - FRONT_LOW_CLOSED
+  return `${CLOUD_OUTLINE.map(({ x, y }, i) => {
+    const v = CLOUD_DEPTH + ((y + dy) * CLOUD_SCALE) / closedDepth
+    const halfWidth = W / 2 - FRONT_TAPER * v
+    const px = W / 2 + x * CLOUD_SCALE * (halfWidth / (W / 2))
+    const py = low + v * depth
+    return `${i === 0 ? 'M' : 'L'} ${px.toFixed(2)} ${py.toFixed(2)}`
+  }).join(' ')} Z`
 }
 
 /** The back panel and its tab as one outline, the tab easing down into the top edge. */
@@ -212,12 +293,14 @@ function useCover(folderPath: string) {
  * and a frosted front - the photo blurred and clipped to the front's shape
  * under a translucent blue, which is what Finder's glass looks like.
  */
-function FolderIcon({ coverUrl, open, fluid = false }: { coverUrl: string | undefined, open: boolean, fluid?: boolean }) {
+function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUrl: string | undefined, open: boolean, iCloud?: boolean, fluid?: boolean }) {
   // One value drives the front's height; its outline, highlight and the glass
   // clip are all rebuilt from it each frame, so they move as one.
   const high = useMotionValue(FRONT_HIGH_CLOSED)
   const front = useTransform(high, frontPath)
   const topEdge = useTransform(high, frontTopEdge)
+  const cloud = useTransform(high, h => cloudOnFront(h))
+  const cloudEdge = useTransform(high, h => cloudOnFront(h, 0.5))
   const reduceMotion = useReducedMotion()
   useEffect(() => {
     const target = open ? FRONT_HIGH_OPEN : FRONT_HIGH_CLOSED
@@ -315,6 +398,13 @@ function FolderIcon({ coverUrl, open, fluid = false }: { coverUrl: string | unde
         strokeWidth={1}
         clipPath={`url(#${id}frontClip)`}
       />
+      {iCloud && (
+        // Pressed in: a darker cloud over a light edge just below it.
+        <>
+          <motion.path d={cloudEdge} fill="#fff" fillOpacity={0.5} />
+          <motion.path d={cloud} fill="#1f6fbf" fillOpacity={0.55} />
+        </>
+      )}
     </svg>
   )
 }
@@ -373,6 +463,7 @@ interface FolderCardProps {
 export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCardProps) {
   const { t } = useTranslation()
   const coverUrl = useCoverUrl(path)
+  const iCloud = useIsICloudFolder(path)
   const { open, handlers } = useOpenOnHover()
 
   return (
@@ -384,7 +475,7 @@ export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCar
         {...stylex.props(cardMarker, styles.card)}
       >
         <span aria-hidden {...stylex.props(styles.iconWell)}>
-          <FolderIcon coverUrl={coverUrl} open={open} />
+          <FolderIcon coverUrl={coverUrl} open={open} iCloud={iCloud} />
         </span>
         <span {...stylex.props(styles.name, text.caption)}>{name}</span>
       </button>
@@ -406,6 +497,7 @@ interface FolderTileProps {
 export function FolderTile({ path, name, width, height, onOpen, onDelete }: FolderTileProps) {
   const { t } = useTranslation()
   const coverUrl = useCoverUrl(path)
+  const iCloud = useIsICloudFolder(path)
   const { open, handlers } = useOpenOnHover()
 
   return (
@@ -432,7 +524,7 @@ export function FolderTile({ path, name, width, height, onOpen, onDelete }: Fold
         {...stylex.props(styles.tile, styles.tileSize(width, height))}
       >
         <span aria-hidden {...stylex.props(styles.tileIcon)}>
-          <FolderIcon coverUrl={coverUrl} open={open} fluid />
+          <FolderIcon coverUrl={coverUrl} open={open} iCloud={iCloud} fluid />
         </span>
         <span {...stylex.props(styles.tileName, utility.truncate, text.caption)}>{name}</span>
       </button>

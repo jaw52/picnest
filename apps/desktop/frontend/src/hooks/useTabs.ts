@@ -132,6 +132,17 @@ export function useTabs() {
   }
 }
 
+/**
+ * Runs `fn` once the next frame has painted: the first animation frame comes
+ * before that paint, the second after it. Returns a cancel.
+ */
+function afterNextPaint(fn: () => void) {
+  let frame = requestAnimationFrame(() => {
+    frame = requestAnimationFrame(fn)
+  })
+  return () => cancelAnimationFrame(frame)
+}
+
 /** What a tab showed when it was left, so switching back picks up there. */
 interface TabView extends FolderView {
   path: string
@@ -188,13 +199,23 @@ export function useActiveTabSync() {
     views.delete(tabId)
     const restore = view?.path === path ? view : undefined
 
-    if (path === null) {
-      closeFolder()
+    // Loading a folder renders its whole grid, which holds the main thread.
+    // On a switch, it waits for the tab strip to paint first, so the
+    // selection's slide is already on the compositor and runs through it.
+    const load = () => {
+      if (path === null) {
+        closeFolder()
+        return
+      }
+      void navigateToFolder(path, restore ?? (switched ? { ratingFilter: null } : {})).then((ok) => {
+        if (!ok)
+          closeFolderTabs(path)
+      })
+    }
+    if (!switched) {
+      load()
       return
     }
-    void navigateToFolder(path, restore ?? (switched ? { ratingFilter: null } : {})).then((ok) => {
-      if (!ok)
-        closeFolderTabs(path)
-    })
+    return afterNextPaint(load)
   }, [tabId, path, store, navigateToFolder, closeFolder, closeFolderTabs])
 }

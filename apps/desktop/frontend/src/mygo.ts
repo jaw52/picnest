@@ -124,6 +124,13 @@ export const App = {
   getPhotoDetails(filePath: string): Promise<PhotoDetails> {
     return call("App.GetPhotoDetails", filePath);
   },
+  /**
+   * IsICloudFolder reports whether a folder is in iCloud Drive, including a
+   * Desktop or Documents folder synced to it.
+   */
+  isICloudFolder(folderPath: string): Promise<boolean> {
+    return call("App.IsICloudFolder", folderPath);
+  },
   listSubfolders(folderPath: string): Promise<FolderEntry[]> {
     return call("App.ListSubfolders", folderPath);
   },

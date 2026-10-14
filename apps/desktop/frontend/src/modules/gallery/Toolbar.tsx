@@ -28,20 +28,24 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    borderBottomWidth: 1,
-    borderBottomStyle: 'solid',
-    borderBottomColor: colors['--ps-border'],
     // The toolbar occupies the window's top-left corner; keep the tabs
     // clear of the native traffic lights.
     paddingLeft: 84,
     paddingRight: 12,
     // A fixed height, so the row doesn't grow when the (taller) thumbnail
-    // slider shows: 40px plus the border, which the traffic lights are
-    // centered on (see TrafficLightPosition in main.go).
+    // slider shows. No bottom border: the active tab runs into the page.
     height: 41,
+    // Centers the controls on the tabs' midline, y=24 (28px tabs, 3px off the
+    // bottom), as are the traffic lights (TrafficLightPosition in main.go).
+    paddingTop: 7,
+    backgroundColor: colors['--ps-titlebar'],
   },
   // Empty space between the tabs and the actions - still a drag handle.
   spacer: { flexGrow: 1, minWidth: 24 },
+  // The folder's controls keep their room on the new-tab page, only hidden:
+  // the tabs, which shrink to fit, would otherwise widen at once on switching.
+  controls: { display: 'flex', flexShrink: 0, alignItems: 'center', gap: 4 },
+  hidden: { visibility: 'hidden' },
   slider: { width: 192, flexShrink: 0, marginRight: 8 },
   spinning: {
     animationName: spin,
@@ -66,9 +70,9 @@ export function Toolbar() {
     <div data-drag-region {...stylex.props(styles.toolbar)}>
       <TabStrip />
       <div {...stylex.props(styles.spacer)} />
-      {currentFolder && (
-        // The whole track is clickable, not just the thumb, so none of it
-        // may drag the window.
+      <div {...stylex.props(styles.controls, !currentFolder && styles.hidden)} aria-hidden={!currentFolder}>
+        {/* The whole track is clickable, not just the thumb, so none of it
+            may drag the window. */}
         <div data-no-drag {...stylex.props(styles.slider)}>
           {/* Also ⌘= / ⌘- / ⌘0, or a pinch on the grid. */}
           <Slider
@@ -81,24 +85,20 @@ export function Toolbar() {
             showValue={false}
           />
         </div>
-      )}
-      {currentFolder && (
         <IconButton
           label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
           icon={Delete2Regular}
           disabled={selectedIds.size === 0 || bulkDeleteBlocked}
           onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
         />
-      )}
-      {currentFolder && (
         <IconButton
           label={t('gallery.rescan')}
           icon={Refresh2Regular}
           iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
-          disabled={isScanning}
-          onClick={() => navigateToFolder(currentFolder)}
+          disabled={!currentFolder || isScanning}
+          onClick={() => currentFolder && navigateToFolder(currentFolder)}
         />
-      )}
+      </div>
     </div>
   )
 }
