@@ -8,6 +8,7 @@
     "build": "bun check && vite build",
     "build:dev": "bun check && vite build --minify false --mode development",
     "preview": "vite preview",
+    "typecheck": "bun check",
     "test": "vitest run",
     "test:watch": "vitest"
   },

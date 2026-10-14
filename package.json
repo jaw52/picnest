@@ -11,6 +11,7 @@
     "dev": "cd apps/desktop && CGO_ENABLED=0 go tool mygo dev",
     "build": "cd apps/desktop && CGO_ENABLED=0 go tool mygo build",
     "generate": "cd apps/desktop && CGO_ENABLED=0 go tool mygo generate",
+    "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test && cd apps/desktop && go test ./...",
     "lint": "oxlint && eslint . && bun run lint:go",
     "lint:fix": "oxlint --fix && eslint . --fix && gofmt -w apps/desktop/*.go",
