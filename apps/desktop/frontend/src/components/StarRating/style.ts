@@ -12,10 +12,12 @@ export const styles = stylex.create({
     borderWidth: 0,
     borderRadius: 4,
     outline: { 'default': 'none', ':focus-visible': `2px solid ${colors['--ps-focus-ring']}` },
+    transitionProperty: 'color',
+    transitionDuration: motion.fast,
   },
-  star: { transitionProperty: 'color', transitionDuration: motion.fast },
+  // Set on the buttons: an icon's own inline color is currentColor.
   filled: { color: colors['--ps-rating'] },
-  empty: { color: colors['--ps-muted-foreground'] },
-  // Drawn over a photo: empty stars stay light whatever the theme.
-  emptyOnImage: { color: 'rgb(255 255 255 / 0.7)' },
+  // Outlined in the rating's own color, on the page or over a photo alike;
+  // the "no rating" button too, solid under the pointer.
+  empty: { color: `color-mix(in srgb, ${colors['--ps-rating']} 70%, transparent)` },
 })

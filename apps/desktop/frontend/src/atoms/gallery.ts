@@ -76,7 +76,10 @@ export const selectPhotoAtom = atom(null, (_get, set, id: string) => {
   set(revealPhotoAtom, { id })
 })
 
-/** The photo whose name the info panel should start editing. */
+/** The photo whose info card is open (see PhotoInfoPopover), beside its tile. */
+export const photoInfoIdAtom = atom<string | null>(null)
+
+/** The photo whose name the info card should start editing. */
 export const renamingPhotoIdAtom = atom<string | null>(null)
 
 /** The last deletion, while it can still be undone. */
@@ -155,15 +158,6 @@ export const gridTabStopIdAtom = atom((get) => {
   const photos = get(filteredPhotosAtom)
   const anchorId = get(selectedPhotoIdAtom)
   return photos.some(p => p.id === anchorId) ? anchorId : photos[0]?.id ?? null
-})
-
-/** The info sidebar only shows details for a single-photo selection. */
-export const selectedPhotoAtom = atom((get) => {
-  const ids = get(selectedPhotoIdsAtom)
-  if (ids.size !== 1)
-    return null
-  const [id] = ids
-  return get(filteredPhotosAtom).find(p => p.id === id) ?? null
 })
 
 /** The photos the viewer pages through, with their current ratings and names. */

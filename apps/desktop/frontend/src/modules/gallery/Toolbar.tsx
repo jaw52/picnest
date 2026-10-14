@@ -1,4 +1,4 @@
-import { Delete2Regular, LayoutRightbarCloseRegular, LayoutRightbarOpenRegular, Refresh2Regular } from '@mingcute/react/core-regular'
+import { Delete2Regular, Refresh2Regular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
 import {
@@ -11,8 +11,6 @@ import {
   THUMBNAIL_WIDTH_MIN,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
-import { infoSidebarCollapsedAtom } from '~/atoms/layout'
-import { activeTabPathAtom } from '~/atoms/tabs'
 import { IconButton } from '~/components/IconButton'
 import { Slider } from '~/components/Slider'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
@@ -53,13 +51,11 @@ const styles = stylex.create({
 })
 
 export function Toolbar() {
-  const tabPath = useAtomValue(activeTabPathAtom)
   const currentFolder = useAtomValue(currentFolderAtom)
   const isScanning = useAtomValue(isScanningAtom)
   const selectedIds = useAtomValue(selectedPhotoIdsAtom)
   const photos = useAtomValue(filteredPhotosAtom)
   const bulkDeleteBlocked = useAtomValue(bulkDeleteBlockedAtom) && selectedIds.size > 1
-  const [infoCollapsed, setInfoCollapsed] = useAtom(infoSidebarCollapsedAtom)
   const [thumbnailWidth, setThumbnailWidth] = useAtom(thumbnailWidthAtom)
   const { navigateToFolder } = useOpenFolder()
   const deletePhoto = useDeletePhoto(currentFolder)
@@ -99,13 +95,6 @@ export function Toolbar() {
           iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
           disabled={isScanning}
           onClick={() => navigateToFolder(currentFolder)}
-        />
-      )}
-      {tabPath !== null && (
-        <IconButton
-          label={infoCollapsed ? '展开信息栏' : '收起信息栏'}
-          icon={infoCollapsed ? LayoutRightbarOpenRegular : LayoutRightbarCloseRegular}
-          onClick={() => setInfoCollapsed(v => !v)}
         />
       )}
     </div>

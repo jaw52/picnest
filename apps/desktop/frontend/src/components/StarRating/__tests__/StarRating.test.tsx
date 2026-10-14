@@ -17,4 +17,11 @@ describe('starRating', () => {
     fireEvent.click(screen.getByLabelText('3 星'))
     expect(onChange).toHaveBeenCalledWith(0)
   })
+
+  it('has a button that clears the rating', () => {
+    const onChange = vi.fn()
+    render(<StarRating rating={4} onChange={onChange} />)
+    fireEvent.click(screen.getByLabelText('未评分'))
+    expect(onChange).toHaveBeenCalledWith(0)
+  })
 })

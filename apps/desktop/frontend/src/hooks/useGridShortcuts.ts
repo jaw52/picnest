@@ -6,6 +6,7 @@ import {
   currentFolderAtom,
   deleteConfirmRequestAtom,
   filteredPhotosAtom,
+  photoInfoIdAtom,
   previewPhotoIdAtom,
   revealPhotoAtom,
   selectedPhotoIdAtom,
@@ -15,7 +16,6 @@ import {
   THUMBNAIL_WIDTH_MIN,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
-import { infoSidebarCollapsedAtom } from '~/atoms/layout'
 import { ratingFromKey } from '~/lib/rating-key'
 import { useDeletePhoto } from './useDeletePhoto'
 import { useRatePhoto } from './useRatePhoto'
@@ -72,8 +72,8 @@ function thumbnailWidthFromKey(e: KeyboardEvent, width: number): number | undefi
  * bulk-delete confirmation is closed:
  * arrow keys move the selection (Shift extends it), Cmd/Ctrl+A selects every
  * photo shown (respecting the filter), Space previews the selection (as Quick
- * Look does in Finder), 0-5 rate it, Delete removes it, ⌘= / ⌘- / ⌘0 resize
- * the thumbnails.
+ * Look does in Finder), ⌘I shows its info, 0-5 rate it, Delete removes it,
+ * ⌘= / ⌘- / ⌘0 resize the thumbnails.
  *
  * `neighbor` finds the photo an arrow key moves to from another, or the first
  * photo from none.
@@ -82,6 +82,7 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
   const previewId = useAtomValue(previewPhotoIdAtom)
   const confirmingDelete = useAtomValue(deleteConfirmRequestAtom) !== null
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
+  const setInfoId = useSetAtom(photoInfoIdAtom)
   const photos = useAtomValue(filteredPhotosAtom)
   const folderPath = useAtomValue(currentFolderAtom)
   const selectedIds = useAtomValue(selectedPhotoIdsAtom)
@@ -91,7 +92,6 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
   const reveal = useSetAtom(revealPhotoAtom)
   const thumbnailWidth = useAtomValue(thumbnailWidthAtom)
   const setThumbnailWidth = useSetAtom(thumbnailWidthAtom)
-  const setInfoCollapsed = useSetAtom(infoSidebarCollapsedAtom)
   const deletePhoto = useDeletePhoto(folderPath)
   const rate = useRatePhoto(folderPath)
   // The moving end of a Shift+arrow range; the anchor is the fixed one.
@@ -131,6 +131,13 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
         setPreviewId(photo.id)
     }
 
+    function showSelectionInfo(e: KeyboardEvent) {
+      e.preventDefault()
+      const photo = previewTarget(photos, selectedIds, anchorId)
+      if (photo)
+        setInfoId(photo.id)
+    }
+
     function onKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName))
@@ -154,7 +161,9 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
       else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault()
         setSelectedIds(new Set(photos.map(p => p.id)))
-        setInfoCollapsed(false)
+      }
+      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
+        showSelectionInfo(e)
       }
       else if (isPlainSpace(e)) {
         previewSelection(e)
@@ -169,5 +178,5 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [previewId, confirmingDelete, selectedIds, anchorId, photos, thumbnailWidth, neighbor, deletePhoto, rate, setSelectedIds, setInfoCollapsed, setPreviewId, selectPhoto, reveal, setThumbnailWidth])
+  }, [previewId, confirmingDelete, selectedIds, anchorId, photos, thumbnailWidth, neighbor, deletePhoto, rate, setSelectedIds, setPreviewId, setInfoId, selectPhoto, reveal, setThumbnailWidth])
 }

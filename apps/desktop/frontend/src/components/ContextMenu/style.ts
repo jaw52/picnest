@@ -46,7 +46,7 @@ export const styles = stylex.create({
   },
   rowDisabled: { opacity: 0.5, pointerEvents: 'none' },
 
-  icon: { flexShrink: 0, transitionProperty: 'color', transitionDuration: '80ms' },
+  icon: { display: 'flex', flexShrink: 0, transitionProperty: 'color', transitionDuration: '80ms' },
   lit: { color: colors['--ps-foreground'] },
   dim: { color: colors['--ps-muted-foreground'] },
   destructive: { color: colors['--ps-destructive'] },

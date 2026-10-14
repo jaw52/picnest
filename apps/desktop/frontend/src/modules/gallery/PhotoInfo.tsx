@@ -1,28 +1,30 @@
 import type { ReactNode } from 'react'
 import type { Photo } from '~/types/photo'
+import { Popover } from '@base-ui/react/popover'
 import { CopyRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
-import {
-  currentFolderAtom,
-  filteredPhotosAtom,
-  renamingPhotoIdAtom,
-  selectedPhotoAtom,
-  selectedPhotoIdsAtom,
-} from '~/atoms/gallery'
+import { currentFolderAtom, photoInfoIdAtom, photosAtom, renamingPhotoIdAtom } from '~/atoms/gallery'
 import { IconButton } from '~/components/IconButton'
 import { StarRating } from '~/components/StarRating'
 import { Tooltip } from '~/components/Tooltip'
+import { SurfaceProvider, useSurface } from '~/context/surface'
 import { usePhotoDetails } from '~/hooks/usePhotoDetails'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { useRenamePhoto } from '~/hooks/useRenamePhoto'
-import { useThumbnail } from '~/hooks/useThumbnail'
 import { fileExtension, formatFileSize, formatUnixSeconds } from '~/lib/format'
 import { writeText } from '~/lib/native'
 import { colors } from '~/theme/colors.stylex'
 import { radius } from '~/theme/layout.stylex'
+import { surfaceStyles } from '~/theme/surface'
 import { text, utility, weight } from '~/theme/text'
+
+const hidden = ':is([data-starting-style], [data-ending-style])'
+
+function tileOf(photoId: string) {
+  return document.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(photoId)}"]`)
+}
 
 const styles = stylex.create({
   row: {
@@ -57,43 +59,20 @@ const styles = stylex.create({
   nameRow: { display: 'flex', alignItems: 'center', gap: 4 },
   name: { minWidth: 0, flexGrow: 1, flexBasis: 0, cursor: 'text' },
   shrink: { flexShrink: 0 },
-  collageCell: { overflow: 'hidden', backgroundColor: colors['--ps-muted'] },
-  fill: { width: '100%', height: '100%' },
-  cover: { objectFit: 'cover' },
-  contain: { objectFit: 'contain' },
-  summary: { display: 'flex', height: '100%', flexDirection: 'column' },
-  collage: {
-    display: 'grid',
-    aspectRatio: '1 / 1',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
-    gap: 1,
-    overflow: 'hidden',
-    backgroundColor: colors['--ps-border'],
-  },
-  summaryCount: {
-    paddingInline: 12,
-    paddingBlock: 8,
-    textAlign: 'center',
-    color: colors['--ps-muted-foreground'],
-  },
-  empty: {
-    display: 'flex',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    textAlign: 'center',
-    color: colors['--ps-muted-foreground'],
-  },
-  detail: { display: 'flex', height: '100%', flexDirection: 'column', overflowY: 'auto' },
-  preview: {
-    display: 'flex',
-    aspectRatio: '1 / 1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: colors['--ps-muted'],
+  positioner: { zIndex: 50 },
+  popup: {
+    boxSizing: 'border-box',
+    width: 280,
+    maxHeight: 'var(--available-height)',
+    overflowY: 'auto',
+    borderRadius: radius.container,
+    outline: 'none',
+    transformOrigin: 'var(--transform-origin)',
+    opacity: { default: 1, [hidden]: 0 },
+    transform: { default: 'none', [hidden]: 'scale(0.97)' },
+    transitionProperty: 'opacity, transform',
+    transitionDuration: '120ms',
+    transitionTimingFunction: 'ease-out',
   },
   info: { paddingInline: 12, paddingBlock: 8 },
   rating: { marginTop: 6 },
@@ -191,121 +170,13 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
   )
 }
 
-// One key per collage cell; cells without a photo keep these.
-const COLLAGE_SLOT_KEYS = ['slot-1', 'slot-2', 'slot-3', 'slot-4']
-
-function CollageThumb({ folderPath, photo }: { folderPath: string | null, photo?: Photo }) {
-  const thumbnailUrl = useThumbnail(
-    folderPath,
-    photo?.path ?? '',
-    960,
-    !!photo && !photo.isCloudPlaceholder,
-  )
-  return (
-    <div {...stylex.props(styles.collageCell)}>
-      {photo && thumbnailUrl && (
-        <img src={thumbnailUrl} alt="" {...stylex.props(styles.fill, styles.cover)} draggable={false} />
-      )}
-    </div>
-  )
-}
-
-function MultiSelectionSummary({
-  folderPath,
-  photos,
-}: {
-  folderPath: string | null
-  photos: Photo[]
-}) {
-  const shown = photos.slice(0, COLLAGE_SLOT_KEYS.length)
-
-  return (
-    <div {...stylex.props(styles.summary)}>
-      <div {...stylex.props(styles.collage)}>
-        {shown.map(photo => (
-          <CollageThumb key={photo.id} folderPath={folderPath} photo={photo} />
-        ))}
-        {COLLAGE_SLOT_KEYS.slice(shown.length).map(key => (
-          <CollageThumb key={key} folderPath={folderPath} />
-        ))}
-      </div>
-      <div {...stylex.props(styles.summaryCount, text.caption)}>
-        {photos.length}
-        {' '}
-        个选中对象
-      </div>
-    </div>
-  )
-}
-
-export function InfoSidebar() {
-  const folderPath = useAtomValue(currentFolderAtom)
-  const selectedIds = useAtomValue(selectedPhotoIdsAtom)
-  const filteredPhotos = useAtomValue(filteredPhotosAtom)
-  const photo = useAtomValue(selectedPhotoAtom)
+function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
   const rate = useRatePhoto(folderPath)
   const renamePhoto = useRenamePhoto(folderPath)
-  const thumbnailUrl = useThumbnail(
-    folderPath,
-    photo?.path ?? '',
-    960,
-    !!photo && !photo.isCloudPlaceholder,
-  )
-  const { details } = usePhotoDetails(photo?.path ?? null)
-
-  // Preload before swapping so the previous thumbnail stays on screen
-  // instead of a blank/white flash while the new one decodes. Resetting to
-  // undefined when there's no url happens during render (not in the effect
-  // below) since it's a synchronous response to thumbnailUrl changing.
-  const [displayUrl, setDisplayUrl] = useState<string | undefined>(thumbnailUrl)
-  const [prevThumbnailUrl, setPrevThumbnailUrl] = useState(thumbnailUrl)
-  if (thumbnailUrl !== prevThumbnailUrl) {
-    setPrevThumbnailUrl(thumbnailUrl)
-    if (!thumbnailUrl)
-      setDisplayUrl(undefined)
-  }
-
-  useEffect(() => {
-    if (!thumbnailUrl)
-      return
-    const img = new Image()
-    img.src = thumbnailUrl
-    img.onload = () => setDisplayUrl(thumbnailUrl)
-    return () => {
-      img.onload = null
-    }
-  }, [thumbnailUrl])
-
-  if (selectedIds.size > 1) {
-    return (
-      <MultiSelectionSummary
-        folderPath={folderPath}
-        photos={filteredPhotos.filter(p => selectedIds.has(p.id))}
-      />
-    )
-  }
-
-  if (!photo) {
-    return (
-      <div {...stylex.props(styles.empty, text.caption)}>
-        选择一张图片查看详情
-      </div>
-    )
-  }
+  const { details } = usePhotoDetails(photo.path)
 
   return (
-    <div {...stylex.props(styles.detail)}>
-      <div {...stylex.props(styles.preview)}>
-        {displayUrl && (
-          <img
-            src={displayUrl}
-            alt={photo.fileName}
-            {...stylex.props(styles.fill, styles.contain)}
-            draggable={false}
-          />
-        )}
-      </div>
-
+    <>
       <div {...stylex.props(styles.info)}>
         <FileNameRow photo={photo} onRename={newName => void renamePhoto(photo, newName)} />
         <Tooltip content="选中后按 0–5 键评分" side="bottom">
@@ -338,6 +209,82 @@ export function InfoSidebar() {
           {details.exif.takenAt && <Row label="拍摄时间" value={details.exif.takenAt} />}
         </Section>
       )}
-    </div>
+    </>
+  )
+}
+
+/**
+ * The card beside a photo's tile, opened from its context menu or ⌘I. It
+ * floats over the page, so opening it leaves the grid as it is. It closes
+ * once its tile is gone: deleted, filtered out, or scrolled far enough to be
+ * unmounted.
+ */
+function PhotoInfoCard({ photoId }: { photoId: string }) {
+  const folderPath = useAtomValue(currentFolderAtom)
+  const setOpenId = useSetAtom(photoInfoIdAtom)
+  const photo = useAtomValue(photosAtom).find(p => p.id === photoId)
+  // A card stacks two steps above the page, like a menu.
+  const level = Math.min(useSurface() + 2, 8)
+
+  useEffect(() => {
+    function closeIfGone() {
+      if (!photo || !tileOf(photoId))
+        setOpenId(null)
+    }
+    closeIfGone()
+    window.addEventListener('scroll', closeIfGone, { passive: true })
+    return () => window.removeEventListener('scroll', closeIfGone)
+  }, [photoId, photo, setOpenId])
+
+  if (!photo)
+    return null
+
+  return (
+    <Popover.Portal>
+      <Popover.Positioner
+        anchor={() => tileOf(photoId)}
+        side="right"
+        align="start"
+        sideOffset={8}
+        collisionPadding={12}
+        {...stylex.props(styles.positioner)}
+      >
+        <SurfaceProvider value={level}>
+          <Popover.Popup
+            // A rename asked for from the context menu focuses its input.
+            initialFocus={() => document.querySelector<HTMLElement>('[data-photo-info] input') ?? true}
+            data-photo-info
+            {...stylex.props(styles.popup, ...surfaceStyles(level, 3))}
+          >
+            <PhotoInfo photo={photo} folderPath={folderPath} />
+          </Popover.Popup>
+        </SurfaceProvider>
+      </Popover.Positioner>
+    </Popover.Portal>
+  )
+}
+
+/** Mount once, beside the grid: the info card for `photoInfoIdAtom`. */
+export function PhotoInfoPopover() {
+  const [openId, setOpenId] = useAtom(photoInfoIdAtom)
+  // Kept through the closing transition, so the card fades out with its content.
+  const [shownId, setShownId] = useState(openId)
+  if (openId !== null && openId !== shownId)
+    setShownId(openId)
+
+  return (
+    <Popover.Root
+      open={openId !== null}
+      onOpenChange={(open) => {
+        if (!open)
+          setOpenId(null)
+      }}
+      onOpenChangeComplete={(open) => {
+        if (!open)
+          setShownId(null)
+      }}
+    >
+      {shownId !== null && <PhotoInfoCard photoId={shownId} />}
+    </Popover.Root>
   )
 }

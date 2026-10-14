@@ -297,7 +297,7 @@ export function PhotoPreview() {
               <span {...stylex.props(styles.captionCount)}>{`${index + 1} / ${photos.length}`}</span>
             )}
             <span {...stylex.props(styles.captionRating)}>
-              <StarRating rating={photo.rating} onChange={r => rate([photo], r)} size={14} onImage />
+              <StarRating rating={photo.rating} onChange={r => rate([photo], r)} size={14} />
             </span>
           </div>
         </motion.div>

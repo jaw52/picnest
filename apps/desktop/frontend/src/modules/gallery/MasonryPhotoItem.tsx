@@ -1,6 +1,6 @@
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { Photo } from '~/types/photo'
-import { CloudRegular, CopyRegular, Delete2Regular, EditRegular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
+import { CloudRegular, CopyRegular, Delete2Regular, EditRegular, InformationRegular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { memo } from 'react'
@@ -8,23 +8,25 @@ import {
   bulkDeleteBlockedAtom,
   filteredPhotosAtom,
   gridTabStopIdAtom,
+  photoInfoIdAtom,
   previewPhotoIdAtom,
   renamingPhotoIdAtom,
   selectedPhotoIdAtom,
   selectedPhotoIdsAtom,
 } from '~/atoms/gallery'
-import { infoSidebarCollapsedAtom } from '~/atoms/layout'
 import { Button } from '~/components/Button'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
 import { useMovePhotos } from '~/hooks/useMovePhotos'
+import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
 import { writeText } from '~/lib/native'
 import { colors } from '~/theme/colors.stylex'
 import { motion } from '~/theme/layout.stylex'
-import { text, utility, weight } from '~/theme/text'
+import { text, weight } from '~/theme/text'
 import { tileMarker } from './markers.stylex'
+import { TileCaption } from './TileCaption'
 
 interface MasonryPhotoItemProps {
   data: Photo
@@ -80,31 +82,16 @@ const styles = stylex.create({
     animationTimingFunction: 'cubic-bezier(0.4, 0, 0.6, 1)',
     animationIterationCount: 'infinite',
   },
-  // Revealed while the tile is hovered.
-  overlay: {
-    position: 'absolute',
-    insetInline: 0,
-    bottom: 0,
+  // Gives way to the caption's rating button, which shows the same.
+  ratingBadge: {
+    pointerEvents: 'none',
     opacity: {
-      default: 0,
-      [stylex.when.ancestor(':hover', tileMarker)]: 1,
-      [stylex.when.ancestor(':focus-within', tileMarker)]: 1,
+      default: 1,
+      [stylex.when.ancestor(':hover', tileMarker)]: 0,
+      [stylex.when.ancestor(':focus-within', tileMarker)]: 0,
     },
     transitionProperty: 'opacity',
     transitionDuration: motion.fast,
-  },
-  // The file name on a gradient, so it stays legible on any photo.
-  infoOverlay: {
-    display: 'flex',
-    justifyContent: 'center',
-    paddingInline: 8,
-    paddingTop: 16,
-    paddingBottom: 6,
-    backgroundImage: 'linear-gradient(to top, rgb(0 0 0 / 0.7), transparent)',
-  },
-  fileName: { maxWidth: '100%', pointerEvents: 'none', color: 'rgb(255 255 255 / 0.9)' },
-  ratingBadge: {
-    pointerEvents: 'none',
     position: 'absolute',
     top: 6,
     right: 6,
@@ -140,6 +127,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const thumbnailUrl = useThumbnail(folderPath, data.path, maxEdge, !data.isCloudPlaceholder)
   const deletePhoto = useDeletePhoto(folderPath)
   const movePhotos = useMovePhotos(folderPath)
+  const rate = useRatePhoto(folderPath)
   const downloadPlaceholder = useDownloadPlaceholder(folderPath)
   const downloading = useAtomValue(downloadingIdsAtom).has(data.id)
   // Read selection here (rather than taking it as a prop) so a selection
@@ -149,15 +137,13 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const photos = useAtomValue(filteredPhotosAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
   const bulkDeleteBlocked = useAtomValue(bulkDeleteBlockedAtom)
-  const setInfoCollapsed = useSetAtom(infoSidebarCollapsedAtom)
   const setRenamingId = useSetAtom(renamingPhotoIdAtom)
+  const setInfoId = useSetAtom(photoInfoIdAtom)
   const selected = selectedIds.has(data.id)
   const height = width / data.aspectRatio
   const isTabStop = useAtomValue(gridTabStopIdAtom) === data.id
 
   const handleSelect = (e: React.MouseEvent) => {
-    // Selecting something is asking to see its details.
-    setInfoCollapsed(false)
     if (e.shiftKey && anchorId) {
       const anchorIndex = photos.findIndex(p => p.id === anchorId)
       const clickedIndex = photos.findIndex(p => p.id === data.id)
@@ -194,15 +180,19 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const handleDelete = () => void deletePhoto(targets())
   const handleMove = () => void movePhotos(targets())
 
-  // Renaming happens in the info panel, which the selection already shows.
+  // After the menu has closed and handed focus back, so the card's name
+  // field keeps it.
+  const openInfo = () => setTimeout(() => setInfoId(data.id))
+  // Renaming happens in the info card.
   const handleRename = () => {
-    setInfoCollapsed(false)
     setRenamingId(data.id)
+    openInfo()
   }
 
   const menuItems: ContextMenuItem[] = [
     ...(selectedCount === 1
       ? [
+          { label: '简介', icon: InformationRegular, onSelect: openInfo },
           { label: '重命名', icon: EditRegular, onSelect: handleRename },
           { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(data.path) },
         ]
@@ -226,7 +216,6 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
       items={menuItems}
       onOpenChange={(open) => {
         if (open && !selectedIds.has(data.id)) {
-          setInfoCollapsed(false)
           setSelectedIds(new Set([data.id]))
           setAnchorId(data.id)
         }
@@ -294,11 +283,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
             : (
                 <div {...stylex.props(styles.fill, styles.loading)} />
               )}
-        <div {...stylex.props(styles.overlay, styles.infoOverlay)}>
-          <span {...stylex.props(utility.truncate, styles.fileName, text.caption)}>
-            {data.fileName}
-          </span>
-        </div>
+        <TileCaption photo={data} onRate={r => rate([data], r)} />
         {data.rating > 0 && (
           <div {...stylex.props(styles.ratingBadge, text.caption, weight.semibold)}>
             {data.rating}

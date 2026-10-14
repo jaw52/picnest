@@ -1,5 +1,5 @@
 import { StarFilled } from '@mingcute/react/core-filled'
-import { StarRegular } from '@mingcute/react/core-regular'
+import { ForbidCircleRegular, StarRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useState } from 'react'
 import { styles } from './style'
@@ -8,17 +8,40 @@ export interface StarRatingProps {
   rating: number
   onChange?: (rating: number) => void
   size?: number
-  /** Drawn over a photo: empty stars stay light whatever the theme. */
-  onImage?: boolean
+  /** False keeps the buttons out of the Tab order, where keys 0-5 rate already. */
+  focusable?: boolean
 }
 
-/** Interactive 0-5 star rating. Clicking the currently-set star clears it. */
-export function StarRating({ rating, onChange, size = 16, onImage = false }: StarRatingProps) {
+/**
+ * Interactive 0-5 rating: a "no rating" button, then five stars. Clicking
+ * the currently-set star clears it too.
+ */
+export function StarRating({
+  rating,
+  onChange,
+  size = 16,
+  focusable = true,
+}: StarRatingProps) {
   const [hovered, setHovered] = useState<number | null>(null)
   const display = hovered ?? rating
+  const tabIndex = focusable ? undefined : -1
 
   return (
     <div {...stylex.props(styles.root)} onMouseLeave={() => setHovered(null)}>
+      <button
+        type="button"
+        aria-label="未评分"
+        aria-pressed={rating === 0}
+        tabIndex={tabIndex}
+        {...stylex.props(styles.button, hovered === 0 ? styles.filled : styles.empty)}
+        onMouseEnter={() => setHovered(0)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onChange?.(0)
+        }}
+      >
+        <ForbidCircleRegular size={size} />
+      </button>
       {[1, 2, 3, 4, 5].map((star) => {
         const filled = star <= display
         const Star = filled ? StarFilled : StarRegular
@@ -28,20 +51,15 @@ export function StarRating({ rating, onChange, size = 16, onImage = false }: Sta
             type="button"
             aria-label={`${star} 星`}
             aria-pressed={star <= rating}
-            {...stylex.props(styles.button)}
+            tabIndex={tabIndex}
+            {...stylex.props(styles.button, filled ? styles.filled : styles.empty)}
             onMouseEnter={() => setHovered(star)}
             onClick={(e) => {
               e.stopPropagation()
               onChange?.(star === rating ? 0 : star)
             }}
           >
-            <Star
-              size={size}
-              {...stylex.props(
-                styles.star,
-                filled ? styles.filled : onImage ? styles.emptyOnImage : styles.empty,
-              )}
-            />
+            <Star size={size} />
           </button>
         )
       })}

@@ -1,24 +1,22 @@
 import type { RefObject } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useAtomValue, useSetAtom } from 'jotai'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { currentFolderAtom, ratingFilterAtom, selectedPhotoIdsAtom } from '~/atoms/gallery'
-import { infoSidebarCollapsedAtom } from '~/atoms/layout'
+import { useAtomValue } from 'jotai'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { currentFolderAtom, ratingFilterAtom } from '~/atoms/gallery'
 import { activeTabPathAtom } from '~/atoms/tabs'
 import { ErrorBoundary } from '~/components/ErrorBoundary'
 import { useSize } from '~/context/size'
 import { useUndoShortcut } from '~/hooks/useDeletePhoto'
 import { useFolderWatcher } from '~/hooks/useFolderWatcher'
-import { useInfoPanelExtent } from '~/hooks/useInfoPanelExtent'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
 import { useActiveTabSync } from '~/hooks/useTabs'
 import { useFolderDrop, useTabShortcuts } from '~/hooks/useTabShortcuts'
 import { spring } from '~/lib/springs'
 import { DeleteConfirmDialog } from '~/modules/gallery/DeleteConfirmDialog'
 import { FilterBar } from '~/modules/gallery/FilterBar'
-import { InfoPanel } from '~/modules/gallery/InfoPanel'
 import { MasonryView } from '~/modules/gallery/MasonryView'
+import { PhotoInfoPopover } from '~/modules/gallery/PhotoInfo'
 import { PhotoPreview } from '~/modules/gallery/PhotoPreview'
 import { ThumbnailProgressBar } from '~/modules/gallery/ThumbnailProgressBar'
 import { Toolbar } from '~/modules/gallery/Toolbar'
@@ -87,15 +85,6 @@ export default function App() {
   const tabPath = useAtomValue(activeTabPathAtom)
   const folder = useAtomValue(currentFolderAtom)
   const filter = useAtomValue(ratingFilterAtom)
-  const infoExtent = useInfoPanelExtent(tabPath)
-  const nothingSelected = useAtomValue(selectedPhotoIdsAtom).size === 0
-  const setInfoCollapsed = useSetAtom(infoSidebarCollapsedAtom)
-  // Selecting opens the info panel; losing the selection (clicking empty
-  // space, switching folder, deleting the last photo) folds it away again.
-  useEffect(() => {
-    if (nothingSelected)
-      setInfoCollapsed(true)
-  }, [nothingSelected, setInfoCollapsed])
   const size = useSize()
   const { refreshFolder } = useOpenFolder()
   useFolderWatcher(() => {
@@ -103,14 +92,9 @@ export default function App() {
       void refreshFolder(folder)
   })
 
-  // The tab bar spans the window and the info panel hangs below it. The
-  // panel's content starts level with the grid, below FilterBar and the
-  // progress bar - whose height isn't fixed (the progress bar only renders
-  // while thumbnails generate, the filter bar can wrap), so both are measured.
+  // FilterBar sticks just below the tab bar, whose height is measured.
   const toolbarRef = useRef<HTMLDivElement>(null)
   const toolbarHeight = useHeight(toolbarRef, TITLEBAR_HEIGHT)
-  const subheaderRef = useRef<HTMLDivElement>(null)
-  const subheaderHeight = useHeight(subheaderRef, 0)
 
   return (
     <div {...stylex.props(styles.root)}>
@@ -121,22 +105,20 @@ export default function App() {
          * with data-drag-region (see theme/theme.css). */}
         <Toolbar />
       </div>
-      {tabPath !== null && <InfoPanel extent={infoExtent} top={toolbarHeight} paddingTop={subheaderHeight} />}
-      <motion.div style={{ marginRight: infoExtent }}>
-        <div ref={subheaderRef} data-grid-header {...stylex.props(styles.header, styles.stickAt(toolbarHeight))}>
-          {tabPath !== null && <FilterBar />}
-          <ThumbnailProgressBar />
-        </div>
-        {tabPath === null
-          ? <NewTabPage />
-          : (
-              <main {...stylex.props(styles.main)}>
-                <ErrorBoundary resetKey={`${folder}:${filter}`}>
-                  <MasonryView />
-                </ErrorBoundary>
-              </main>
-            )}
-      </motion.div>
+      <div data-grid-header {...stylex.props(styles.header, styles.stickAt(toolbarHeight))}>
+        {tabPath !== null && <FilterBar />}
+        <ThumbnailProgressBar />
+      </div>
+      {tabPath === null
+        ? <NewTabPage />
+        : (
+            <main {...stylex.props(styles.main)}>
+              <ErrorBoundary resetKey={`${folder}:${filter}`}>
+                <MasonryView />
+              </ErrorBoundary>
+            </main>
+          )}
+      <PhotoInfoPopover />
       <PhotoPreview />
       <DeleteConfirmDialog />
       <UndoToast />

@@ -59,7 +59,12 @@ function MenuRow({ index, label, icon: Icon, destructive, disabled, shortcut, on
       // shrink-0 because the popup is a max-height flex column.
       {...stylex.props(styles.row, disabled && styles.rowDisabled, size.control, size.gap, size.itemPx)}
     >
-      {Icon && <Icon size={size.icon} {...stylex.props(styles.icon, tone)} />}
+      {/* The tone goes on a wrapper: an icon's own inline color is currentColor. */}
+      {Icon && (
+        <span {...stylex.props(styles.icon, tone)}>
+          <Icon size={size.icon} />
+        </span>
+      )}
       <span {...stylex.props(styles.label, size.text)}>
         <span
           aria-hidden="true"

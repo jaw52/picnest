@@ -5,7 +5,7 @@ import { getPhotoDetails } from '~/lib/backend'
 
 // Module-level cache: EXIF/file-size never changes for the lifetime of the
 // app, so once we've read it for a path there's no need to ask the backend again
-// just because the info sidebar unmounted and remounted.
+// just because the info card closed and opened again.
 const detailsCache = new Map<string, PhotoDetails>()
 
 export function usePhotoDetails(path: string | null): {

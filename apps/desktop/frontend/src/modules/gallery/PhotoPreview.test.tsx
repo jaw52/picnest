@@ -10,7 +10,6 @@ import {
   selectedPhotoIdsAtom,
   subfoldersAtom,
 } from '~/atoms/gallery'
-import { infoSidebarCollapsedAtom } from '~/atoms/layout'
 
 import { MasonryView } from './MasonryView'
 import { PhotoPreview } from './PhotoPreview'
@@ -136,31 +135,6 @@ it('lays out a folder that only holds other folders instead of calling it empty'
   )
   expect(screen.getByRole('listbox')).toBeInTheDocument()
   expect(document.body.textContent).not.toContain('这个文件夹是空的')
-})
-
-it('reveals a collapsed info panel when selecting everything', () => {
-  const store = createStore()
-  const a: Photo = {
-    id: '/a.jpg',
-    path: '/a.jpg',
-    fileName: 'a.jpg',
-    width: 100,
-    height: 100,
-    rating: 0,
-    modified: 0,
-    isCloudPlaceholder: false,
-    aspectRatio: 1,
-  }
-  store.set(currentFolderAtom, '/')
-  store.set(photosAtom, [a])
-  store.set(infoSidebarCollapsedAtom, true)
-  render(
-    <Provider store={store}>
-      <MasonryView />
-    </Provider>,
-  )
-  fireEvent.keyDown(window, { key: 'a', metaKey: true })
-  expect(store.get(infoSidebarCollapsedAtom)).toBe(false)
 })
 
 function twoPhotos() {
