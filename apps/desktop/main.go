@@ -28,21 +28,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// The default menu bar, less View's page zoom: ⌘= / ⌘- / ⌘0 resize the
-	// grid's thumbnails instead.
-	mygo.App.SetMenu(mygo.NewMenu([]*mygo.MenuItem{
-		{Role: mygo.RoleAppMenu},
-		{Role: mygo.RoleFileMenu},
-		{Role: mygo.RoleEditMenu},
-		{Label: "View", Submenu: []*mygo.MenuItem{
-			{Role: mygo.RoleReload},
-			{Role: mygo.RoleForceReload},
-			{Role: mygo.RoleToggleDevTools},
-			mygo.Separator(),
-			{Role: mygo.RoleToggleFullScreen},
-		}},
-		{Role: mygo.RoleWindowMenu},
-	}))
+	loadLanguage()
+	mygo.App.SetMenu(appMenu())
 
 	mygo.App.WhenReady(func() {
 		w := mygo.NewWindow(mygo.WindowOptions{

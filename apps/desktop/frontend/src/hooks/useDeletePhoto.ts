@@ -15,6 +15,7 @@ import {
   selectedPhotoIdsAtom,
   undoableDeletionAtom,
 } from '~/atoms/gallery'
+import { i18n } from '~/i18n'
 import { deletePhotos, restorePhotos } from '~/lib/backend'
 import { message } from '~/lib/native'
 import { successorOf } from '~/lib/photo'
@@ -80,7 +81,7 @@ export function useDeletePhoto(folderPath: string | null) {
             folderPath,
             targets.map(p => p.path),
           )
-          errors.push(...result.failures.map(failure => `删除失败：${failure}`))
+          errors.push(...result.failures.map(failure => i18n.t('dialogs.deleteFailed', { error: failure })))
           if (result.trashed.length > 0) {
             store.set(undoableDeletionAtom, { folderPath, trashed: result.trashed })
             if (store.get(currentFolderAtom) === folderPath)
@@ -88,17 +89,17 @@ export function useDeletePhoto(folderPath: string | null) {
           }
         }
         catch (error) {
-          errors.push(`删除失败：${error}`)
+          errors.push(i18n.t('dialogs.deleteFailed', { error }))
         }
         // Refresh even after partial failure, without navigating back if the
         // user switched folders while the native trash operation was running.
         if (store.get(currentFolderAtom) === folderPath) {
           const refreshed = await refreshFolder(folderPath)
           if (!refreshed)
-            errors.push('刷新目录失败，请手动重新扫描。')
+            errors.push(i18n.t('common.rescanFailed'))
         }
         if (errors.length > 0)
-          await message(errors.join('\n'), { title: '删除照片', kind: 'error' })
+          await message(errors.join('\n'), { title: i18n.t('dialogs.deletePhotosTitle'), kind: 'error' })
       }
       finally {
         store.set(deletionPendingAtom, false)
@@ -141,7 +142,7 @@ export function useUndoDeletion() {
       }
     }
     if (error !== undefined)
-      await message(`${error}`, { title: '撤销删除', kind: 'error' })
+      await message(`${error}`, { title: i18n.t('dialogs.undoDeleteTitle'), kind: 'error' })
   }, [store, refreshFolder])
 }
 

@@ -8,6 +8,7 @@ import * as stylex from '@stylexjs/stylex'
 import { animate, AnimatePresence, motion, useMotionValue } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   closePreviewAtom,
   currentFolderAtom,
@@ -137,7 +138,8 @@ function LightboxButton({
 }
 
 function CloudNotice() {
-  return <div {...stylex.props(styles.notice, text.body)}>iCloud 未下载，无法预览</div>
+  const { t } = useTranslation()
+  return <div {...stylex.props(styles.notice, text.body)}>{t('preview.notDownloaded')}</div>
 }
 
 /** The photo either side of the one shown, in place for a swipe to slide in. */
@@ -148,6 +150,7 @@ function Neighbour({ photo }: { photo: Photo }) {
 }
 
 export function PhotoPreview() {
+  const { t } = useTranslation()
   const photos = useAtomValue(previewPhotosAtom)
   const photo = useAtomValue(previewPhotoAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
@@ -342,9 +345,9 @@ export function PhotoPreview() {
                       alt={photo.fileName}
                       fadeIn={photo.id === openedId}
                       menuItems={[
-                        { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(photo.path) },
+                        { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
                         {
-                          label: '删除',
+                          label: t('common.delete'),
                           icon: Delete2Regular,
                           destructive: true,
                           onSelect: () => void deletePhoto([photo]),
@@ -360,14 +363,14 @@ export function PhotoPreview() {
             )}
           </motion.div>
           <LightboxButton
-            label="关闭"
+            label={t('common.close')}
             icon={CloseRegular}
             position="close"
             onClick={close}
           />
           {index > 0 && (
             <LightboxButton
-              label="上一张"
+              label={t('preview.previous')}
               icon={LeftRegular}
               position="prev"
               onClick={(e) => {
@@ -378,7 +381,7 @@ export function PhotoPreview() {
           )}
           {index !== -1 && index < photos.length - 1 && (
             <LightboxButton
-              label="下一张"
+              label={t('preview.next')}
               icon={RightRegular}
               position="next"
               onClick={(e) => {

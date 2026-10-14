@@ -3,6 +3,7 @@ import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { currentFolderAtom, ratingFilterAtom } from '~/atoms/gallery'
 import { activeTabPathAtom } from '~/atoms/tabs'
 import { ErrorBoundary } from '~/components/ErrorBoundary'
@@ -10,6 +11,7 @@ import { useSize } from '~/context/size'
 import { useUndoShortcut } from '~/hooks/useDeletePhoto'
 import { useFolderWatcher } from '~/hooks/useFolderWatcher'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
+import { useSettingsEvents } from '~/hooks/useSettingsEvents'
 import { useActiveTabSync } from '~/hooks/useTabs'
 import { useFolderDrop, useTabShortcuts } from '~/hooks/useTabShortcuts'
 import { spring } from '~/lib/springs'
@@ -21,6 +23,7 @@ import { PhotoPreview } from '~/modules/gallery/PhotoPreview'
 import { ThumbnailProgressBar } from '~/modules/gallery/ThumbnailProgressBar'
 import { Toolbar } from '~/modules/gallery/Toolbar'
 import { UndoToast } from '~/modules/gallery/UndoToast'
+import { SettingsDialog } from '~/modules/settings/SettingsDialog'
 import { NewTabPage } from '~/modules/tabs/NewTabPage'
 import { colors } from '~/theme/colors.stylex'
 import { radius } from '~/theme/layout.stylex'
@@ -78,7 +81,9 @@ const styles = stylex.create({
 })
 
 export default function App() {
+  const { t } = useTranslation()
   useActiveTabSync()
+  useSettingsEvents()
   useTabShortcuts()
   useUndoShortcut()
   const isDraggingOver = useFolderDrop()
@@ -122,6 +127,7 @@ export default function App() {
       <PhotoPreview />
       <DeleteConfirmDialog />
       <UndoToast />
+      <SettingsDialog />
       <AnimatePresence>
         {isDraggingOver && (
           <motion.div
@@ -131,7 +137,7 @@ export default function App() {
             exit={{ opacity: 0, transition: spring.moderate.exit }}
             transition={spring.moderate}
           >
-            松开以添加文件夹
+            {t('app.dropToAddFolder')}
           </motion.div>
         )}
       </AnimatePresence>

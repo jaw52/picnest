@@ -3,6 +3,7 @@ import { ArrowLeftRegular, ArrowRightRegular, FolderRegular, RightRegular } from
 import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { subfoldersAtom } from '~/atoms/gallery'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
 import { activeTabPathAtom, canGoBackAtom, canGoForwardAtom } from '~/atoms/tabs'
@@ -71,6 +72,7 @@ const styles = stylex.create({
  * subfolders, to jump to a sibling of the folder after it.
  */
 function SubfolderMenu({ folder }: { folder: string }) {
+  const { t } = useTranslation()
   const { openInActiveTab } = useTabs()
   const [subfolders, setSubfolders] = useState<FolderEntry[] | null>(null)
   // Bumped on every open, so folders created since show up.
@@ -107,7 +109,7 @@ function SubfolderMenu({ folder }: { folder: string }) {
       trigger={(
         <button
           type="button"
-          aria-label={`${folderNameFromPath(folder)} 的子文件夹`}
+          aria-label={t('path.subfolders', { name: folderNameFromPath(folder) })}
           {...stylex.props(styles.chevron)}
         >
           <RightRegular size={14} />
@@ -124,6 +126,7 @@ function SubfolderMenu({ folder }: { folder: string }) {
  * top-level folder with no subfolders and no history.
  */
 export function PathBar() {
+  const { t } = useTranslation()
   const path = useAtomValue(activeTabPathAtom)
   const recentFolders = useAtomValue(recentFoldersAtom)
   const canGoBack = useAtomValue(canGoBackAtom)
@@ -139,10 +142,10 @@ export function PathBar() {
     return null
 
   return (
-    <nav aria-label="文件夹路径" {...stylex.props(styles.bar)}>
+    <nav aria-label={t('path.breadcrumb')} {...stylex.props(styles.bar)}>
       <div {...stylex.props(styles.history)}>
-        <IconButton label="后退" icon={ArrowLeftRegular} disabled={!canGoBack} onClick={goBack} />
-        <IconButton label="前进" icon={ArrowRightRegular} disabled={!canGoForward} onClick={goForward} />
+        <IconButton label={t('path.back')} icon={ArrowLeftRegular} disabled={!canGoBack} onClick={goBack} />
+        <IconButton label={t('path.forward')} icon={ArrowRightRegular} disabled={!canGoForward} onClick={goForward} />
       </div>
       {segments.map((segment, i) => {
         const isCurrent = i === segments.length - 1

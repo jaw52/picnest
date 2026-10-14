@@ -1,9 +1,11 @@
+import type { TFunction } from 'i18next'
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { Photo } from '~/types/photo'
 import { CloudRegular, CopyRegular, Delete2Regular, EditRegular, InformationRegular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   bulkDeleteBlockedAtom,
   filteredPhotosAtom,
@@ -104,10 +106,10 @@ const styles = stylex.create({
 })
 
 /** The context menu's delete item, for `count` photos. */
-function deleteLabel(count: number, bulkDeleteBlocked: boolean) {
+function deleteLabel(t: TFunction, count: number, bulkDeleteBlocked: boolean) {
   if (count === 1)
-    return '删除'
-  return bulkDeleteBlocked ? '缩略图生成中，暂不能批量删除' : `删除 ${count} 张照片`
+    return t('common.delete')
+  return bulkDeleteBlocked ? t('gallery.bulkDeleteBusy') : t('common.deletePhotos', { count })
 }
 
 /**
@@ -121,6 +123,7 @@ function selectOnKeyboardFocus(e: React.FocusEvent<HTMLElement>, selected: boole
 }
 
 function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProps) {
+  const { t } = useTranslation()
   // Cloud placeholders (undownloaded iCloud Drive files) never get a
   // thumbnail request - decoding them would force a synchronous download.
   const maxEdge = thumbnailEdgeFor(width)
@@ -192,18 +195,18 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
   const menuItems: ContextMenuItem[] = [
     ...(selectedCount === 1
       ? [
-          { label: '简介', icon: InformationRegular, onSelect: openInfo },
-          { label: '重命名', icon: EditRegular, onSelect: handleRename },
-          { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(data.path) },
+          { label: t('gallery.info'), icon: InformationRegular, onSelect: openInfo },
+          { label: t('gallery.rename'), icon: EditRegular, onSelect: handleRename },
+          { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(data.path) },
         ]
       : []),
     {
-      label: selectedCount > 1 ? `移动 ${selectedCount} 张照片到…` : '移动到…',
+      label: selectedCount > 1 ? t('common.movePhotosTo', { count: selectedCount }) : t('gallery.moveTo'),
       icon: MoveRegular,
       onSelect: handleMove,
     },
     {
-      label: deleteLabel(selectedCount, bulkDeleteBlocked),
+      label: deleteLabel(t, selectedCount, bulkDeleteBlocked),
       icon: Delete2Regular,
       destructive: true,
       disabled: selectedCount > 1 && bulkDeleteBlocked,
@@ -254,7 +257,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
           ? (
               <div {...stylex.props(styles.placeholder)}>
                 <CloudRegular size={20} />
-                <span {...stylex.props(text.caption)}>iCloud 未下载</span>
+                <span {...stylex.props(text.caption)}>{t('gallery.notDownloaded')}</span>
                 <Button
                   variant="secondary"
                   size="compact"
@@ -266,7 +269,7 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
                     void downloadPlaceholder(data)
                   }}
                 >
-                  {downloading ? '下载中' : '下载'}
+                  {downloading ? t('gallery.downloading') : t('gallery.download')}
                 </Button>
               </div>
             )

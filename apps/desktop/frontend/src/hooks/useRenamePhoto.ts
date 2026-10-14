@@ -3,6 +3,7 @@ import { useSetAtom } from 'jotai'
 import { useCallback } from 'react'
 
 import { renamePhotoAtom } from '~/atoms/gallery'
+import { i18n } from '~/i18n'
 import { renamePhoto } from '~/lib/backend'
 import { message } from '~/lib/native'
 
@@ -27,7 +28,7 @@ export function useRenamePhoto(folderPath: string | null) {
         await renamePhoto(folderPath, photo.fileName, trimmed)
       }
       catch (error) {
-        await message(`重命名失败：${error}`, { title: '重命名', kind: 'error' })
+        await message(i18n.t('dialogs.renameFailed', { error }), { title: i18n.t('dialogs.renameTitle'), kind: 'error' })
         await refreshFolder(folderPath)
       }
     },

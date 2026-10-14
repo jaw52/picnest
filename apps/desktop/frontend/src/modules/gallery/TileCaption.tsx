@@ -3,6 +3,7 @@ import { StarFilled } from '@mingcute/react/core-filled'
 import { StarRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { StarRating } from '~/components/StarRating'
 import { colors } from '~/theme/colors.stylex'
 import { motion } from '~/theme/layout.stylex'
@@ -70,6 +71,7 @@ interface TileCaptionProps {
  * photo with: "no rating", then 1-5 stars.
  */
 export function TileCaption({ photo, onRate }: TileCaptionProps) {
+  const { t } = useTranslation()
   const [rating, setRating] = useState(false)
 
   return (
@@ -86,7 +88,7 @@ export function TileCaption({ photo, onRate }: TileCaptionProps) {
         {!photo.isCloudPlaceholder && (
           <button
             type="button"
-            aria-label="评分"
+            aria-label={t('rating.label')}
             aria-expanded={rating}
             // The tile is the grid's tab stop; keys 0-5 rate from there.
             tabIndex={-1}

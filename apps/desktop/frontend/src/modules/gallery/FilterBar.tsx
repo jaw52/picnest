@@ -2,6 +2,7 @@ import type { RatingFilter } from '~/lib/photo'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   photosAtom,
   previewPhotoIdAtom,
@@ -37,6 +38,7 @@ const STARS = [1, 2, 3, 4, 5]
 const FILTERS: RatingFilter[] = [null, 0, ...STARS]
 
 export function FilterBar() {
+  const { t } = useTranslation()
   const [filter, setRatingFilter] = useAtom(ratingFilterAtom)
   const photos = useAtomValue(photosAtom)
   const counts = ratingCounts(photos)
@@ -64,8 +66,8 @@ export function FilterBar() {
           selectedIndex={Math.max(0, FILTERS.indexOf(filter))}
           onSelect={index => setFilter(FILTERS[index] ?? null)}
         >
-          <TabsSubtleItem index={0} label={`全部 ${photos.length}`} />
-          <TabsSubtleItem index={1} label={`未评分 ${counts[0]}`} dimmed={counts[0] === 0} />
+          <TabsSubtleItem index={0} label={t('gallery.filterAll', { count: photos.length })} />
+          <TabsSubtleItem index={1} label={t('gallery.filterUnrated', { count: counts[0] })} dimmed={counts[0] === 0} />
           {STARS.map(star => (
             <TabsSubtleItem
               key={star}

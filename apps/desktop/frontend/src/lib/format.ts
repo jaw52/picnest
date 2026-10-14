@@ -1,3 +1,5 @@
+import { i18n } from '~/i18n'
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024)
     return `${bytes} B`
@@ -12,7 +14,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 export function formatUnixSeconds(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleString()
+  return new Date(seconds * 1000).toLocaleString(i18n.language)
 }
 
 export function fileExtension(fileName: string): string {

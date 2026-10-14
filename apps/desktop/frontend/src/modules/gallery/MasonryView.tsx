@@ -4,6 +4,7 @@ import type { Photo } from '~/types/photo'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   currentFolderAtom,
   filteredPhotosAtom,
@@ -102,6 +103,7 @@ const styles = stylex.create({
  * opens in place, like a link; the rating filter only narrows the photos.
  */
 export function MasonryView() {
+  const { t } = useTranslation()
   const photos = useAtomValue(filteredPhotosAtom)
   const subfolders = useAtomValue(subfoldersAtom)
   const folderPath = useAtomValue(currentFolderAtom)
@@ -261,7 +263,7 @@ export function MasonryView() {
       return null
     return (
       <div {...stylex.props(styles.empty, text.body)}>
-        {photosTotal === 0 ? '这个文件夹是空的' : '没有匹配当前筛选条件的图片'}
+        {photosTotal === 0 ? t('gallery.emptyFolder') : t('gallery.noMatches')}
       </div>
     )
   }
@@ -270,7 +272,7 @@ export function MasonryView() {
     <div
       ref={containerRef}
       role="listbox"
-      aria-label="照片"
+      aria-label={t('gallery.photos')}
       aria-multiselectable
       {...stylex.props(styles.grid, styles.gridHeight(layout.height))}
     >

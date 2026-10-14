@@ -19,6 +19,24 @@ export interface FolderEntry {
   path: string;
 }
 
+/** Language is a language the app is translated into. */
+export type Language = "zh-CN" | "en";
+
+/**
+ * LanguagePreference is the language picked in Settings: one of the
+ * app's languages, or whichever the system prefers.
+ */
+export type LanguagePreference = "system" | "zh-CN" | "en";
+
+/**
+ * LanguageState is the language picked in Settings and the one the app is
+ * shown in because of it.
+ */
+export interface LanguageState {
+  preference: LanguagePreference;
+  language: Language;
+}
+
 export interface PhotoDetails {
   fileSize: number;
   created?: number;
@@ -96,6 +114,13 @@ export const App = {
   ensureThumbnail(folderPath: string, filePath: string, maxEdge: number, background: boolean, requestID: string): Promise<string> {
     return call("App.EnsureThumbnail", folderPath, filePath, maxEdge, background, requestID);
   },
+  /**
+   * GetLanguage reports the language picked in Settings and the one the app
+   * is shown in.
+   */
+  getLanguage(): Promise<LanguageState> {
+    return call("App.GetLanguage");
+  },
   getPhotoDetails(filePath: string): Promise<PhotoDetails> {
     return call("App.GetPhotoDetails", filePath);
   },
@@ -123,6 +148,13 @@ export const App = {
   },
   scanFolderPage(folderPath: string, offset: number, limit: number): Promise<PhotoPage> {
     return call("App.ScanFolderPage", folderPath, offset, limit);
+  },
+  /**
+   * SetLanguage picks the app's language, translating the menu bar and every
+   * window's page.
+   */
+  setLanguage(preference: LanguagePreference): Promise<LanguageState> {
+    return call("App.SetLanguage", preference);
   },
   setRating(folderPath: string, fileName: string, rating: number): Promise<void> {
     return call("App.SetRating", folderPath, fileName, rating);
@@ -171,4 +203,11 @@ export const Native = {
 export const events = {
   /** folderChanged carries the path of the watched folder. */
   folderChanged: event<string>("folder-changed"),
+  /**
+   * languageChanged carries the language picked in Settings, and the
+   * one the app is now shown in.
+   */
+  languageChanged: event<LanguageState>("language-changed"),
+  /** openSettings asks the page to open Settings, chosen from the menu bar. */
+  openSettings: event<{}>("open-settings"),
 } as const;

@@ -1,6 +1,7 @@
 import { NewFolderRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import { recentFoldersAtom, withFolderForgotten } from '~/atoms/recentFolders'
 import { Button } from '~/components/Button'
 import { useSize } from '~/context/size'
@@ -45,6 +46,7 @@ const styles = stylex.create({
  * before. Folders open in their own tabs, so this page stays open.
  */
 export function NewTabPage() {
+  const { t } = useTranslation()
   const [recentFolders, setRecentFolders] = useAtom(recentFoldersAtom)
   const { addFolder, openInNewTab } = useTabs()
   const deleteFolder = useDeleteFolder()
@@ -54,9 +56,9 @@ export function NewTabPage() {
     <div {...stylex.props(styles.page)}>
       <div {...stylex.props(styles.column)}>
         <div {...stylex.props(styles.intro)}>
-          <span {...stylex.props(text.title, weight.semibold)}>新标签页</span>
+          <span {...stylex.props(text.title, weight.semibold)}>{t('common.newTab')}</span>
           <span {...stylex.props(styles.muted, text.body)}>
-            添加一个文件夹，或从下面选择已添加的文件夹，在新标签页中打开。也可以直接把文件夹拖进窗口。
+            {t('newTab.intro')}
           </span>
         </div>
         <Button
@@ -65,12 +67,12 @@ export function NewTabPage() {
           onClick={() => void addFolder()}
           xstyle={styles.addButton}
         >
-          添加文件夹
+          {t('newTab.addFolder')}
         </Button>
         {recentFolders.length > 0 && (
           <div {...stylex.props(styles.section)}>
             <div {...stylex.props(styles.heading, size.type.caption, weight.semibold)}>
-              已添加的文件夹
+              {t('newTab.added')}
             </div>
             <div {...stylex.props(styles.grid)}>
               {recentFolders.map(folder => (

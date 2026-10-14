@@ -106,7 +106,7 @@ func trashItem(path string) (string, error) {
 		if nserr != 0 {
 			return "", errors.New(nsStringValue(objc.Send(nserr, sel("localizedDescription"))))
 		}
-		return "", errors.New("无法移到废纸篓")
+		return "", errors.New(text().cannotTrash)
 	}
 	return nsStringValue(objc.Send(result, sel("path"))), nil
 }

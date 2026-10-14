@@ -4,6 +4,7 @@ import { AddRegular, AlignArrowRightRegular, CloseRegular, CloseSquareRegular, C
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import { folderNameFromPath } from '~/atoms/recentFolders'
 import { tabsStateAtom } from '~/atoms/tabs'
 import { ContextMenu } from '~/components/ContextMenu'
@@ -15,8 +16,6 @@ import { colors } from '~/theme/colors.stylex'
 import { control, radius } from '~/theme/layout.stylex'
 import { text, utility, weight } from '~/theme/text'
 import { tabMarker } from './markers.stylex'
-
-const NEW_TAB_TITLE = '新标签页'
 
 const styles = stylex.create({
   strip: {
@@ -86,8 +85,9 @@ const styles = stylex.create({
 })
 
 function TabItem({ tab, active, isOnly, isLast }: { tab: Tab, active: boolean, isOnly: boolean, isLast: boolean }) {
+  const { t } = useTranslation()
   const { activateTab, closeTab, closeOtherTabs, closeTabsToRight } = useTabs()
-  const title = tab.path ? folderNameFromPath(tab.path) : NEW_TAB_TITLE
+  const title = tab.path ? folderNameFromPath(tab.path) : t('common.newTab')
   const Icon = tab.path
     ? (active ? FolderFilled : FolderRegular)
     : (active ? LayoutGridFilled : LayoutGridRegular)
@@ -121,7 +121,7 @@ function TabItem({ tab, active, isOnly, isLast }: { tab: Tab, active: boolean, i
       </span>
       <button
         type="button"
-        aria-label={`关闭 ${title}`}
+        aria-label={t('tabs.closeTab', { title })}
         {...stylex.props(styles.close, active && styles.closeVisible)}
         onMouseDown={e => e.stopPropagation()}
         onClick={() => closeTab(tab.id)}
@@ -135,14 +135,14 @@ function TabItem({ tab, active, isOnly, isLast }: { tab: Tab, active: boolean, i
   return (
     <ContextMenu
       items={[
-        { label: '关闭', icon: CloseRegular, shortcut: active ? '⌘W' : undefined, onSelect: () => closeTab(tab.id) },
-        { label: '关闭其他标签页', icon: CloseSquareRegular, disabled: isOnly, onSelect: () => closeOtherTabs(tab.id) },
-        { label: '关闭右侧标签页', icon: AlignArrowRightRegular, disabled: isLast, onSelect: () => closeTabsToRight(tab.id) },
+        { label: t('common.close'), icon: CloseRegular, shortcut: active ? '⌘W' : undefined, onSelect: () => closeTab(tab.id) },
+        { label: t('tabs.closeOthers'), icon: CloseSquareRegular, disabled: isOnly, onSelect: () => closeOtherTabs(tab.id) },
+        { label: t('tabs.closeToRight'), icon: AlignArrowRightRegular, disabled: isLast, onSelect: () => closeTabsToRight(tab.id) },
         ...(path
           ? [
-              { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
+              { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(path) },
               {
-                label: '在访达中打开',
+                label: t('common.revealInFinder'),
                 icon: FolderOpenRegular,
                 onSelect: () =>
                   void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
@@ -157,6 +157,7 @@ function TabItem({ tab, active, isOnly, isLast }: { tab: Tab, active: boolean, i
 }
 
 export function TabStrip() {
+  const { t } = useTranslation()
   const { tabs, activeId } = useAtomValue(tabsStateAtom)
   const { newTab } = useTabs()
 
@@ -165,7 +166,7 @@ export function TabStrip() {
       {/* In the sticky header, a shorter page clamping the window's scroll
        * would look to framer like the tabs moving by that much. layoutRoot
        * measures them against the strip; it needs `layout` to be measured. */}
-      <motion.div layout layoutRoot role="tablist" aria-label="文件夹标签页" {...stylex.props(styles.tabs)}>
+      <motion.div layout layoutRoot role="tablist" aria-label={t('tabs.list')} {...stylex.props(styles.tabs)}>
         <AnimatePresence initial={false}>
           {tabs.map((tab, i) => (
             <TabItem
@@ -178,7 +179,7 @@ export function TabStrip() {
           ))}
         </AnimatePresence>
       </motion.div>
-      <IconButton label="新标签页 (⌘T)" icon={AddRegular} onClick={newTab} />
+      <IconButton label={t('tabs.newTabShortcut')} icon={AddRegular} onClick={newTab} />
     </div>
   )
 }

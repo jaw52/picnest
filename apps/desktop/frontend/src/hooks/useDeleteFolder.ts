@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 
 import { folderNameFromPath, recentFoldersAtom, withFolderRemoved } from '~/atoms/recentFolders'
 import { useTabs } from '~/hooks/useTabs'
+import { i18n } from '~/i18n'
 import { deleteFolder } from '~/lib/backend'
 import { ask, message } from '~/lib/native'
 
@@ -12,8 +13,8 @@ export function useDeleteFolder() {
 
   return useCallback(
     async (folderPath: string) => {
-      const confirmed = await ask(`确定要将「${folderNameFromPath(folderPath)}」移到废纸篓吗？`, {
-        title: '删除文件夹',
+      const confirmed = await ask(i18n.t('dialogs.deleteFolderConfirm', { name: folderNameFromPath(folderPath) }), {
+        title: i18n.t('dialogs.deleteFolderTitle'),
         kind: 'warning',
       })
       if (!confirmed)
@@ -23,7 +24,7 @@ export function useDeleteFolder() {
         await deleteFolder(folderPath)
       }
       catch (error) {
-        await message(`删除失败：${error}`, { title: '删除文件夹', kind: 'error' })
+        await message(i18n.t('dialogs.deleteFailed', { error }), { title: i18n.t('dialogs.deleteFolderTitle'), kind: 'error' })
         return
       }
 

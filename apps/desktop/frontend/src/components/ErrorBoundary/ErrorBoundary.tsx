@@ -1,6 +1,7 @@
 import type { ErrorInfo, ReactNode } from 'react'
 import * as stylex from '@stylexjs/stylex'
 import { Component } from 'react'
+import { i18n } from '~/i18n'
 import { text, weight } from '~/theme/text'
 import { styles } from './style'
 
@@ -41,13 +42,13 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div {...stylex.props(styles.root)}>
           <p {...stylex.props(text.subtitleCompact, weight.semibold, styles.title)}>
-            画廊渲染出错了
+            {i18n.t('errorBoundary.title')}
           </p>
           <p {...stylex.props(text.caption, styles.muted, styles.message)}>
             {this.state.error.message}
           </p>
           <p {...stylex.props(text.caption, styles.muted)}>
-            试试切换筛选条件或重新打开文件夹
+            {i18n.t('errorBoundary.hint')}
           </p>
         </div>
       )

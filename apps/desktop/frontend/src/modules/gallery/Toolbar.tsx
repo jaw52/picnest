@@ -1,6 +1,7 @@
 import { Delete2Regular, Refresh2Regular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
+import { useTranslation } from 'react-i18next'
 import {
   bulkDeleteBlockedAtom,
   currentFolderAtom,
@@ -51,6 +52,7 @@ const styles = stylex.create({
 })
 
 export function Toolbar() {
+  const { t } = useTranslation()
   const currentFolder = useAtomValue(currentFolderAtom)
   const isScanning = useAtomValue(isScanningAtom)
   const selectedIds = useAtomValue(selectedPhotoIdsAtom)
@@ -70,7 +72,7 @@ export function Toolbar() {
         <div data-no-drag {...stylex.props(styles.slider)}>
           {/* Also ⌘= / ⌘- / ⌘0, or a pinch on the grid. */}
           <Slider
-            label="缩略图"
+            label={t('gallery.thumbnailSize')}
             min={THUMBNAIL_WIDTH_MIN}
             max={THUMBNAIL_WIDTH_MAX}
             step={10}
@@ -82,7 +84,7 @@ export function Toolbar() {
       )}
       {currentFolder && (
         <IconButton
-          label={bulkDeleteBlocked ? '缩略图生成完后才能批量删除' : '删除选中项'}
+          label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
           icon={Delete2Regular}
           disabled={selectedIds.size === 0 || bulkDeleteBlocked}
           onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
@@ -90,7 +92,7 @@ export function Toolbar() {
       )}
       {currentFolder && (
         <IconButton
-          label="重新扫描"
+          label={t('gallery.rescan')}
           icon={Refresh2Regular}
           iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
           disabled={isScanning}

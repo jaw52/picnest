@@ -44,7 +44,7 @@ func (Native) Ask(ctx context.Context, title, message string, kind DialogKind) (
 		Type:          typ,
 		Title:         title,
 		Message:       message,
-		Buttons:       []string{"确定", "取消"},
+		Buttons:       []string{text().ok, text().cancel},
 		DefaultButton: 0,
 		CancelButton:  1,
 	})

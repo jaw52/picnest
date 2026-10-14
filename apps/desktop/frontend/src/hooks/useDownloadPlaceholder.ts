@@ -3,6 +3,7 @@ import { atom, useStore } from 'jotai'
 import { useCallback } from 'react'
 
 import { currentFolderAtom, photosAtom } from '~/atoms/gallery'
+import { i18n } from '~/i18n'
 import { downloadPlaceholder } from '~/lib/backend'
 import { message } from '~/lib/native'
 
@@ -51,7 +52,7 @@ export function useDownloadPlaceholder(folderPath: string | null) {
         }
       }
       catch (error) {
-        await message(`下载失败：${error}`, { title: '下载 iCloud 文件', kind: 'error' })
+        await message(i18n.t('dialogs.downloadFailed', { error }), { title: i18n.t('dialogs.downloadTitle'), kind: 'error' })
       }
       finally {
         setDownloading(false)

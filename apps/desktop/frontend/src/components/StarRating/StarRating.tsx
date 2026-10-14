@@ -2,6 +2,7 @@ import { StarFilled } from '@mingcute/react/core-filled'
 import { ForbidCircleRegular, StarRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { styles } from './style'
 
 export interface StarRatingProps {
@@ -22,6 +23,7 @@ export function StarRating({
   size = 16,
   focusable = true,
 }: StarRatingProps) {
+  const { t } = useTranslation()
   const [hovered, setHovered] = useState<number | null>(null)
   const display = hovered ?? rating
   const tabIndex = focusable ? undefined : -1
@@ -30,7 +32,7 @@ export function StarRating({
     <div {...stylex.props(styles.root)} onMouseLeave={() => setHovered(null)}>
       <button
         type="button"
-        aria-label="未评分"
+        aria-label={t('rating.none')}
         aria-pressed={rating === 0}
         tabIndex={tabIndex}
         {...stylex.props(styles.button, hovered === 0 ? styles.filled : styles.empty)}
@@ -49,7 +51,7 @@ export function StarRating({
           <button
             key={star}
             type="button"
-            aria-label={`${star} 星`}
+            aria-label={t('rating.stars', { count: star })}
             aria-pressed={star <= rating}
             tabIndex={tabIndex}
             {...stylex.props(styles.button, filled ? styles.filled : styles.empty)}

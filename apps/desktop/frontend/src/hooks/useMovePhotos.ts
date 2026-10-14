@@ -3,6 +3,7 @@ import { atom, useStore } from 'jotai'
 import { useCallback } from 'react'
 
 import { currentFolderAtom } from '~/atoms/gallery'
+import { i18n } from '~/i18n'
 import { movePhotos, pickFolder } from '~/lib/backend'
 import { message } from '~/lib/native'
 
@@ -24,8 +25,8 @@ export function useMovePhotos(folderPath: string | null) {
       try {
         const title
           = photos.length === 1
-            ? `移动「${photos[0].fileName}」到…`
-            : `移动 ${photos.length} 张照片到…`
+            ? i18n.t('dialogs.movePhotoTo', { name: photos[0].fileName })
+            : i18n.t('common.movePhotosTo', { count: photos.length })
         const destFolder = await pickFolder({ title, defaultPath: folderPath })
         if (!destFolder || destFolder === folderPath)
           return
@@ -46,10 +47,10 @@ export function useMovePhotos(folderPath: string | null) {
         if (store.get(currentFolderAtom) === folderPath) {
           const refreshed = await refreshFolder(folderPath)
           if (!refreshed)
-            errors.push('刷新目录失败，请手动重新扫描。')
+            errors.push(i18n.t('common.rescanFailed'))
         }
         if (errors.length > 0)
-          await message(errors.join('\n'), { title: '移动照片', kind: 'error' })
+          await message(errors.join('\n'), { title: i18n.t('dialogs.movePhotosTitle'), kind: 'error' })
       }
       finally {
         store.set(movePendingAtom, false)

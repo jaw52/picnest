@@ -2,6 +2,7 @@ import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { undoableDeletionAtom } from '~/atoms/gallery'
 import { Button } from '~/components/Button'
 import { Tooltip } from '~/components/Tooltip'
@@ -40,6 +41,7 @@ const styles = stylex.create({
  * it too, for as long as it is the last deletion (see useUndoShortcut).
  */
 export function UndoToast() {
+  const { t } = useTranslation()
   const deletion = useAtomValue(undoableDeletionAtom)
   const undo = useUndoDeletion()
   const [shown, setShown] = useState(deletion)
@@ -74,10 +76,10 @@ export function UndoToast() {
           onPointerEnter={() => setHovered(true)}
           onPointerLeave={() => setHovered(false)}
         >
-          <span>{count > 1 ? `已将 ${count} 张照片移到废纸篓` : '已移到废纸篓'}</span>
+          <span>{count > 1 ? t('gallery.trashedMany', { count }) : t('gallery.trashedOne')}</span>
           <Tooltip content="⌘Z">
             <Button variant="secondary" size="compact" onClick={() => void undo()}>
-              撤销
+              {t('gallery.undo')}
             </Button>
           </Tooltip>
         </motion.div>

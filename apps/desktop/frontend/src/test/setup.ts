@@ -1,3 +1,4 @@
+import { initI18n } from '~/i18n'
 import '@testing-library/jest-dom/vitest'
 
 // jsdom doesn't implement ResizeObserver; the masonry grid uses it to track
@@ -27,3 +28,6 @@ window.matchMedia ??= (query: string) =>
 // jsdom doesn't implement HTMLImageElement.decode; the lightbox decodes
 // photos before showing them. Resolving at once stands in for a decoded image.
 HTMLImageElement.prototype.decode ??= () => Promise.resolve()
+
+// Components render in Chinese, the language the tests query by.
+initI18n('zh-CN')

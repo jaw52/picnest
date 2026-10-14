@@ -17,6 +17,11 @@ import (
 var (
 	// folderChanged carries the path of the watched folder.
 	folderChanged = mygo.NewEvent[string]("folder-changed")
+	// languageChanged carries the language picked in Settings, and the
+	// one the app is now shown in.
+	languageChanged = mygo.NewEvent[LanguageState]("language-changed")
+	// openSettings asks the page to open Settings, chosen from the menu bar.
+	openSettings = mygo.NewEvent[struct{}]("open-settings")
 )
 
 // configFile returns a path inside the app config dir.
@@ -147,15 +152,15 @@ func (a *App) RestorePhotos(folderPath string, photos []TrashedPhoto) error {
 	for _, p := range photos {
 		name := filepath.Base(p.Path)
 		if _, err := os.Lstat(p.Path); err == nil {
-			msgs = append(msgs, fmt.Sprintf("「%s」已存在，未能放回", name))
+			msgs = append(msgs, fmt.Sprintf(text().existsNotRestored, name))
 			continue
 		}
 		if err := moveFile(p.TrashPath, p.Path); err != nil {
-			msgs = append(msgs, fmt.Sprintf("「%s」：%v", name, err))
+			msgs = append(msgs, fmt.Sprintf(text().fileFailed, name, err))
 			continue
 		}
 		if err := setRating(db, name, p.Rating); err != nil {
-			msgs = append(msgs, fmt.Sprintf("「%s」评分未能恢复：%v", name, err))
+			msgs = append(msgs, fmt.Sprintf(text().ratingNotRestored, name, err))
 		}
 	}
 	if len(msgs) > 0 {
@@ -169,7 +174,7 @@ func (a *App) RestorePhotos(folderPath string, photos []TrashedPhoto) error {
 // background, so callers re-scan to see the file become real.
 func (a *App) DownloadPlaceholder(filePath string) error {
 	if runtime.GOOS != "darwin" {
-		return errors.New("只有 macOS 支持下载 iCloud 文件")
+		return errors.New(text().iCloudMacOnly)
 	}
 	info, err := os.Stat(filePath)
 	if err != nil {
@@ -190,11 +195,11 @@ func (a *App) DeleteFolder(folderPath string) error {
 
 func (a *App) RenamePhoto(folderPath, oldName, newName string) error {
 	if newName == "" || strings.Contains(newName, "/") {
-		return errors.New("文件名不能为空或包含斜杠")
+		return errors.New(text().invalidName)
 	}
 	newPath := filepath.Join(folderPath, newName)
 	if _, err := os.Lstat(newPath); err == nil {
-		return fmt.Errorf("「%s」已存在", newName)
+		return fmt.Errorf(text().nameTaken, newName)
 	}
 	if err := os.Rename(filepath.Join(folderPath, oldName), newPath); err != nil {
 		return err
@@ -212,7 +217,7 @@ func (a *App) RenamePhoto(folderPath, oldName, newName string) error {
 // together, so one bad file doesn't abort the batch.
 func (a *App) MovePhotos(folderPath string, fileNames []string, destFolder string) error {
 	if filepath.Clean(folderPath) == filepath.Clean(destFolder) {
-		return errors.New("目标文件夹与当前文件夹相同")
+		return errors.New(text().sameFolder)
 	}
 	db, err := openRatingsDB(folderPath)
 	if err != nil {
@@ -230,15 +235,15 @@ func (a *App) MovePhotos(folderPath string, fileNames []string, destFolder strin
 		from := filepath.Join(folderPath, name)
 		to := filepath.Join(destFolder, name)
 		if _, err := os.Lstat(to); err == nil {
-			msgs = append(msgs, fmt.Sprintf("「%s」在目标文件夹中已存在", name))
+			msgs = append(msgs, fmt.Sprintf(text().existsInDestination, name))
 			continue
 		}
 		if err := moveFile(from, to); err != nil {
-			msgs = append(msgs, fmt.Sprintf("「%s」：%v", name, err))
+			msgs = append(msgs, fmt.Sprintf(text().fileFailed, name, err))
 			continue
 		}
 		if err := moveFileRecords(db, ratingsDBPath(destFolder), name); err != nil {
-			msgs = append(msgs, fmt.Sprintf("「%s」元数据迁移失败：%v", name, err))
+			msgs = append(msgs, fmt.Sprintf(text().recordsNotMoved, name, err))
 		}
 	}
 	if len(msgs) > 0 {

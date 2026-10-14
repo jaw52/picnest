@@ -5,6 +5,7 @@ import { CopyRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { currentFolderAtom, photoInfoIdAtom, photosAtom, renamingPhotoIdAtom } from '~/atoms/gallery'
 import { IconButton } from '~/components/IconButton'
 import { StarRating } from '~/components/StarRating'
@@ -103,6 +104,7 @@ function Section({ title, children }: { title: string, children: ReactNode }) {
  * real file on disk; click the icon to copy.
  */
 function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: string) => void }) {
+  const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(photo.fileName)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -155,13 +157,13 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
     <div {...stylex.props(styles.nameRow)}>
       <div
         {...stylex.props(styles.name, utility.truncate, text.subtitleCompact, weight.semibold)}
-        title={`${photo.fileName}（双击重命名）`}
+        title={t('photoInfo.renameHint', { name: photo.fileName })}
         onDoubleClick={startEditing}
       >
         {photo.fileName}
       </div>
       <IconButton
-        label="复制文件名"
+        label={t('photoInfo.copyFileName')}
         icon={CopyRegular}
         xstyle={styles.shrink}
         onClick={() => void writeText(photo.fileName)}
@@ -171,6 +173,7 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
 }
 
 function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
+  const { t } = useTranslation()
   const rate = useRatePhoto(folderPath)
   const renamePhoto = useRenamePhoto(folderPath)
   const { details } = usePhotoDetails(photo.path)
@@ -179,34 +182,34 @@ function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | n
     <>
       <div {...stylex.props(styles.info)}>
         <FileNameRow photo={photo} onRename={newName => void renamePhoto(photo, newName)} />
-        <Tooltip content="选中后按 0–5 键评分" side="bottom">
+        <Tooltip content={t('photoInfo.rateHint')} side="bottom">
           <div {...stylex.props(styles.rating)}>
             <StarRating rating={photo.rating} onChange={r => rate([photo], r)} />
           </div>
         </Tooltip>
       </div>
 
-      <Section title="基本信息">
-        <Row label="尺寸" value={`${photo.width} × ${photo.height}`} />
-        <Row label="类型" value={fileExtension(photo.fileName) || '未知'} />
-        <Row label="大小" value={details ? formatFileSize(details.fileSize) : '...'} />
+      <Section title={t('photoInfo.basics')}>
+        <Row label={t('photoInfo.dimensions')} value={`${photo.width} × ${photo.height}`} />
+        <Row label={t('photoInfo.type')} value={fileExtension(photo.fileName) || t('photoInfo.unknown')} />
+        <Row label={t('photoInfo.size')} value={details ? formatFileSize(details.fileSize) : '...'} />
         {details?.created !== undefined && (
-          <Row label="创建时间" value={formatUnixSeconds(details.created)} />
+          <Row label={t('photoInfo.created')} value={formatUnixSeconds(details.created)} />
         )}
-        <Row label="修改时间" value={formatUnixSeconds(photo.modified)} />
+        <Row label={t('photoInfo.modified')} value={formatUnixSeconds(photo.modified)} />
       </Section>
 
       {details?.exif && (
         <Section title="EXIF">
-          {details.exif.cameraMake && <Row label="制造商" value={details.exif.cameraMake} />}
-          {details.exif.cameraModel && <Row label="型号" value={details.exif.cameraModel} />}
-          {details.exif.lensModel && <Row label="镜头" value={details.exif.lensModel} />}
-          {details.exif.focalLength && <Row label="焦距" value={details.exif.focalLength} />}
-          {details.exif.aperture && <Row label="光圈" value={details.exif.aperture} />}
-          {details.exif.shutterSpeed && <Row label="曝光时间" value={details.exif.shutterSpeed} />}
+          {details.exif.cameraMake && <Row label={t('photoInfo.make')} value={details.exif.cameraMake} />}
+          {details.exif.cameraModel && <Row label={t('photoInfo.model')} value={details.exif.cameraModel} />}
+          {details.exif.lensModel && <Row label={t('photoInfo.lens')} value={details.exif.lensModel} />}
+          {details.exif.focalLength && <Row label={t('photoInfo.focalLength')} value={details.exif.focalLength} />}
+          {details.exif.aperture && <Row label={t('photoInfo.aperture')} value={details.exif.aperture} />}
+          {details.exif.shutterSpeed && <Row label={t('photoInfo.shutterSpeed')} value={details.exif.shutterSpeed} />}
           {details.exif.iso && <Row label="ISO" value={details.exif.iso} />}
-          {details.exif.exposureBias && <Row label="曝光偏移" value={details.exif.exposureBias} />}
-          {details.exif.takenAt && <Row label="拍摄时间" value={details.exif.takenAt} />}
+          {details.exif.exposureBias && <Row label={t('photoInfo.exposureBias')} value={details.exif.exposureBias} />}
+          {details.exif.takenAt && <Row label={t('photoInfo.takenAt')} value={details.exif.takenAt} />}
         </Section>
       )}
     </>

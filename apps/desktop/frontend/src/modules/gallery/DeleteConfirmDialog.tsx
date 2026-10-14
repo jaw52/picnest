@@ -7,6 +7,7 @@ import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { deleteConfirmRequestAtom } from '~/atoms/gallery'
 import { Button } from '~/components/Button'
 import { SurfaceProvider } from '~/context/surface'
@@ -161,6 +162,7 @@ function DeleteConfirmTile({
   height: number
   onRemove: () => void
 }) {
+  const { t } = useTranslation()
   const thumbnailUrl = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(width), !photo.isCloudPlaceholder)
 
   return (
@@ -185,8 +187,8 @@ function DeleteConfirmTile({
       </div>
       <button
         type="button"
-        aria-label={`不删除「${photo.fileName}」`}
-        title="不删除这张"
+        aria-label={t('deleteConfirm.keep', { name: photo.fileName })}
+        title={t('deleteConfirm.keepTitle')}
         {...stylex.props(styles.remove, styles.revealed)}
         onClick={onRemove}
       >
@@ -206,6 +208,7 @@ function DeleteConfirmGrid({
   folderPath: string
   onRemove: (photo: Photo) => void
 }) {
+  const { t } = useTranslation()
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [viewport, setViewport] = useState({ top: 0, height: 0 })
@@ -235,7 +238,7 @@ function DeleteConfirmGrid({
       onScroll={e => setViewport({ top: e.currentTarget.scrollTop, height: e.currentTarget.clientHeight })}
     >
       {photos.length === 0
-        ? <div {...stylex.props(styles.empty, text.body)}>没有要删除的照片了</div>
+        ? <div {...stylex.props(styles.empty, text.body)}>{t('deleteConfirm.nothingLeft')}</div>
         : (
             <div {...stylex.props(styles.grid, styles.gridHeight(layout.height))}>
               {/* Tiles glide into the gaps left by removed ones. */}
@@ -278,6 +281,7 @@ function DeleteConfirmContent({
   cancelRef: RefObject<HTMLButtonElement | null>
   onClose: (photos: Photo[] | null) => void
 }) {
+  const { t } = useTranslation()
   const [remaining, setRemaining] = useState(request.photos)
   // Starts over when a new request reuses the mounted popup.
   const [prevRequest, setPrevRequest] = useState(request)
@@ -290,7 +294,7 @@ function DeleteConfirmContent({
     <>
       <div {...stylex.props(styles.header)}>
         <AlertDialog.Title {...stylex.props(text.title, weight.semibold)}>
-          {`删除 ${remaining.length} 张照片`}
+          {t('common.deletePhotos', { count: remaining.length })}
         </AlertDialog.Title>
       </div>
       <DeleteConfirmGrid
@@ -299,13 +303,13 @@ function DeleteConfirmContent({
         onRemove={photo => setRemaining(prev => prev.filter(p => p.id !== photo.id))}
       />
       <div {...stylex.props(styles.footer)}>
-        <AlertDialog.Close ref={cancelRef} render={<Button variant="tertiary" />}>取消</AlertDialog.Close>
+        <AlertDialog.Close ref={cancelRef} render={<Button variant="tertiary" />}>{t('common.cancel')}</AlertDialog.Close>
         <Button
           variant="destructive"
           disabled={remaining.length === 0}
           onClick={() => onClose(remaining)}
         >
-          确认删除
+          {t('deleteConfirm.confirm')}
         </Button>
       </div>
     </>

@@ -1,8 +1,10 @@
+import type { TFunction } from 'i18next'
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import { CloseRegular, CopyRegular, ExternalLinkRegular, FolderDeleteRegular, FolderOpenRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useThumbnail } from '~/hooks/useThumbnail'
 import { listSubfolders, scanFolderPage } from '~/lib/backend'
@@ -319,20 +321,21 @@ function FolderIcon({ coverUrl, open, fluid = false }: { coverUrl: string | unde
 
 /** The menu every folder gets; `onRemove` and `onOpenInNewTab` add their items. */
 function folderMenuItems(
+  t: TFunction,
   path: string,
   { onOpenInNewTab, onRemove, onDelete }: { onOpenInNewTab?: () => void, onRemove?: () => void, onDelete: () => void },
 ): ContextMenuItem[] {
   return [
-    ...(onOpenInNewTab ? [{ label: '在新标签页中打开', icon: ExternalLinkRegular, onSelect: onOpenInNewTab }] : []),
-    { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(path) },
+    ...(onOpenInNewTab ? [{ label: t('tabs.openInNewTab'), icon: ExternalLinkRegular, onSelect: onOpenInNewTab }] : []),
+    { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(path) },
     {
-      label: '在访达中打开',
+      label: t('common.revealInFinder'),
       icon: FolderOpenRegular,
       onSelect: () =>
         void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
     },
-    ...(onRemove ? [{ label: '从列表中移除', icon: CloseRegular, onSelect: onRemove }] : []),
-    { label: '删除文件夹', icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
+    ...(onRemove ? [{ label: t('tabs.removeFromList'), icon: CloseRegular, onSelect: onRemove }] : []),
+    { label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
   ]
 }
 
@@ -368,11 +371,12 @@ interface FolderCardProps {
 
 /** A folder drawn like a Finder folder icon with its first photo inside. */
 export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCardProps) {
+  const { t } = useTranslation()
   const coverUrl = useCoverUrl(path)
   const { open, handlers } = useOpenOnHover()
 
   return (
-    <ContextMenu items={folderMenuItems(path, { onRemove, onDelete })}>
+    <ContextMenu items={folderMenuItems(t, path, { onRemove, onDelete })}>
       <button
         type="button"
         onClick={onOpen}
@@ -400,12 +404,13 @@ interface FolderTileProps {
 
 /** A subfolder in the masonry, sized like a photo tile, that opens like a link. */
 export function FolderTile({ path, name, width, height, onOpen, onDelete }: FolderTileProps) {
+  const { t } = useTranslation()
   const coverUrl = useCoverUrl(path)
   const { open, handlers } = useOpenOnHover()
 
   return (
     <ContextMenu
-      items={folderMenuItems(path, {
+      items={folderMenuItems(t, path, {
         onOpenInNewTab: () => onOpen({ metaKey: true, button: 0 }),
         onDelete,
       })}
