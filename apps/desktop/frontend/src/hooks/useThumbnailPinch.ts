@@ -65,12 +65,18 @@ export function useThumbnailPinch(enabled: boolean) {
     document.addEventListener('gesturestart', onGestureStart)
     document.addEventListener('gesturechange', onGestureChange)
     document.addEventListener('gestureend', onGestureEnd)
-    window.addEventListener('wheel', onWheel, { passive: false })
+    // Only where pinch isn't a gesture event: a cancelable wheel listener
+    // makes WebKit wait on the main thread before scrolling, so the grid's
+    // renders while scrolling would stall the scroll itself.
+    const pinchIsWheel = !('GestureEvent' in window)
+    if (pinchIsWheel)
+      window.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       document.removeEventListener('gesturestart', onGestureStart)
       document.removeEventListener('gesturechange', onGestureChange)
       document.removeEventListener('gestureend', onGestureEnd)
-      window.removeEventListener('wheel', onWheel)
+      if (pinchIsWheel)
+        window.removeEventListener('wheel', onWheel)
       window.clearTimeout(wheelIdle)
     }
   }, [enabled, store, setWidth])
