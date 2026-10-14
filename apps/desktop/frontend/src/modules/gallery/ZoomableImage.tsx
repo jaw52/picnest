@@ -60,6 +60,20 @@ interface ZoomableImageProps {
 }
 
 /**
+ * A photo laid out as the lightbox fits it, without the zoom: a neighbour
+ * waiting beside the photo shown, for a swipe to bring in.
+ */
+export function FittedImage({ src, alt }: { src: string, alt: string }) {
+  return (
+    <div {...stylex.props(styles.viewport)}>
+      <div {...stylex.props(styles.stage)}>
+        <img src={src} alt={alt} {...stylex.props(styles.image)} draggable={false} />
+      </div>
+    </div>
+  )
+}
+
+/**
  * The lightbox photo with trackpad zoom: pinch to zoom around the cursor,
  * two-finger scroll to pan once zoomed (at fit it bubbles up, for swiping
  * between photos), drag to pan, click to jump between

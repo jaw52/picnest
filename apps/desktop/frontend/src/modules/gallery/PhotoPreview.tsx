@@ -1,10 +1,13 @@
+import type { AnimationPlaybackControls } from 'framer-motion'
 import type { MouseEvent, WheelEvent } from 'react'
 import type { IconComponent } from '~/lib/icon'
+import type { PageDirection, SwipePager } from '~/lib/swipe-pager'
+import type { Photo } from '~/types/photo'
 import { CloseRegular, CopyRegular, Delete2Regular, LeftRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
-import { AnimatePresence, motion } from 'framer-motion'
+import { animate, AnimatePresence, motion, useMotionValue } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   closePreviewAtom,
   currentFolderAtom,
@@ -20,11 +23,21 @@ import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { convertFileSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
-import { createSwipeDetector } from '~/lib/swipe'
+import { createSwipePager } from '~/lib/swipe-pager'
 import { motion as motionTokens, radius } from '~/theme/layout.stylex'
 import { text } from '~/theme/text'
 import { Filmstrip } from './Filmstrip'
-import { ZoomableImage } from './ZoomableImage'
+import { FittedImage, ZoomableImage } from './ZoomableImage'
+
+/** Space between the photo and its neighbours as they slide past. */
+const PAGE_GAP = 32
+/** A swipe turns the page once it has gone this far, in px, or a fifth of the window. */
+const PAGE_TURN_DISTANCE = 200
+const SLIDE = { type: 'spring' as const, duration: 0.32, bounce: 0 }
+
+function slideTransition() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? { duration: 0 } : SLIDE
+}
 
 const styles = stylex.create({
   overlay: {
@@ -34,9 +47,15 @@ const styles = stylex.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     backgroundColor: 'rgb(0 0 0 / 0.9)',
     outline: 'none',
   },
+  // The photo and its neighbours side by side, slid along by a swipe.
+  track: { position: 'absolute', inset: 0 },
+  page: { position: 'absolute', inset: 0, display: 'flex' },
+  before: { transform: `translateX(calc(-100% - ${PAGE_GAP}px))` },
+  after: { transform: `translateX(calc(100% + ${PAGE_GAP}px))` },
   // A round control on the lightbox, which stays dark whatever the theme.
   button: {
     position: 'absolute',
@@ -117,6 +136,17 @@ function LightboxButton({
   )
 }
 
+function CloudNotice() {
+  return <div {...stylex.props(styles.notice, text.body)}>iCloud 未下载，无法预览</div>
+}
+
+/** The photo either side of the one shown, in place for a swipe to slide in. */
+function Neighbour({ photo }: { photo: Photo }) {
+  return photo.isCloudPlaceholder
+    ? <CloudNotice />
+    : <FittedImage src={convertFileSrc(photo.path)} alt={photo.fileName} />
+}
+
 export function PhotoPreview() {
   const photos = useAtomValue(previewPhotosAtom)
   const photo = useAtomValue(previewPhotoAtom)
@@ -164,35 +194,82 @@ export function PhotoPreview() {
       retain([])
   }, [isOpen, retain])
 
+  // How far the photo and its neighbours are slid, by a swipe in progress.
+  const slide = useMotionValue(0)
+  const slideRef = useRef<AnimationPlaybackControls | null>(null)
+  function slideTo(x: number) {
+    slideRef.current?.stop()
+    slideRef.current = animate(slide, x, slideTransition())
+    return slideRef.current
+  }
+
   // Only the latest switch lands, should several be waiting on decodes.
   const switchRef = useRef(0)
+  // The track goes back in place before the new photo paints, so the
+  // neighbour slid into view is swapped for the same photo, unmoved. Closing
+  // mid-slide leaves it in place for the next opening too.
+  const shownId = photo?.id
+  useLayoutEffect(() => {
+    slideRef.current?.stop()
+    slide.jump(0)
+  }, [shownId, slide])
+  const ready = useCallback(
+    (photo: Photo) => (photo.isCloudPlaceholder ? Promise.resolve() : decode(convertFileSrc(photo.path))),
+    [decode],
+  )
   const goTo = useCallback(
     (delta: number) => {
-      if (index === -1)
-        return
-      const next = photos[index + delta]
+      const next = index === -1 ? undefined : photos[index + delta]
       if (!next)
         return
       const token = ++switchRef.current
-      const ready = next.isCloudPlaceholder ? Promise.resolve() : decode(convertFileSrc(next.path))
-      void ready.then(() => {
+      void ready(next).then(() => {
         if (switchRef.current === token)
           setPreviewId(next.id)
       })
     },
-    [index, photos, setPreviewId, decode],
+    [index, photos, ready, setPreviewId],
   )
+  // A swipe's page turn: the neighbour finishes sliding in, then lands.
+  const turnPage = (direction: PageDirection) => {
+    const next = photos[index + direction]
+    if (!next)
+      return
+    const token = ++switchRef.current
+    const slid = slideTo(-direction * (window.innerWidth + PAGE_GAP))
+    void Promise.all([ready(next), slid]).then(() => {
+      if (switchRef.current === token)
+        setPreviewId(next.id)
+    })
+  }
 
-  // Two-finger horizontal swipe, one photo per gesture. Lives here rather
-  // than in ZoomableImage because that remounts with every photo, which would
-  // lose track of the gesture mid-momentum.
-  const [swipe] = useState(createSwipeDetector)
+  // Two-finger horizontal swipe, the photo following the fingers. Lives here
+  // rather than in ZoomableImage because that remounts with every photo,
+  // which would lose track of the gesture mid-momentum. The pager outlives
+  // renders, so it reaches this render's state through a ref.
+  const swipeRef = useRef({ index, photos, turnPage })
+  useEffect(() => {
+    swipeRef.current = { index, photos, turnPage }
+  })
+  const pagerRef = useRef<SwipePager | null>(null)
+  useEffect(() => () => pagerRef.current?.dispose(), [])
   function onWheel(e: WheelEvent<HTMLDivElement>) {
     if (e.ctrlKey)
       return
-    const direction = swipe.push(e.nativeEvent)
-    if (direction !== 0)
-      goTo(direction)
+    pagerRef.current ??= createSwipePager({
+      distance: () => Math.min(PAGE_TURN_DISTANCE, window.innerWidth / 5),
+      canPage: (direction) => {
+        const { index, photos } = swipeRef.current
+        return index !== -1 && photos[index + direction] !== undefined
+      },
+      follow: (offset) => {
+        slideRef.current?.stop()
+        slide.set(offset)
+      },
+      commit: direction => swipeRef.current.turnPage(direction),
+      release: () => void slideTo(0),
+    })
+    pagerRef.current.push(e.nativeEvent)
   }
 
   useEffect(() => {
@@ -244,27 +321,39 @@ export function PhotoPreview() {
           onClick={close}
           onWheel={onWheel}
         >
-          {photo.isCloudPlaceholder
-            ? (
-                <div {...stylex.props(styles.notice, text.body)}>iCloud 未下载，无法预览</div>
-              )
-            : (
-                <ZoomableImage
-                  key={photo.id}
-                  src={convertFileSrc(photo.path)}
-                  alt={photo.fileName}
-                  fadeIn={photo.id === openedId}
-                  menuItems={[
-                    { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(photo.path) },
-                    {
-                      label: '删除',
-                      icon: Delete2Regular,
-                      destructive: true,
-                      onSelect: () => void deletePhoto([photo]),
-                    },
-                  ]}
-                />
-              )}
+          <motion.div className={stylex.props(styles.track).className} style={{ x: slide }}>
+            {index > 0 && (
+              <div {...stylex.props(styles.page, styles.before)}>
+                <Neighbour photo={photos[index - 1]} />
+              </div>
+            )}
+            <div {...stylex.props(styles.page)}>
+              {photo.isCloudPlaceholder
+                ? <CloudNotice />
+                : (
+                    <ZoomableImage
+                      key={photo.id}
+                      src={convertFileSrc(photo.path)}
+                      alt={photo.fileName}
+                      fadeIn={photo.id === openedId}
+                      menuItems={[
+                        { label: '复制路径', icon: CopyRegular, onSelect: () => void writeText(photo.path) },
+                        {
+                          label: '删除',
+                          icon: Delete2Regular,
+                          destructive: true,
+                          onSelect: () => void deletePhoto([photo]),
+                        },
+                      ]}
+                    />
+                  )}
+            </div>
+            {index !== -1 && index < photos.length - 1 && (
+              <div {...stylex.props(styles.page, styles.after)}>
+                <Neighbour photo={photos[index + 1]} />
+              </div>
+            )}
+          </motion.div>
           <LightboxButton
             label="关闭"
             icon={CloseRegular}
