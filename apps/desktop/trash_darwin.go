@@ -8,8 +8,9 @@ import (
 	"github.com/ebitengine/purego"
 )
 
-// Objective-C runtime bindings, for the one Foundation call mygo doesn't
-// expose: trashing a file and learning where it went, so it can be put back.
+// Objective-C runtime bindings, for the calls mygo doesn't expose: trashing
+// a file and learning where it went, so it can be put back, and the web
+// view's frame rate (see webview_darwin.go).
 
 type objcID = uintptr
 
@@ -24,6 +25,10 @@ var (
 		SendStr   func(obj, sel objcID, s string) objcID
 		SendID    func(obj, sel, arg objcID) objcID
 		SendTrash func(obj, sel, url objcID, result, nserr *objcID) bool
+		SendBool  func(obj, sel, arg objcID) bool
+		SendIndex func(obj, sel objcID, i uint) objcID
+		SendCount func(obj, sel objcID) uint
+		SendFlag  func(obj, sel objcID, flag bool, arg objcID)
 	}
 	objcOnce sync.Once
 	objcErr  error
@@ -49,6 +54,10 @@ func loadObjC() error {
 		purego.RegisterLibFunc(&objc.SendStr, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&objc.SendID, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&objc.SendTrash, lib, "objc_msgSend")
+		purego.RegisterLibFunc(&objc.SendBool, lib, "objc_msgSend")
+		purego.RegisterLibFunc(&objc.SendIndex, lib, "objc_msgSend")
+		purego.RegisterLibFunc(&objc.SendCount, lib, "objc_msgSend")
+		purego.RegisterLibFunc(&objc.SendFlag, lib, "objc_msgSend")
 	})
 	return objcErr
 }

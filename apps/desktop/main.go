@@ -45,7 +45,7 @@ func main() {
 	}))
 
 	mygo.App.WhenReady(func() {
-		mygo.NewWindow(mygo.WindowOptions{
+		w := mygo.NewWindow(mygo.WindowOptions{
 			Title:         "Picnest",
 			Width:         1280,
 			Height:        840,
@@ -57,6 +57,7 @@ func main() {
 			TrafficLightPosition: &mygo.Point{X: 16, Y: 13},
 			URL:                  "/",
 		})
+		unlockFrameRate(w.NativeHandle())
 	})
 
 	if err := mygo.App.Run(); err != nil {
