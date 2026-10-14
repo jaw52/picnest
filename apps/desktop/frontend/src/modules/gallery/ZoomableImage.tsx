@@ -67,7 +67,10 @@ export function FittedImage({ src, alt }: { src: string, alt: string }) {
   return (
     <div {...stylex.props(styles.viewport)}>
       <div {...stylex.props(styles.stage)}>
-        <img src={src} alt={alt} {...stylex.props(styles.image)} draggable={false} />
+        {/* WebKit decodes a large photo off the main thread the first time it
+            paints, leaving it blank meanwhile: a neighbour offscreen until a
+            swipe slides it in would come in empty. */}
+        <img src={src} alt={alt} decoding="sync" {...stylex.props(styles.image)} draggable={false} />
       </div>
     </div>
   )
@@ -248,6 +251,7 @@ export function ZoomableImage({ src, alt, fadeIn, menuItems }: ZoomableImageProp
             ref={imageRef}
             src={src}
             alt={alt}
+            decoding="sync"
             {...stylex.props(styles.image, dragging ? styles.dragging : zoomed ? styles.zoomed : styles.fit)}
             draggable={false}
             initial={fadeIn ? { opacity: 0, scale: 0.98 } : false}
