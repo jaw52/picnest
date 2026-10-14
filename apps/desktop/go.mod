@@ -4,7 +4,7 @@ go 1.27.1
 
 require (
 	github.com/ebitengine/purego v0.11.1
-	github.com/egoist/mygo v0.4.2
+	github.com/egoist/mygo v0.4.8
 	github.com/rjeczalik/notify v0.9.3
 	modernc.org/sqlite v1.60.1
 )

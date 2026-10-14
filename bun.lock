@@ -22,7 +22,7 @@
     },
     "apps/desktop/frontend": {
       "name": "picnest",
-      "version": "0.1.0",
+      "version": "0.2.1",
       "dependencies": {
         "@base-ui/react": "^1.8.0",
         "@fontsource-variable/inter": "^5.3.0",
@@ -30,7 +30,7 @@
         "@stylexjs/stylex": "0.19.1",
         "framer-motion": "^14.0.0",
         "jotai": "^2.20.3",
-        "mygo-runtime": "0.4.2",
+        "mygo-runtime": "0.4.8",
         "react": "^19.2.8",
         "react-dom": "^19.2.8",
       },
@@ -852,7 +852,7 @@
 
     "ms": ["ms@2.1.3", "", {}, "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="],
 
-    "mygo-runtime": ["mygo-runtime@0.4.2", "", {}, "sha512-wgt8RljK5sWRRBLKzTLIYKqvr/ef44DLBP+CaXbb6G8XtQEnUIMTrvrBHXkuoIjBLkuwobGtFtaqche+sbQeGg=="],
+    "mygo-runtime": ["mygo-runtime@0.4.8", "", {}, "sha512-CMoey/iUiZzETDdZq0iQsvyKFGAEnOBUltheV2ni2iU7SCpyZAB69U+8jGg/P4qeNhRbkQqLbj4M8M/kYJ7bKg=="],
 
     "nanoid": ["nanoid@3.3.18", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w=="],
 

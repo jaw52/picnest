@@ -18,7 +18,7 @@
     "@stylexjs/stylex": "0.19.1",
     "framer-motion": "^14.0.0",
     "jotai": "^2.20.3",
-    "mygo-runtime": "0.4.2",
+    "mygo-runtime": "0.4.8",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
