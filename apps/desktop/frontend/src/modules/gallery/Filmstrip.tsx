@@ -1,8 +1,8 @@
 import type { WheelEvent } from 'react'
 import type { Photo } from '~/types/photo'
-import { CloudRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import CloudRegular from '~icons/mingcute/cloud-line'
 import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
 
 /** A thumbnail's side, in CSS px. */
@@ -68,7 +68,7 @@ function FilmThumb({ photo, folderPath }: { photo: Photo, folderPath: string | n
   if (photo.isCloudPlaceholder && !url) {
     return (
       <span {...stylex.props(styles.cloud)}>
-        <CloudRegular size={16} />
+        <CloudRegular width={16} height={16} />
       </span>
     )
   }

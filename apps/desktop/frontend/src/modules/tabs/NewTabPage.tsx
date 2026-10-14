@@ -1,7 +1,7 @@
-import { NewFolderRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom } from 'jotai'
 import { useTranslation } from 'react-i18next'
+import NewFolderRegular from '~icons/mingcute/new-folder-line'
 import { recentFoldersAtom, withFolderForgotten } from '~/atoms/recentFolders'
 import { Button } from '~/components/Button'
 import { useSize } from '~/context/size'

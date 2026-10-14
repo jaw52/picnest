@@ -1,7 +1,8 @@
-import { Delete2Regular, Refresh2Regular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
+import Delete2Regular from '~icons/mingcute/delete-2-line'
+import Refresh2Regular from '~icons/mingcute/refresh-2-line'
 import {
   bulkDeleteBlockedAtom,
   currentFolderAtom,

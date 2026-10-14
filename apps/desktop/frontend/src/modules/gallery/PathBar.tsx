@@ -1,9 +1,12 @@
 import type { FolderEntry } from '~/types/folder'
-import { ArrowLeftRegular, ArrowRightRegular, FolderRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ArrowLeftRegular from '~icons/mingcute/arrow-left-line'
+import ArrowRightRegular from '~icons/mingcute/arrow-right-line'
+import FolderRegular from '~icons/mingcute/folder-line'
+import RightRegular from '~icons/mingcute/right-line'
 import { subfoldersAtom } from '~/atoms/gallery'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
 import { activeTabPathAtom, canGoBackAtom, canGoForwardAtom } from '~/atoms/tabs'
@@ -112,7 +115,7 @@ function SubfolderMenu({ folder }: { folder: string }) {
           aria-label={t('path.subfolders', { name: folderNameFromPath(folder) })}
           {...stylex.props(styles.chevron)}
         >
-          <RightRegular size={14} />
+          <RightRegular width={14} height={14} />
         </button>
       )}
     />
@@ -164,7 +167,7 @@ export function PathBar() {
               }}
               {...stylex.props(styles.segment, isCurrent && styles.current, text.caption)}
             >
-              {i === 0 && <FolderRegular size={14} {...stylex.props(styles.icon)} />}
+              {i === 0 && <FolderRegular width={14} height={14} {...stylex.props(styles.icon)} />}
               <span {...stylex.props(utility.truncate, isCurrent ? weight.semibold : weight.normal)}>
                 {folderNameFromPath(segment)}
               </span>

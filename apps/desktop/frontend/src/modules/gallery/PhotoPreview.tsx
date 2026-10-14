@@ -3,12 +3,16 @@ import type { MouseEvent, WheelEvent } from 'react'
 import type { IconComponent } from '~/lib/icon'
 import type { PageDirection, SwipePager } from '~/lib/swipe-pager'
 import type { Photo } from '~/types/photo'
-import { CloseRegular, CopyRegular, Delete2Regular, LeftRegular, RightRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { animate, AnimatePresence, motion, useMotionValue } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import CloseRegular from '~icons/mingcute/close-line'
+import CopyRegular from '~icons/mingcute/copy-line'
+import Delete2Regular from '~icons/mingcute/delete-2-line'
+import LeftRegular from '~icons/mingcute/left-line'
+import RightRegular from '~icons/mingcute/right-line'
 import {
   closePreviewAtom,
   currentFolderAtom,
@@ -153,7 +157,7 @@ function LightboxButton({
         {...stylex.props(styles.button, styles[position])}
         onClick={onClick}
       >
-        <Icon size={18} />
+        <Icon width={18} height={18} />
       </button>
     </Tooltip>
   )

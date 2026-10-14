@@ -1,8 +1,9 @@
-import { StarFilled } from '@mingcute/react/core-filled'
-import { ForbidCircleRegular, StarRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ForbidCircleRegular from '~icons/mingcute/forbid-circle-line'
+import StarFilled from '~icons/mingcute/star-fill'
+import StarRegular from '~icons/mingcute/star-line'
 import { styles } from './style'
 
 export interface StarRatingProps {
@@ -42,7 +43,7 @@ export function StarRating({
           onChange?.(0)
         }}
       >
-        <ForbidCircleRegular size={size} />
+        <ForbidCircleRegular width={size} height={size} />
       </button>
       {[1, 2, 3, 4, 5].map((star) => {
         const filled = star <= display
@@ -61,7 +62,7 @@ export function StarRating({
               onChange?.(star === rating ? 0 : star)
             }}
           >
-            <Star size={size} />
+            <Star width={size} height={size} />
           </button>
         )
       })}

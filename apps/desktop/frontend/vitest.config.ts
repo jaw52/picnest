@@ -2,7 +2,9 @@ import path from 'node:path'
 
 import stylex from '@stylexjs/unplugin'
 import react from '@vitejs/plugin-react'
+import icons from 'unplugin-icons/vite'
 import { defineConfig } from 'vitest/config'
+import { iconsOptions } from './config/icons.ts'
 import { stylexOptions } from './config/stylex.ts'
 
 // The plugin's dev middleware polls on an interval that only stops when an HTTP
@@ -13,7 +15,7 @@ const stylexPlugins = [stylex.vite(stylexOptions)]
   .map(plugin => ({ ...plugin, configureServer: undefined }))
 
 export default defineConfig({
-  plugins: [...stylexPlugins, react()],
+  plugins: [...stylexPlugins, react(), icons(iconsOptions)],
   resolve: {
     alias: {
       '~': path.resolve(import.meta.dirname, './src'),

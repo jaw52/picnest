@@ -1,11 +1,17 @@
 import type { TFunction } from 'i18next'
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { Photo } from '~/types/photo'
-import { CloudRegular, CopyRegular, Delete2Regular, EditRegular, InformationRegular, LoadingRegular, MoveRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
+import CloudRegular from '~icons/mingcute/cloud-line'
+import CopyRegular from '~icons/mingcute/copy-line'
+import Delete2Regular from '~icons/mingcute/delete-2-line'
+import EditRegular from '~icons/mingcute/edit-line'
+import InformationRegular from '~icons/mingcute/information-line'
+import LoadingRegular from '~icons/mingcute/loading-line'
+import MoveRegular from '~icons/mingcute/move-line'
 import {
   bulkDeleteBlockedAtom,
   filteredPhotosAtom,
@@ -174,7 +180,7 @@ function TileImage({ photo, thumbnailUrl, folderPath }: { photo: Photo, thumbnai
   }
   return (
     <div {...stylex.props(styles.placeholder)}>
-      <CloudRegular size={20} />
+      <CloudRegular width={20} height={20} />
       <span {...stylex.props(text.caption)}>{t('gallery.notDownloaded')}</span>
       <Button
         variant="secondary"

@@ -1,5 +1,4 @@
-import type { IconProps } from '@mingcute/react'
-import type { ComponentType } from 'react'
+import type { ComponentType, SVGProps } from 'react'
 
-/** Any MingCute icon component. */
-export type IconComponent = ComponentType<IconProps>
+/** Any icon component from `~icons/*`. */
+export type IconComponent = ComponentType<SVGProps<SVGSVGElement>>

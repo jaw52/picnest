@@ -79,9 +79,9 @@ function ButtonContent({
     return (
       <>
         <span {...stylex.props(styles.hiddenWhileLoading)}>
-          {showLeading && LeadingIcon && <LeadingIcon size={iconSize} />}
+          {showLeading && LeadingIcon && <LeadingIcon width={iconSize} height={iconSize} />}
           {children}
-          {showTrailing && TrailingIcon && <TrailingIcon size={iconSize} />}
+          {showTrailing && TrailingIcon && <TrailingIcon width={iconSize} height={iconSize} />}
         </span>
         <span {...stylex.props(styles.spinnerWrap)}>
           <svg
@@ -108,9 +108,9 @@ function ButtonContent({
 
   return (
     <>
-      {showLeading && LeadingIcon && <LeadingIcon size={iconSize} />}
+      {showLeading && LeadingIcon && <LeadingIcon width={iconSize} height={iconSize} />}
       <span {...stylex.props(trim.capAlphabetic)}>{children}</span>
-      {showTrailing && TrailingIcon && <TrailingIcon size={iconSize} />}
+      {showTrailing && TrailingIcon && <TrailingIcon width={iconSize} height={iconSize} />}
     </>
   )
 }

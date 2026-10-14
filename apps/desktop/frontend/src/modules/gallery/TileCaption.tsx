@@ -1,9 +1,9 @@
 import type { Photo } from '~/types/photo'
-import { StarFilled } from '@mingcute/react/core-filled'
-import { StarRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import StarFilled from '~icons/mingcute/star-fill'
+import StarRegular from '~icons/mingcute/star-line'
 import { StarRating } from '~/components/StarRating'
 import { colors } from '~/theme/colors.stylex'
 import { motion } from '~/theme/layout.stylex'
@@ -101,11 +101,11 @@ export function TileCaption({ photo, onRate }: TileCaptionProps) {
           {photo.rating > 0
             ? (
                 <>
-                  <StarFilled size={12} />
+                  <StarFilled width={12} height={12} />
                   {photo.rating}
                 </>
               )
-            : <StarRegular size={12} />}
+            : <StarRegular width={12} height={12} />}
         </button>
       </div>
       <div {...stylex.props(styles.fold, rating && styles.unfolded)}>

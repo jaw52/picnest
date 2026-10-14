@@ -62,7 +62,7 @@ function MenuRow({ index, label, icon: Icon, destructive, disabled, shortcut, on
       {/* The tone goes on a wrapper: an icon's own inline color is currentColor. */}
       {Icon && (
         <span {...stylex.props(styles.icon, tone)}>
-          <Icon size={size.icon} />
+          <Icon width={size.icon} height={size.icon} />
         </span>
       )}
       <span {...stylex.props(styles.label, size.text)}>

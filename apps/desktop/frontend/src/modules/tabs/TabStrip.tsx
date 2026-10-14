@@ -1,11 +1,21 @@
 import type { Tab } from '~/lib/tabs'
-import { CloudFilled, FolderFilled, LayoutGridFilled } from '@mingcute/react/core-filled'
-import { AddRegular, AlignArrowRightRegular, CloseRegular, CloseSquareRegular, CloudRegular, CopyRegular, FolderOpenRegular, FolderRegular, LayoutGridRegular } from '@mingcute/react/core-regular'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion, useIsPresent } from 'framer-motion'
 import { useAtomValue } from 'jotai'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import AddRegular from '~icons/mingcute/add-line'
+import AlignArrowRightRegular from '~icons/mingcute/align-arrow-right-line'
+import CloseRegular from '~icons/mingcute/close-line'
+import CloseSquareRegular from '~icons/mingcute/close-square-line'
+import CloudFilled from '~icons/mingcute/cloud-fill'
+import CloudRegular from '~icons/mingcute/cloud-line'
+import CopyRegular from '~icons/mingcute/copy-line'
+import FolderFilled from '~icons/mingcute/folder-fill'
+import FolderRegular from '~icons/mingcute/folder-line'
+import FolderOpenRegular from '~icons/mingcute/folder-open-line'
+import LayoutGridFilled from '~icons/mingcute/layout-grid-fill'
+import LayoutGridRegular from '~icons/mingcute/layout-grid-line'
 import { folderNameFromPath } from '~/atoms/recentFolders'
 import { tabsStateAtom } from '~/atoms/tabs'
 import { ContextMenu } from '~/components/ContextMenu'
@@ -160,7 +170,7 @@ function TabIcon({ path, active }: { path: string | null, active: boolean }) {
     return <span {...stylex.props(styles.icon, styles.iconSpace)} />
   const kind = path === null ? 'newTab' : iCloud ? 'iCloud' : 'local'
   const Icon = TAB_ICONS[kind][active ? 1 : 0]
-  return <Icon size={14} {...stylex.props(styles.icon)} />
+  return <Icon width={14} height={14} {...stylex.props(styles.icon)} />
 }
 
 interface TabItemProps {
@@ -224,7 +234,7 @@ function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemPr
         onMouseDown={e => e.stopPropagation()}
         onClick={() => closeTab(tab.id)}
       >
-        <CloseRegular size={12} />
+        <CloseRegular width={12} height={12} />
       </button>
     </motion.div>
   )
