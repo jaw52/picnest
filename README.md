@@ -11,6 +11,10 @@ Built with [mygo](https://github.com/egoist/mygo) · 基于 [mygo](https://githu
 
 ![Picnest screenshot](docs/screenshot.png)
 
+![Picnest demo: resize thumbnails, rate from the keyboard, filter by stars, preview, delete and undo](docs/demo.gif)
+
+[Watch the full-quality video · 观看高清视频](https://github.com/jaw52/picnest/releases/download/v0.1.0/picnest-demo.mp4)
+
 </div>
 
 ---
