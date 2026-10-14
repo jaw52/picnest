@@ -205,11 +205,14 @@ export function PhotoPreview() {
 
   // Only the latest switch lands, should several be waiting on decodes.
   const switchRef = useRef(0)
+  // A swipe's page turn is sliding the next photo in.
+  const turningRef = useRef(false)
   // The track goes back in place before the new photo paints, so the
   // neighbour slid into view is swapped for the same photo, unmoved. Closing
   // mid-slide leaves it in place for the next opening too.
   const shownId = photo?.id
   useLayoutEffect(() => {
+    turningRef.current = false
     slideRef.current?.stop()
     slide.jump(0)
   }, [shownId, slide])
@@ -236,6 +239,7 @@ export function PhotoPreview() {
     if (!next)
       return
     const token = ++switchRef.current
+    turningRef.current = true
     const slid = slideTo(-direction * (window.innerWidth + PAGE_GAP))
     void Promise.all([ready(next), slid]).then(() => {
       if (switchRef.current === token)
@@ -267,6 +271,7 @@ export function PhotoPreview() {
         slide.set(offset)
       },
       commit: direction => swipeRef.current.turnPage(direction),
+      turning: () => turningRef.current,
       release: () => void slideTo(0),
     })
     pagerRef.current.push(e.nativeEvent)

@@ -4,7 +4,9 @@ const AXIS_SLOP = 4
 const IDLE_MS = 100
 /** A pause this long, in ms, after a swipe may be fresh fingers on the pad. */
 const NEW_GESTURE_GAP_MS = 30
-/** How much a delta must grow past the momentum's low to be fresh fingers. */
+/** Fresh fingers start from a standstill: the low after the pause is this small. */
+const NEW_GESTURE_LOW = 4
+/** How much a delta must grow past that low to be fresh fingers. */
 const NEW_GESTURE_RISE = 4
 /** Pulling past the first or last page moves the photo this fraction of the way. */
 const RUBBER_BAND = 0.25
@@ -19,6 +21,8 @@ interface SwipePagerOptions {
   follow: (offset: number) => void
   /** Turn the page: 1 for the next photo, -1 for the previous. */
   commit: (direction: PageDirection) => void
+  /** A page turn is still sliding in: fresh fingers wait for it to land. */
+  turning: () => boolean
   /** The gesture ended short of a page turn: settle back. */
   release: () => void
 }
@@ -31,17 +35,18 @@ export type SwipePager = ReturnType<typeof createSwipePager>
  * Pages through photos with two-finger trackpad swipes, the photo following
  * the fingers. WebKit's wheel events don't say where a gesture or its
  * momentum begins, so this reads it from the deltas: a gesture ends after a
- * pause; once it has turned a page, the rest of it - the momentum, which
- * only ever slows - is swallowed, unless a pause and then a rising delta
- * show fresh fingers starting another swipe.
+ * pause; once it has turned a page, the rest of it - the fingers still
+ * moving, then the momentum - is swallowed, unless a pause, a near
+ * standstill and then a rising delta show fresh fingers starting another
+ * swipe.
  */
 export function createSwipePager(options: SwipePagerOptions) {
   let state: 'idle' | 'following' | 'settled' | 'ignoring' = 'idle'
   let startX = 0
   let startY = 0
   let offset = 0
-  // While settled or ignoring: the smallest delta since, and whether a
-  // pause has come that fresh fingers would follow.
+  // While settled or ignoring: whether a pause has come that fresh fingers
+  // would follow, and the smallest delta since.
   let low = Infinity
   let paused = false
   let lastTime = 0
@@ -104,9 +109,13 @@ export function createSwipePager(options: SwipePagerOptions) {
 
       if (state === 'settled' || state === 'ignoring') {
         const delta = Math.max(Math.abs(e.deltaX), Math.abs(e.deltaY))
-        if (gap >= NEW_GESTURE_GAP_MS)
+        if (gap >= NEW_GESTURE_GAP_MS) {
           paused = true
-        if (!paused || delta < low + NEW_GESTURE_RISE) {
+          low = Infinity
+        }
+        // The fingers that turned the page may still be moving, speeding up
+        // and pausing as they go: only a rise from a standstill is new.
+        if (!paused || low > NEW_GESTURE_LOW || delta < low + NEW_GESTURE_RISE || options.turning()) {
           low = Math.min(low, delta)
           return
         }

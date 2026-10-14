@@ -21,7 +21,11 @@ interface Recorded {
 }
 
 /** Replays events at their recorded pace, since gestures end on a pause. */
-function replay(events: Recorded[], canPage: (direction: PageDirection) => boolean = () => true) {
+function replay(
+  events: Recorded[],
+  canPage: (direction: PageDirection) => boolean = () => true,
+  turning: () => boolean = () => false,
+) {
   const commits: PageDirection[] = []
   const follows: number[] = []
   let releases = 0
@@ -31,6 +35,7 @@ function replay(events: Recorded[], canPage: (direction: PageDirection) => boole
     follow: offset => follows.push(offset),
     commit: direction => commits.push(direction),
     release: () => releases++,
+    turning,
   })
   let last = events[0].timeStamp
   for (const event of events) {
@@ -76,6 +81,19 @@ describe('createSwipePager', () => {
   it('turns again for a swipe after the previous one ended', () => {
     const shifted = swipeLeft.map(e => ({ ...e, timeStamp: e.timeStamp + 5000 }))
     expect(replay([...swipeLeft, ...shifted]).commits).toEqual([1, 1])
+  })
+
+  it('turns once for fingers that keep speeding up, pausing, after the turn', () => {
+    // A swipe left that turns the page at 200px, while the fingers carry on
+    // and pause for 40ms before speeding up again.
+    const deltas = [5, 10, 20, 30, 40, 50, 30, 40, 50, 60, 70, 60, 40, 20, 10, 5, 2, 1]
+    let t = 0
+    const events = deltas.map((d, i) => ({ deltaX: d, deltaY: 0, timeStamp: (t += i === 9 ? 40 : 16) }))
+    expect(replay(events).commits).toEqual([1])
+  })
+
+  it('waits for a turn to land before following fresh fingers', () => {
+    expect(replay(doubleSwipeRight, () => true, () => true).commits).toEqual([-1])
   })
 
   it('ignores vertical scrolls', () => {
