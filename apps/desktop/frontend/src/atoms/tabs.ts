@@ -15,6 +15,8 @@ export const tabsStateAtom = atomWithStorage<TabsState>(
   { getOnInit: true },
 )
 
+export const activeTabIdAtom = atom(get => activeTab(get(tabsStateAtom)).id)
+
 /** The folder the active tab shows; null on the new-tab page. */
 export const activeTabPathAtom = atom(get => activeTab(get(tabsStateAtom)).path)
 

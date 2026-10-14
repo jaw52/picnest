@@ -8,6 +8,7 @@ import {
   currentFolderAtom,
   filteredPhotosAtom,
   isScanningAtom,
+  pendingScrollAtom,
   photosTotalAtom,
   previewPhotoIdAtom,
   ratingFilterAtom,
@@ -239,6 +240,15 @@ export function MasonryView() {
     pendingFocusRef.current = reveal.id
     focusPending()
   }, [reveal, setReveal, photos, subfolders, layout, focusPending])
+  // A tab switched back to scrolls to where it was left, once the grid has
+  // its height.
+  const [pendingScroll, setPendingScroll] = useAtom(pendingScrollAtom)
+  useLayoutEffect(() => {
+    if (pendingScroll === null || containerWidth === 0)
+      return
+    window.scrollTo(0, pendingScroll)
+    setPendingScroll(null)
+  }, [pendingScroll, containerWidth, setPendingScroll])
   // A tile scrolled to from afar mounts once the grid catches up with the scroll.
   useLayoutEffect(() => {
     focusPending()

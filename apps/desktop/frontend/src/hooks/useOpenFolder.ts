@@ -1,12 +1,16 @@
+import type { RatingFilter } from '~/lib/photo'
+import type { Photo } from '~/types/photo'
 import { useAtom, useSetAtom, useStore } from 'jotai'
 import { useCallback } from 'react'
 
 import {
   currentFolderAtom,
   isScanningAtom,
+  pendingScrollAtom,
   photosAtom,
   photosTotalAtom,
   previewPhotoIdAtom,
+  ratingFilterAtom,
   selectedPhotoIdAtom,
   selectedPhotoIdsAtom,
   subfoldersAtom,
@@ -27,6 +31,41 @@ const PAGE_SIZE = 300
 // to agree on which scan is the latest one.
 let latestScanId = 0
 
+/**
+ * How a folder is shown: what a tab switched back to puts back. Left out,
+ * the rating filter stays as it is and the rest starts afresh.
+ */
+export interface FolderView {
+  ratingFilter: RatingFilter
+  scrollY: number
+  selectedIds: ReadonlySet<string>
+  anchorId: string | null
+}
+
+/**
+ * Fetches `folder`'s pages after the ones in `photos`, appending each to it
+ * and handing it to `onPage`. False if `scanId` was superseded meanwhile.
+ */
+async function loadRemainingPages(
+  folder: string,
+  photos: Photo[],
+  total: number,
+  scanId: number,
+  onPage?: (page: Photo[]) => void,
+) {
+  while (photos.length < total) {
+    const page = await scanFolderPage(folder, photos.length, PAGE_SIZE)
+    if (scanId !== latestScanId)
+      return false
+    if (page.photos.length === 0)
+      break // Shrunk on disk mid-scan; avoid looping forever.
+    const more = page.photos.map(toPhoto)
+    photos.push(...more)
+    onPage?.(more)
+  }
+  return true
+}
+
 /** A folder's subfolders, or none if they can't be listed; the photos still show. */
 function subfoldersOf(folder: string) {
   return listSubfolders(folder).catch((error) => {
@@ -46,14 +85,13 @@ export function useOpenFolder() {
   const setSelectedIds = useSetAtom(selectedPhotoIdsAtom)
   const setAnchorId = useSetAtom(selectedPhotoIdAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
+  const setRatingFilter = useSetAtom(ratingFilterAtom)
+  const setPendingScroll = useSetAtom(pendingScrollAtom)
 
   const scanAndSelect = useCallback(
-    async (folder: string): Promise<boolean> => {
+    async (folder: string, view: Partial<FolderView>): Promise<boolean> => {
       const scanId = ++latestScanId
       setIsScanning(true)
-      setPhotos([])
-      setSubfolders([])
-      setPhotosTotal(0)
       setSelectedIds(new Set())
       setAnchorId(null)
       setPreviewId(null)
@@ -64,24 +102,31 @@ export function useOpenFolder() {
         ])
         if (scanId !== latestScanId)
           return true
+        const photos = first.photos.map(toPhoto)
+        // A scroll position to go back to needs the grid's full height, so
+        // every page loads before the swap.
+        if (view.scrollY !== undefined && !await loadRemainingPages(folder, photos, first.total, scanId))
+          return true
+
+        // The previous folder stays on screen until now, then everything
+        // the grid shows changes in one render.
+        const ids = new Set(photos.map(p => p.id))
         setSubfolders(subfolders)
-        setPhotos(first.photos.map(toPhoto))
+        setPhotos(photos)
         setPhotosTotal(first.total)
         setCurrentFolder(folder)
+        if (view.ratingFilter !== undefined)
+          setRatingFilter(view.ratingFilter)
+        setSelectedIds(new Set([...view.selectedIds ?? []].filter(id => ids.has(id))))
+        setAnchorId(view.anchorId && ids.has(view.anchorId) ? view.anchorId : null)
+        setPendingScroll(view.scrollY ?? 0)
         void watchFolder(folder).catch((error) => {
           console.warn(`failed to watch folder ${folder}:`, error)
         })
 
-        let loaded = first.photos.length
-        while (loaded < first.total) {
-          const page = await scanFolderPage(folder, loaded, PAGE_SIZE)
-          if (scanId !== latestScanId)
-            return true
-          if (page.photos.length === 0)
-            break // Shrunk on disk mid-scan; avoid looping forever.
-          setPhotos(prev => [...prev, ...page.photos.map(toPhoto)])
-          loaded += page.photos.length
-        }
+        await loadRemainingPages(folder, photos, first.total, scanId, (more) => {
+          setPhotos(prev => [...prev, ...more])
+        })
         return true
       }
       catch (error) {
@@ -102,6 +147,8 @@ export function useOpenFolder() {
       setSelectedIds,
       setAnchorId,
       setPreviewId,
+      setRatingFilter,
+      setPendingScroll,
     ],
   )
 
@@ -161,8 +208,8 @@ export function useOpenFolder() {
    * one that can no longer be read.
    */
   const navigateToFolder = useCallback(
-    async (folder: string): Promise<boolean> => {
-      const ok = await scanAndSelect(folder)
+    async (folder: string, view: Partial<FolderView> = {}): Promise<boolean> => {
+      const ok = await scanAndSelect(folder, view)
       if (!ok) {
         // The folder was likely moved/deleted/unmounted; if it was
         // bookmarked, drop the now-dead shortcut.
