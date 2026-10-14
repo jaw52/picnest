@@ -18,16 +18,39 @@ const photos: Photo[] = Array.from({ length: 200 }, (_, i) => ({
   aspectRatio: 1.5,
 }))
 
-it('centres the current photo among the neighbours that fit, and shows one on click', () => {
+it('mounts the thumbnails in view around the current photo, and shows one on click', () => {
   window.innerWidth = 1000
   const onSelect = vi.fn()
   render(<Filmstrip photos={photos} index={100} folderPath="/f" onSelect={onSelect} />)
 
   expect(screen.getByLabelText('100.jpg')).toHaveAttribute('aria-current', 'true')
-  // Half the window holds 10 thumbnails a side, plus 2 mounted off screen.
-  expect(screen.getAllByRole('button')).toHaveLength(25)
-  expect(screen.queryByLabelText('87.jpg')).not.toBeInTheDocument()
+  // Thumbnails 91-109 show in the 1000px strip, with a few more mounted past each edge.
+  expect(screen.getByLabelText('87.jpg')).toBeInTheDocument()
+  expect(screen.getByLabelText('114.jpg')).toBeInTheDocument()
+  expect(screen.queryByLabelText('86.jpg')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('115.jpg')).not.toBeInTheDocument()
 
   fireEvent.click(screen.getByLabelText('103.jpg'))
   expect(onSelect).toHaveBeenCalledWith(103)
+})
+
+it('scrolls on its own, without changing the photo or reaching the lightbox', () => {
+  window.innerWidth = 1000
+  const onSelect = vi.fn()
+  const onLightboxWheel = vi.fn()
+  render(
+    <div onWheel={onLightboxWheel}>
+      <Filmstrip photos={photos} index={100} folderPath="/f" onSelect={onSelect} />
+    </div>,
+  )
+  const strip = screen.getByLabelText('100.jpg').closest('div')!.parentElement!
+
+  fireEvent.wheel(strip, { deltaX: 300 })
+  expect(onLightboxWheel).not.toHaveBeenCalled()
+
+  strip.scrollLeft = 150 * 54
+  fireEvent.scroll(strip)
+  expect(screen.getByLabelText('150.jpg')).toBeInTheDocument()
+  expect(screen.queryByLabelText('100.jpg')).not.toBeInTheDocument()
+  expect(onSelect).not.toHaveBeenCalled()
 })
