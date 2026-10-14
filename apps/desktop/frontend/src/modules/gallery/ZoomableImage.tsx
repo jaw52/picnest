@@ -9,8 +9,8 @@ import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
 
 /** Height kept clear above the photo: the title bar row, where the traffic lights sit. */
 const TITLEBAR_STRIP = 40
-/** Height reserved under the photo for the caption: its 16px offset, its own height, and a gap. */
-const CAPTION_STRIP = 64
+/** Height reserved under the photo for the filmstrip and the caption above it, and a gap. */
+const CAPTION_STRIP = 112
 /** Width kept clear on each side for the previous/next buttons: their 16px offset, 36px size, and a gap. */
 const BUTTON_STRIP = 64
 /** Movement under this is a click, not a drag. */
@@ -19,9 +19,9 @@ const DRAG_THRESHOLD = 3
 const WHEEL_ZOOM_RATE = 0.01
 
 const styles = stylex.create({
-  // Fills the overlay. The padding leaves the traffic lights and the caption
-  // strips of their own, so a tall photo is fitted between them instead of
-  // running underneath.
+  // Fills the overlay. The padding leaves the traffic lights, and the caption
+  // and filmstrip, strips of their own, so a tall photo is fitted between
+  // them instead of running underneath.
   viewport: {
     position: 'absolute',
     inset: 0,

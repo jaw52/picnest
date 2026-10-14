@@ -23,6 +23,7 @@ import { spring } from '~/lib/springs'
 import { createSwipeDetector } from '~/lib/swipe'
 import { motion as motionTokens, radius } from '~/theme/layout.stylex'
 import { text } from '~/theme/text'
+import { Filmstrip } from './Filmstrip'
 import { ZoomableImage } from './ZoomableImage'
 
 const styles = stylex.create({
@@ -60,9 +61,10 @@ const styles = stylex.create({
   prev: { top: '50%', left: 16, transform: 'translateY(-50%)' },
   next: { top: '50%', right: 16, transform: 'translateY(-50%)' },
   notice: { margin: 'auto', color: 'rgb(255 255 255 / 0.8)' },
+  // Above the filmstrip.
   caption: {
     position: 'absolute',
-    bottom: 16,
+    bottom: 72,
     left: '50%',
     transform: 'translateX(-50%)',
     // As wide as its content, up to the window: a long file name gives way
@@ -300,6 +302,14 @@ export function PhotoPreview() {
               <StarRating rating={photo.rating} onChange={r => rate([photo], r)} size={14} />
             </span>
           </div>
+          {index !== -1 && (
+            <Filmstrip
+              photos={photos}
+              index={index}
+              folderPath={folderPath}
+              onSelect={i => goTo(i - index)}
+            />
+          )}
         </motion.div>
       )}
     </AnimatePresence>
