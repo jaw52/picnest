@@ -3,7 +3,7 @@ import { Slider as BaseSlider } from '@base-ui/react/slider'
 import * as stylex from '@stylexjs/stylex'
 import { useRef, useState } from 'react'
 import { weight } from '~/theme/text'
-import { styles, THUMB_SIZE, TRACK_INSET } from './style'
+import { styles, THUMB_SIZE } from './style'
 
 export interface SliderProps {
   value: number
@@ -15,7 +15,7 @@ export interface SliderProps {
   label?: string
   /** Formats the displayed value. */
   formatValue?: (value: number) => string
-  /** Off, only the label shows, for a value whose number means nothing to the user. */
+  /** Off, no text shows, for a value whose number means nothing to the user; the label stays as the thumb's accessible name. */
   showValue?: boolean
   disabled?: boolean
   xstyle?: StyleXStyles
@@ -28,7 +28,7 @@ interface Preview {
 }
 
 /**
- * A value label and a thumb on a pill track. Base UI owns the pointer
+ * A value label and a thumb on a thin rail. Base UI owns the pointer
  * handling, ARIA and arrow keys; hovering previews a click with a bar from the
  * thumb to the step under the cursor.
  */
@@ -51,8 +51,8 @@ export function Slider({
 
   const span = max - min || 1
   const fraction = (value - min) / span
-  // The fill ends at the thumb center, measured from the pill's own left edge.
-  const fillWidth = `calc(${THUMB_SIZE / 2 - TRACK_INSET}px + ${fraction} * (100% - ${THUMB_SIZE - 2 * TRACK_INSET}px))`
+  // The fill ends at the thumb center.
+  const fillWidth = `calc(${THUMB_SIZE / 2}px + ${fraction} * (100% - ${THUMB_SIZE}px))`
 
   const updatePreview = (clientX: number) => {
     const el = controlRef.current
@@ -70,14 +70,14 @@ export function Slider({
     // Extend to the track edges at the extremes so there's no gap.
     const edgeX = snapped === min ? 0 : snapped === max ? rect.width : snappedX
     setPreview({
-      left: Math.min(thumbX, edgeX) - TRACK_INSET,
+      left: Math.min(thumbX, edgeX),
       width: Math.abs(edgeX - thumbX),
       rightward: edgeX > thumbX,
     })
   }
 
   const interacting = hovered || dragging
-  const valueLabel = (v: number) => (showValue ? `${label ? `${label}: ` : ''}${formatValue(v)}` : label ?? '')
+  const valueLabel = (v: number) => `${label ? `${label}: ` : ''}${formatValue(v)}`
   const widest = valueLabel(max)
 
   return (
@@ -92,15 +92,17 @@ export function Slider({
       thumbAlignment="edge"
       {...stylex.props(styles.root, xstyle)}
     >
-      <span
-        {...stylex.props(styles.value, interacting ? weight.semibold : weight.normal)}
-      >
-        {/* Invisible ghost reserves the width of the widest possible value. */}
-        <span aria-hidden="true" {...stylex.props(styles.valueCell, styles.valueGhost)}>
-          {widest}
+      {showValue && (
+        <span
+          {...stylex.props(styles.value, interacting ? weight.semibold : weight.normal)}
+        >
+          {/* Invisible ghost reserves the width of the widest possible value. */}
+          <span aria-hidden="true" {...stylex.props(styles.valueCell, styles.valueGhost)}>
+            {widest}
+          </span>
+          <span {...stylex.props(styles.valueCell)}>{valueLabel(value)}</span>
         </span>
-        <span {...stylex.props(styles.valueCell)}>{valueLabel(value)}</span>
-      </span>
+      )}
       <BaseSlider.Control
         ref={controlRef}
         onPointerDown={() => setDragging(true)}

@@ -10,12 +10,9 @@ const dark = '@media (prefers-color-scheme: dark)'
  * never overhangs either end; the visible knob is the smaller circle inside it.
  */
 export const THUMB_SIZE = 20
-const KNOB_SIZE = 16
-// 2px shorter than the thumb box, so the 16px knob fits inside the pill with
-// 1px to spare above and below.
-const TRACK_HEIGHT = 18
-/** Inset so the pill's rounded-end centers align with thumb centers at min/max. */
-export const TRACK_INSET = (THUMB_SIZE - TRACK_HEIGHT) / 2
+const KNOB_SIZE = 18
+// A thin rail the knob sits on and overhangs.
+const TRACK_HEIGHT = 6
 
 export const styles = stylex.create({
   root: {
@@ -54,20 +51,18 @@ export const styles = stylex.create({
     height: THUMB_SIZE + 16,
     cursor: 'ew-resize',
   },
-  // overflow hidden clips the fill and hover bar to the pill, so they inherit
-  // its rounded ends.
+  // The unfilled rail is hatched with fine diagonal stripes. overflow hidden
+  // clips the fill and hover bar to it, so they inherit its rounded ends.
   track: {
     position: 'absolute',
-    left: TRACK_INSET,
-    right: TRACK_INSET,
-    top: 8 + TRACK_INSET,
+    left: 0,
+    right: 0,
+    top: 8 + (THUMB_SIZE - TRACK_HEIGHT) / 2,
     height: TRACK_HEIGHT,
-    boxSizing: 'border-box',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors['--ps-border'],
     borderRadius: radius.full,
     overflow: 'hidden',
+    backgroundColor: `color-mix(in srgb, ${colors['--ps-foreground']} 10%, transparent)`,
+    backgroundImage: `repeating-linear-gradient(-45deg, color-mix(in srgb, ${colors['--ps-foreground']} 8%, transparent) 0 1px, transparent 1px 3px)`,
   },
   fill: {
     position: 'absolute',
@@ -75,20 +70,20 @@ export const styles = stylex.create({
     left: 0,
     height: '100%',
     backgroundColor: {
-      default: `color-mix(in srgb, ${colors['--ps-selected']} 50%, transparent)`,
-      [dark]: `color-mix(in srgb, ${colors['--ps-accent']} 40%, transparent)`,
+      default: `color-mix(in srgb, ${colors['--ps-foreground']} 30%, transparent)`,
+      [dark]: `color-mix(in srgb, ${colors['--ps-foreground']} 40%, transparent)`,
     },
   },
   fillWidth: (width: string) => ({ width }),
   // The bar previews what a click would change: it runs from the thumb's
-  // center to the snapped hover value, 40% accent, fading over 150ms.
+  // center to the snapped hover value, fading over 150ms.
   preview: {
     position: 'absolute',
     top: 0,
     height: '100%',
     pointerEvents: 'none',
     zIndex: 2,
-    backgroundColor: `color-mix(in srgb, ${colors['--ps-accent']} 40%, transparent)`,
+    backgroundColor: `color-mix(in srgb, ${colors['--ps-foreground']} 20%, transparent)`,
     transitionProperty: 'opacity',
     transitionDuration: '150ms',
   },
@@ -99,7 +94,7 @@ export const styles = stylex.create({
     width,
     borderRadius: rightward ? '0 9999px 9999px 0' : '9999px 0 0 9999px',
   }),
-  // A 20px box centered on the track holding the 16px knob. The ring is
+  // A 20px box centered on the track holding the 18px knob. The ring is
   // drawn around the box, 2px out (24px), for keyboard focus only.
   thumb: {
     width: THUMB_SIZE,
@@ -117,7 +112,7 @@ export const styles = stylex.create({
     height: KNOB_SIZE,
     borderRadius: radius.full,
     backgroundColor: 'white',
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
     transitionProperty: 'width, height',
     transitionDuration: motion.fast,
   },
