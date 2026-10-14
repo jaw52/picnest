@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/egoist/mygo"
@@ -18,7 +20,28 @@ func serveLocalFile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return
 	}
+	if isProcreateFile(path) {
+		serveProcreatePreview(w, r, path)
+		return
+	}
 	http.ServeFile(w, r, path)
+}
+
+// serveProcreatePreview serves the preview PNG inside a .procreate file,
+// since the webview can't display the archive itself.
+func serveProcreatePreview(w http.ResponseWriter, r *http.Request, path string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	png, err := readProcreatePreview(path)
+	if err != nil {
+		http.Error(w, "no preview", http.StatusUnsupportedMediaType)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	http.ServeContent(w, r, "", info.ModTime(), bytes.NewReader(png))
 }
 
 func main() {

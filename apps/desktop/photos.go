@@ -16,6 +16,7 @@ import (
 
 var imageExtensions = map[string]bool{
 	"jpg": true, "jpeg": true, "png": true, "webp": true, "gif": true, "bmp": true,
+	"procreate": true,
 }
 
 func isImageFile(path string) bool {

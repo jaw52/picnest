@@ -40,9 +40,11 @@ var (
 		DictionaryCreate           func(alloc cfRef, keys, values *cfRef, n int, kcb, vcb cfRef) cfRef
 		DictionaryGetValue         func(dict, key cfRef) cfRef
 		URLCreateFromFSRepresenter func(alloc cfRef, path *byte, n int, isDir bool) cfRef
+		DataCreate                 func(alloc cfRef, bytes *byte, n int) cfRef
 	}
 	imgio struct {
 		SourceCreateWithURL      func(url, opts cfRef) cfRef
+		SourceCreateWithData     func(data, opts cfRef) cfRef
 		SourceCopyProperties     func(src cfRef, idx int, opts cfRef) cfRef
 		SourceCreateThumbnail    func(src cfRef, idx int, opts cfRef) cfRef
 		DestinationCreateWithURL func(url, typ cfRef, count int, opts cfRef) cfRef
@@ -105,8 +107,10 @@ func loadFrameworks() error {
 		purego.RegisterLibFunc(&cf.DictionaryCreate, coreFoundation, "CFDictionaryCreate")
 		purego.RegisterLibFunc(&cf.DictionaryGetValue, coreFoundation, "CFDictionaryGetValue")
 		purego.RegisterLibFunc(&cf.URLCreateFromFSRepresenter, coreFoundation, "CFURLCreateFromFileSystemRepresentation")
+		purego.RegisterLibFunc(&cf.DataCreate, coreFoundation, "CFDataCreate")
 
 		purego.RegisterLibFunc(&imgio.SourceCreateWithURL, imageIO, "CGImageSourceCreateWithURL")
+		purego.RegisterLibFunc(&imgio.SourceCreateWithData, imageIO, "CGImageSourceCreateWithData")
 		purego.RegisterLibFunc(&imgio.SourceCopyProperties, imageIO, "CGImageSourceCopyPropertiesAtIndex")
 		purego.RegisterLibFunc(&imgio.SourceCreateThumbnail, imageIO, "CGImageSourceCreateThumbnailAtIndex")
 		purego.RegisterLibFunc(&imgio.DestinationCreateWithURL, imageIO, "CGImageDestinationCreateWithURL")
@@ -186,14 +190,28 @@ func newCFDict(keys, values []cfRef) cfRef {
 	return cf.DictionaryCreate(kCFAllocatorDefault, &keys[0], &values[0], len(keys), kTypeKeyCallbacks, kTypeValueCallbacks)
 }
 
+// openSource opens an image for ImageIO. A .procreate file opens as the
+// preview PNG stored inside it.
 func openSource(path string) cfRef {
+	opts := newCFDict([]cfRef{kShouldCache}, []cfRef{kBooleanFalse})
+	defer cf.Release(opts)
+	if isProcreateFile(path) {
+		png, err := readProcreatePreview(path)
+		if err != nil || len(png) == 0 {
+			return 0
+		}
+		data := cf.DataCreate(kCFAllocatorDefault, &png[0], len(png))
+		if data == 0 {
+			return 0
+		}
+		defer cf.Release(data)
+		return imgio.SourceCreateWithData(data, opts)
+	}
 	url := newURL(path)
 	if url == 0 {
 		return 0
 	}
 	defer cf.Release(url)
-	opts := newCFDict([]cfRef{kShouldCache}, []cfRef{kBooleanFalse})
-	defer cf.Release(opts)
 	return imgio.SourceCreateWithURL(url, opts)
 }
 
