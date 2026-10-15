@@ -469,10 +469,18 @@ func serveLibraryPhoto(w http.ResponseWriter, r *http.Request, path string) {
 		modified = assetStamp(asset)
 		if edge <= 0 {
 			data, mimeType = libraryImageData(asset)
-			if data != nil {
+			switch {
+			case data == nil:
+				edge = libraryPreviewEdge
+			case mimeType == "image/heic" || mimeType == "image/heif":
+				// WebKit takes seconds to decode a large HEIC photo, and
+				// holds up the page decoding images after it meanwhile; the
+				// same photo as a JPEG, at full size, takes a fraction of
+				// a second.
+				edge = max(pk.SendInt(asset, sel("pixelWidth")), pk.SendInt(asset, sel("pixelHeight")))
+			default:
 				return nil
 			}
-			edge = libraryPreviewEdge
 		}
 		tmp, err := os.CreateTemp("", "picnest-library-*.jpg")
 		if err != nil {
