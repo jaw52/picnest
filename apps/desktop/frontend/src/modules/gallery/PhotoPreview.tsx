@@ -29,7 +29,7 @@ import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadP
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { largestCachedThumbnail, useThumbnail } from '~/hooks/useThumbnail'
 import { isLibraryPath } from '~/lib/library'
-import { convertFileSrc, writeText } from '~/lib/native'
+import { convertFileSrc, convertPreviewSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
 import { createSwipePager } from '~/lib/swipe-pager'
@@ -191,11 +191,36 @@ function placeholderFor(folderPath: string | null, photo: Photo): Placeholder | 
   return src ? { src, width: photo.width, height: photo.height } : undefined
 }
 
+/** Steps the preview size goes up in, so a slightly larger window doesn't load every photo again. */
+const PREVIEW_EDGE_STEP = 512
+
+/** Pixels on the longest side of a photo that fill the window on this display. */
+function previewEdge() {
+  const longest = Math.max(window.innerWidth, window.innerHeight) * window.devicePixelRatio
+  return Math.ceil(longest / PREVIEW_EDGE_STEP) * PREVIEW_EDGE_STEP
+}
+
+/**
+ * The size photos are shown at fit, which follows the window. A photo
+ * larger than that is shown from a copy scaled to it: WebKit stalls the
+ * page for 100ms or more to paint a photo of 12 megapixels or more, even one
+ * decoded beforehand.
+ */
+function usePreviewEdge() {
+  const [edge, setEdge] = useState(previewEdge)
+  useEffect(() => {
+    const update = () => setEdge(previewEdge())
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return edge
+}
+
 /** The photo either side of the one shown, in place for a swipe to slide in. */
-function Neighbour({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
+function Neighbour({ photo, folderPath, src }: { photo: Photo, folderPath: string | null, src: string }) {
   return photo.isCloudPlaceholder
     ? <CloudPreview photo={photo} folderPath={folderPath} />
-    : <FittedImage src={convertFileSrc(photo.path)} placeholder={placeholderFor(folderPath, photo)} alt={photo.fileName} />
+    : <FittedImage src={src} placeholder={placeholderFor(folderPath, photo)} alt={photo.fileName} />
 }
 
 /** Marks an undownloaded photo in the caption, with a button to download it. */
@@ -247,6 +272,8 @@ export function PhotoPreview() {
     setOpenedId(photo.id)
 
   const index = photo ? photos.findIndex(p => p.id === photo.id) : -1
+  const edge = usePreviewEdge()
+  const srcOf = useCallback((p: Photo) => convertPreviewSrc(p.path, edge), [edge])
 
   // Neighbours are decoded in the background, and a switch waits for the next
   // photo to decode, so the current one stays up until the next can paint.
@@ -256,11 +283,11 @@ export function PhotoPreview() {
       return
     const srcs = [photos[index - 1], photos[index], photos[index + 1]]
       .filter(p => p && !p.isCloudPlaceholder)
-      .map(p => convertFileSrc(p!.path))
+      .map(p => srcOf(p!))
     retain(srcs)
     for (const src of srcs)
       void decode(src)
-  }, [index, photos, decode, retain])
+  }, [index, photos, decode, retain, srcOf])
   useEffect(() => {
     if (!isOpen)
       retain([])
@@ -292,7 +319,7 @@ export function PhotoPreview() {
     (photo: Photo) => {
       if (photo.isCloudPlaceholder)
         return Promise.resolve()
-      const full = decode(convertFileSrc(photo.path))
+      const full = decode(srcOf(photo))
       if (!isLibraryPath(folderPath))
         return full
       // A photo in the Photos library may take a while to read: the switch
@@ -303,7 +330,7 @@ export function PhotoPreview() {
         .then(() => placeholder && decode(placeholder.src))
       return Promise.race([full, fallback])
     },
-    [decode, folderPath],
+    [decode, folderPath, srcOf],
   )
   const goTo = useCallback(
     (delta: number) => {
@@ -414,7 +441,7 @@ export function PhotoPreview() {
           <motion.div className={stylex.props(styles.track).className} style={{ x: slide }}>
             {index > 0 && (
               <div {...stylex.props(styles.page, styles.before)}>
-                <Neighbour photo={photos[index - 1]} folderPath={folderPath} />
+                <Neighbour photo={photos[index - 1]} folderPath={folderPath} src={srcOf(photos[index - 1])} />
               </div>
             )}
             <div {...stylex.props(styles.page)}>
@@ -423,10 +450,16 @@ export function PhotoPreview() {
                 : (
                     <ZoomableImage
                       key={photo.id}
-                      src={convertFileSrc(photo.path)}
+                      src={srcOf(photo)}
+                      // Shown from a scaled copy, the photo itself loads
+                      // for a closer look. A library photo is read at one
+                      // size whatever is asked.
+                      full={!isLibraryPath(folderPath) && Math.max(photo.width, photo.height) > edge
+                        ? { src: convertFileSrc(photo.path), width: photo.width, height: photo.height }
+                        : undefined}
                       // A photo already decoded shows straight away, without
                       // its thumbnail and spinner blinking up first.
-                      placeholder={isDecoded(convertFileSrc(photo.path)) ? undefined : placeholderFor(folderPath, photo)}
+                      placeholder={isDecoded(srcOf(photo)) ? undefined : placeholderFor(folderPath, photo)}
                       alt={photo.fileName}
                       fadeIn={photo.id === openedId}
                       menuItems={isLibraryPath(folderPath)
@@ -446,7 +479,7 @@ export function PhotoPreview() {
             </div>
             {index !== -1 && index < photos.length - 1 && (
               <div {...stylex.props(styles.page, styles.after)}>
-                <Neighbour photo={photos[index + 1]} folderPath={folderPath} />
+                <Neighbour photo={photos[index + 1]} folderPath={folderPath} src={srcOf(photos[index + 1])} />
               </div>
             )}
           </motion.div>

@@ -13,6 +13,15 @@ export function convertFileSrc(path: string): string {
   return `${base}?path=${encodeURIComponent(path)}`
 }
 
+/**
+ * A photo scaled down to at most `maxEdge` px on its longest side, upright
+ * as the photo shows. The backend serves the file as it is when it's no
+ * larger, or of a kind it leaves alone (see servePreview).
+ */
+export function convertPreviewSrc(path: string, maxEdge: number): string {
+  return `${convertFileSrc(path)}&edge=${maxEdge}`
+}
+
 export function writeText(text: string): Promise<void> {
   return Native.writeText(text)
 }

@@ -56,6 +56,8 @@ const styles = stylex.create({
   // The photo over its placeholder, unseen until it has loaded.
   over: { position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none' },
   unloaded: { visibility: 'hidden' },
+  // The full-size photo over the scaled copy, leaving clicks to the copy.
+  passThrough: { pointerEvents: 'none' },
   spinner: {
     position: 'absolute',
     top: '50%',
@@ -121,8 +123,17 @@ function PlaceholderImage({ placeholder }: { placeholder: Placeholder }) {
   )
 }
 
+/** The photo itself, and its size as stored, when `src` is a scaled copy of it. */
+export interface FullImage {
+  src: string
+  width: number
+  height: number
+}
+
 interface ZoomableImageProps {
   src: string
+  /** Loaded over `src` once zoomed in, and what actual size means. */
+  full?: FullImage
   /** Shown while `src` loads, with a spinner over it. */
   placeholder?: Placeholder
   alt: string
@@ -164,8 +175,9 @@ export function FittedImage({ src, placeholder, alt }: { src: string, placeholde
  * fit and actual size. Pinch arrives as `gesture*` events in WebKit (the
  * macOS webview) and as ctrl+wheel in Chromium; both are handled.
  */
-export function ZoomableImage({ src, placeholder, alt, fadeIn, menuItems }: ZoomableImageProps) {
+export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }: ZoomableImageProps) {
   const { loaded, ...loadHandlers } = useLoaded(src)
+  const { loaded: fullLoaded, ...fullLoadHandlers } = useLoaded(full?.src ?? '')
   const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -183,6 +195,16 @@ export function ZoomableImage({ src, placeholder, alt, fadeIn, menuItems }: Zoom
     viewRef.current = next
     setSmooth(animated)
     setView(next)
+  }
+
+  /** The photo's own width in pixels, however large `src` is. */
+  function photoWidth(image: HTMLImageElement) {
+    if (!full)
+      return image.naturalWidth
+    // Its size is as stored: a photo turned upright by its EXIF
+    // orientation shows it the other way round.
+    const landscape = image.offsetWidth >= image.offsetHeight
+    return landscape === (full.width >= full.height) ? full.width : full.height
   }
 
   function measure() {
@@ -206,8 +228,8 @@ export function ZoomableImage({ src, placeholder, alt, fadeIn, menuItems }: Zoom
         offsetX: rect.left + rect.width / 2 - v.x - (vRect.left + vRect.width / 2),
         offsetY: rect.top + rect.height / 2 - v.y - (vRect.top + vRect.height / 2),
       },
-      max: Math.max(4, actualSizeScale(image.naturalWidth, image.offsetWidth) * 4),
-      actual: actualSizeScale(image.naturalWidth, image.offsetWidth),
+      max: Math.max(4, actualSizeScale(photoWidth(image), image.offsetWidth) * 4),
+      actual: actualSizeScale(photoWidth(image), image.offsetWidth),
     }
   }
 
@@ -280,6 +302,10 @@ export function ZoomableImage({ src, placeholder, alt, fadeIn, menuItems }: Zoom
   }, [])
 
   const zoomed = view.scale > 1
+  // The photo itself loads the first time it's zoomed into, and stays.
+  const [wantFull, setWantFull] = useState(false)
+  if (zoomed && full && !wantFull)
+    setWantFull(true)
 
   return (
     <div
@@ -357,6 +383,15 @@ export function ZoomableImage({ src, placeholder, alt, fadeIn, menuItems }: Zoom
                 zoomTo(m.actual, e.clientX, e.clientY, true)
             }}
           />
+          {wantFull && full && (
+            <img
+              src={full.src}
+              alt=""
+              {...fullLoadHandlers}
+              {...stylex.props(styles.image, styles.over, styles.passThrough, !fullLoaded && styles.unloaded)}
+              draggable={false}
+            />
+          )}
           {placeholder && !loaded && <LoadingRegular width={24} height={24} {...stylex.props(styles.spinner)} />}
         </div>
       </ContextMenu>

@@ -6,7 +6,7 @@ import (
 )
 
 func TestSchedulerRunsForegroundNewestFirstThenBackground(t *testing.T) {
-	s := newThumbScheduler(1)
+	s := newThumbScheduler(1, 1)
 	releaseFirst, _ := s.acquire(false, "") // occupies the only slot
 
 	order := make(chan string, 4)
@@ -42,7 +42,7 @@ func TestSchedulerRunsForegroundNewestFirstThenBackground(t *testing.T) {
 }
 
 func TestSchedulerCancelDropsWaitingRequest(t *testing.T) {
-	s := newThumbScheduler(1)
+	s := newThumbScheduler(1, 1)
 	releaseFirst, _ := s.acquire(false, "")
 
 	results := make(chan error, 2)
@@ -67,7 +67,52 @@ func TestSchedulerCancelDropsWaitingRequest(t *testing.T) {
 	if err := <-results; err != nil {
 		t.Fatalf("kept request returned %v", err)
 	}
-	if s.free != 1 || len(s.waiting) != 0 {
+	if s.free != 1 || s.bgFree != 1 || len(s.waiting) != 0 {
 		t.Fatalf("free=%d waiting=%d, want 1 and 0", s.free, len(s.waiting))
+	}
+}
+
+func TestSchedulerKeepsBackgroundToItsSlots(t *testing.T) {
+	s := newThumbScheduler(3, 1)
+	releaseBg, _ := s.acquire(true, "")
+
+	// A second background request waits although slots are free...
+	granted := make(chan func(), 1)
+	go func() {
+		release, _ := s.acquire(true, "")
+		granted <- release
+	}()
+	select {
+	case <-granted:
+		t.Fatal("second background request ran past the background limit")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	// ...while foreground requests take them.
+	releaseFg1, _ := s.acquire(false, "")
+	releaseFg2, _ := s.acquire(false, "")
+	if s.free != 0 {
+		t.Fatalf("free = %d, want 0", s.free)
+	}
+
+	// A foreground slot freeing up isn't one background may use.
+	releaseFg1()
+	select {
+	case <-granted:
+		t.Fatal("background request took a foreground slot")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	// The background slot freeing up passes to the waiting request.
+	releaseBg()
+	select {
+	case release := <-granted:
+		release()
+	case <-time.After(time.Second):
+		t.Fatal("waiting background request never ran")
+	}
+	releaseFg2()
+	if s.free != 3 || s.bgFree != 1 {
+		t.Fatalf("free=%d bgFree=%d, want 3 and 1", s.free, s.bgFree)
 	}
 }

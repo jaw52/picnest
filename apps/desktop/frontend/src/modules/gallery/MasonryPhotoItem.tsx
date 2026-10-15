@@ -29,7 +29,7 @@ import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
 import { useMovePhotos } from '~/hooks/useMovePhotos'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
-import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
+import { largestCachedThumbnail, thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
 import { isLibraryPath } from '~/lib/library'
 import { writeText } from '~/lib/native'
 import { colors } from '~/theme/colors.stylex'
@@ -42,6 +42,8 @@ interface MasonryPhotoItemProps {
   data: Photo
   width: number
   folderPath: string | null
+  /** Ask for the thumbnail behind tiles on screen (see useThumbnail). */
+  background: boolean
 }
 
 const pulse = stylex.keyframes({
@@ -197,11 +199,14 @@ function TileImage({ photo, thumbnailUrl, folderPath }: { photo: Photo, thumbnai
   )
 }
 
-function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProps) {
+function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryPhotoItemProps) {
   const { t } = useTranslation()
   // Undownloaded iCloud files get iCloud's own thumbnail, without a download.
   const maxEdge = thumbnailEdgeFor(width)
-  const thumbnailUrl = useThumbnail(folderPath, data.path, maxEdge, true, data.isCloudPlaceholder)
+  // A thumbnail at another size, from before the tiles were resized, shows
+  // until this size is ready.
+  const thumbnailUrl = useThumbnail(folderPath, data.path, maxEdge, true, data.isCloudPlaceholder, background)
+    ?? largestCachedThumbnail(folderPath, data.path)
   const deletePhoto = useDeletePhoto(folderPath)
   const movePhotos = useMovePhotos(folderPath)
   const rate = useRatePhoto(folderPath)

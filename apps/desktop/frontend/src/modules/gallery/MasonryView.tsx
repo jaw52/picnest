@@ -21,7 +21,7 @@ import { useDeleteFolder } from '~/hooks/useDeleteFolder'
 import { useGridShortcuts } from '~/hooks/useGridShortcuts'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
 import { useTabs } from '~/hooks/useTabs'
-import { thumbnailEdgeFor } from '~/hooks/useThumbnail'
+import { thumbnailCache, thumbnailCacheKey, thumbnailEdgeFor } from '~/hooks/useThumbnail'
 import { useThumbnailPinch } from '~/hooks/useThumbnailPinch'
 import { useThumbnailPrefetch } from '~/hooks/useThumbnailPrefetch'
 import { cellsInRange, layoutMasonry, masonryColumns, neighborCell } from '~/lib/masonry'
@@ -144,7 +144,8 @@ export function MasonryView() {
     setGrid(next)
     layout = next.layout
   }
-  useThumbnailPrefetch(folderPath, containerWidth > 0 ? thumbnailEdgeFor(layout.columnWidth) : 0)
+  const thumbnailEdge = thumbnailEdgeFor(layout.columnWidth)
+  useThumbnailPrefetch(folderPath, containerWidth > 0 ? thumbnailEdge : 0)
 
   // Which part of the grid the window shows, in grid coordinates. Tracked
   // in SCROLL_STEP increments, so scrolling re-renders a few times per
@@ -298,9 +299,17 @@ export function MasonryView() {
           )
         }
         const photo = photos[i - subfolders.length]
+        // The window's top is somewhere in the SCROLL_STEP below viewport.top.
+        const onScreen = cell.top < viewport.top + SCROLL_STEP + viewport.height
+          && cell.top + cell.height > viewport.top
+        // A tile off screen asks for its thumbnail behind those on screen.
+        // One that has its thumbnail keeps the flag as it is, so scrolling
+        // past doesn't render it again.
+        const background = !onScreen
+          && !thumbnailCache.has(thumbnailCacheKey(folderPath, photo.path, thumbnailEdge, photo.isCloudPlaceholder))
         return (
           <div key={photo.id} {...position}>
-            <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} />
+            <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} background={background} />
           </div>
         )
       })}

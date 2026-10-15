@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 
 import { prefetchPathsAtom, thumbnailProgressAtom, unloadedPhotosAtom } from '~/atoms/gallery'
 import { ensureThumbnailUrl } from '~/lib/backend'
-import { thumbnailCache, thumbnailCacheKey } from './useThumbnail'
+import { cacheThumbnail, thumbnailCache, thumbnailCacheKey } from './useThumbnail'
 
 const CONCURRENCY = 4
 
@@ -43,7 +43,7 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
         const key = thumbnailCacheKey(folderPath!, path, maxEdge)
         try {
           if (!thumbnailCache.has(key))
-            thumbnailCache.set(key, await ensureThumbnailUrl(folderPath!, path, maxEdge, { background: true, signal: controller.signal }))
+            cacheThumbnail(folderPath, path, maxEdge, false, await ensureThumbnailUrl(folderPath!, path, maxEdge, { background: true, signal: controller.signal }))
         }
         catch {
           // Per-tile failures surface when that tile mounts.

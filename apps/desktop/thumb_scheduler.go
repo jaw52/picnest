@@ -14,12 +14,15 @@ var errThumbCancelled = errors.New(thumbCancelledError)
 // thumbScheduler bounds concurrent thumbnail decodes and decides who runs
 // next when a slot frees up. Foreground requests (a tile the user is looking
 // at) run newest-first, so tiles scrolled past don't delay the ones on
-// screen; background prefetch runs oldest-first and only when no foreground
-// request is waiting. A waiting request can be cancelled by its id, e.g. when
-// its tile unmounts; one that already holds a slot runs to completion.
+// screen; background requests (prefetch, and tiles just off screen) run
+// oldest-first, only when no foreground request is waiting, and on no more
+// than a few of the slots, so a long prefetch leaves cores to the rest of
+// the system. A waiting request can be cancelled by its id, e.g. when its
+// tile unmounts; one that already holds a slot runs to completion.
 type thumbScheduler struct {
 	mu         sync.Mutex
 	free       int
+	bgFree     int            // of the slots, how many more background requests may hold
 	foreground []*thumbWaiter // stack: newest last
 	background []*thumbWaiter // queue: oldest first
 	waiting    map[string]*thumbWaiter
@@ -31,19 +34,27 @@ type thumbWaiter struct {
 	cancelled chan struct{}
 }
 
-func newThumbScheduler(slots int) *thumbScheduler {
-	return &thumbScheduler{free: slots, waiting: make(map[string]*thumbWaiter)}
+func newThumbScheduler(slots, backgroundSlots int) *thumbScheduler {
+	return &thumbScheduler{
+		free:    slots,
+		bgFree:  min(backgroundSlots, slots),
+		waiting: make(map[string]*thumbWaiter),
+	}
 }
 
 // acquire blocks until a slot is available and returns its release func, or
 // returns errThumbCancelled if cancel(id) is called while it waits. An empty
 // id can't be cancelled.
 func (s *thumbScheduler) acquire(background bool, id string) (func(), error) {
+	release := func() { s.release(background) }
 	s.mu.Lock()
-	if s.free > 0 {
+	if s.free > 0 && (!background || s.bgFree > 0) {
 		s.free--
+		if background {
+			s.bgFree--
+		}
 		s.mu.Unlock()
-		return s.release, nil
+		return release, nil
 	}
 	w := &thumbWaiter{id: id, granted: make(chan struct{}), cancelled: make(chan struct{})}
 	if background {
@@ -58,7 +69,7 @@ func (s *thumbScheduler) acquire(background bool, id string) (func(), error) {
 
 	select {
 	case <-w.granted:
-		return s.release, nil
+		return release, nil
 	case <-w.cancelled:
 		return nil, errThumbCancelled
 	}
@@ -82,16 +93,20 @@ func (s *thumbScheduler) cancel(id string) {
 	close(w.cancelled)
 }
 
-func (s *thumbScheduler) release() {
+func (s *thumbScheduler) release(background bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if background {
+		s.bgFree++
+	}
 	var next *thumbWaiter
 	switch {
 	case len(s.foreground) > 0:
 		last := len(s.foreground) - 1
 		next, s.foreground = s.foreground[last], s.foreground[:last]
-	case len(s.background) > 0:
+	case len(s.background) > 0 && s.bgFree > 0:
 		next, s.background = s.background[0], s.background[1:]
+		s.bgFree--
 	default:
 		s.free++
 		return

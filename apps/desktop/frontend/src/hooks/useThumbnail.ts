@@ -9,6 +9,9 @@ import { ensureThumbnailUrl, THUMBNAIL_CANCELLED } from '~/lib/backend'
  */
 export const thumbnailCache = new Map<string, string>()
 
+/** Each photo's largest thumbnail in thumbnailCache, by `folderPath:filePath`. */
+const largestThumbnails = new Map<string, { edge: number, url: string }>()
+
 /**
  * `cloud` marks an undownloaded iCloud file, whose thumbnail comes from
  * iCloud and is replaced by a decoded one once the file is downloaded.
@@ -17,38 +20,49 @@ export function thumbnailCacheKey(folderPath: string | null, filePath: string, m
   return `${folderPath ?? ''}:${filePath}:${maxEdge}${cloud ? ':cloud' : ''}`
 }
 
+/** Adds a resolved thumbnail to thumbnailCache. */
+export function cacheThumbnail(folderPath: string | null, filePath: string, maxEdge: number, cloud: boolean, url: string) {
+  thumbnailCache.set(thumbnailCacheKey(folderPath, filePath, maxEdge, cloud), url)
+  const photoKey = `${folderPath ?? ''}:${filePath}`
+  const largest = largestThumbnails.get(photoKey)
+  if (!largest || maxEdge >= largest.edge)
+    largestThumbnails.set(photoKey, { edge: maxEdge, url })
+}
+
 /**
  * The largest thumbnail of a photo already resolved at any size, to stand in
  * for the photo while it loads; undefined if none is.
  */
 export function largestCachedThumbnail(folderPath: string | null, filePath: string): string | undefined {
-  const prefix = `${folderPath ?? ''}:${filePath}:`
-  let best: { edge: number, url: string } | undefined
-  for (const [key, url] of thumbnailCache) {
-    if (!key.startsWith(prefix))
-      continue
-    const edge = Number.parseInt(key.slice(prefix.length), 10)
-    if (!best || edge > best.edge)
-      best = { edge, url }
-  }
-  return best?.url
+  return largestThumbnails.get(`${folderPath ?? ''}:${filePath}`)?.url
 }
+
+/** Steps thumbnail sizes go up in; see thumbnailEdgeFor. */
+const THUMBNAIL_EDGE_STEP = 256
 
 /**
  * Pixels to request for a tile rendered `width` CSS px wide on this display,
- * bucketed to powers of two so dragging the slider doesn't regenerate every
- * step.
+ * rounded up to a THUMBNAIL_EDGE_STEP: fine enough that a tile's thumbnail
+ * is never much larger than it shows, coarse enough that resizing the
+ * window or the tiles crosses a step only now and then. A thumbnail
+ * generated at another step stands in meanwhile (see largestCachedThumbnail).
  */
 export function thumbnailEdgeFor(width: number) {
-  return 2 ** Math.ceil(Math.log2(Math.max(width * window.devicePixelRatio, 480)))
+  const pixels = Math.max(width * window.devicePixelRatio, 480)
+  return Math.ceil(pixels / THUMBNAIL_EDGE_STEP) * THUMBNAIL_EDGE_STEP
 }
 
+/**
+ * `background` asks behind the requests that aren't, for a picture not on
+ * screen yet; turning it off asks again, at the front.
+ */
 export function useThumbnail(
   folderPath: string | null,
   filePath: string,
   maxEdge: number,
   enabled = true,
   cloud = false,
+  background = false,
 ): string | undefined {
   const cacheKey = thumbnailCacheKey(folderPath, filePath, maxEdge, cloud)
   const cachedUrl = thumbnailCache.get(cacheKey)
@@ -77,10 +91,10 @@ export function useThumbnail(
         // async boundary without re-checking it here.
         if (!folderPath)
           return
-        const resolved = await ensureThumbnailUrl(folderPath, filePath, maxEdge, { signal: controller.signal })
+        const resolved = await ensureThumbnailUrl(folderPath, filePath, maxEdge, { background, signal: controller.signal })
         // Cache even if unmounted meanwhile: the request already ran to
         // completion, so the next mount can reuse it.
-        thumbnailCache.set(cacheKey, resolved)
+        cacheThumbnail(folderPath, filePath, maxEdge, cloud, resolved)
         if (!controller.signal.aborted)
           setFetchedUrl(resolved)
       }
@@ -95,7 +109,7 @@ export function useThumbnail(
     load()
 
     return () => controller.abort()
-  }, [folderPath, filePath, maxEdge, cacheKey, enabled])
+  }, [folderPath, filePath, maxEdge, cacheKey, enabled, cloud, background])
 
   return cachedUrl ?? fetchedUrl
 }

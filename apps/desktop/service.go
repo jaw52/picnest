@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/egoist/mygo"
 )
@@ -39,14 +40,26 @@ func configFile(name string) (string, error) {
 
 // App is the service bound to the frontend.
 type App struct {
-	// Bounds concurrent thumbnail decodes so a big folder doesn't saturate
-	// every core. A quarter of the cores keeps the UI responsive.
-	thumbs        *thumbScheduler
+	// Bounds concurrent thumbnail decodes. Tiles on screen may use three
+	// quarters of the cores, past which decoding gets no faster on Apple
+	// silicon (its efficiency cores add little); background work keeps to a
+	// quarter, so prefetching a big folder leaves the rest of the system be.
+	thumbs *thumbScheduler
+	// generating maps a thumbnail being written to the wait for it, so a
+	// request for one already underway (a tile's, after prefetch started
+	// it) waits for that one instead of decoding the photo again.
+	generating    sync.Map // thumbnail path -> *thumbJob
 	folderWatcher folderWatcher
 }
 
+type thumbJob struct {
+	done chan struct{}
+	err  error
+}
+
 func NewApp() *App {
-	return &App{thumbs: newThumbScheduler(max(runtime.NumCPU()/4, 1))}
+	cpus := runtime.NumCPU()
+	return &App{thumbs: newThumbScheduler(max(cpus*3/4, 1), max(cpus/4, 1))}
 }
 
 func (a *App) ScanFolderPage(folderPath string, offset, limit int) (PhotoPage, error) {
@@ -92,12 +105,34 @@ func (a *App) EnsureThumbnail(folderPath, filePath string, maxEdge int, backgrou
 	if err != nil || cached {
 		return thumbPath, err
 	}
+	if job, ok := a.generating.Load(thumbPath); ok {
+		return waitForThumb(job.(*thumbJob), thumbPath)
+	}
 	release, err := a.thumbs.acquire(background, requestID)
 	if err != nil {
 		return "", err
 	}
 	defer release()
-	return generateThumbnail(filePath, thumbPath, maxEdge)
+
+	job := &thumbJob{done: make(chan struct{})}
+	if running, loaded := a.generating.LoadOrStore(thumbPath, job); loaded {
+		return waitForThumb(running.(*thumbJob), thumbPath)
+	}
+	defer func() {
+		a.generating.Delete(thumbPath)
+		close(job.done)
+	}()
+	path, err := generateThumbnail(filePath, thumbPath, maxEdge)
+	job.err = err
+	return path, err
+}
+
+func waitForThumb(job *thumbJob, thumbPath string) (string, error) {
+	<-job.done
+	if job.err != nil {
+		return "", job.err
+	}
+	return thumbPath, nil
 }
 
 // CancelThumbnail drops a thumbnail request that is still waiting for a

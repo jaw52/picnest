@@ -19,7 +19,11 @@ vi.mock('~/hooks/useDeletePhoto', () => ({ useDeletePhoto: () => deletePhoto }))
 const { rate } = vi.hoisted(() => ({ rate: vi.fn() }))
 vi.mock('~/hooks/useRatePhoto', () => ({ useRatePhoto: () => rate }))
 vi.mock('./MasonryPhotoItem', () => ({ MasonryPhotoItem: () => null }))
-vi.mock('~/lib/native', () => ({ convertFileSrc: (path: string) => path, writeText: vi.fn() }))
+vi.mock('~/lib/native', () => ({
+  convertFileSrc: (path: string) => path,
+  convertPreviewSrc: (path: string) => path,
+  writeText: vi.fn(),
+}))
 vi.mock('~/lib/backend', () => ({ ensureThumbnailUrl: () => new Promise(() => {}), THUMBNAIL_CANCELLED: {} }))
 vi.mock('~/modules/tabs/FolderCard', () => ({
   FolderTile: ({ name }: { name: string }) => <span>{name}</span>,
