@@ -198,6 +198,9 @@ var libraryPhotos struct {
 	result objcID // retained
 }
 
+// libraryPhotosFrom returns the fetch for a page at offset, autoreleased
+// into the caller's pool: a scan starting over meanwhile releases the shared
+// one, which a scan still paging through it must outlive.
 func libraryPhotosFrom(offset int) objcID {
 	libraryPhotos.Lock()
 	defer libraryPhotos.Unlock()
@@ -207,7 +210,7 @@ func libraryPhotosFrom(offset int) objcID {
 		}
 		libraryPhotos.result = objc.Send(fetchLibraryPhotos(), sel("retain"))
 	}
-	return libraryPhotos.result
+	return objc.Send(objc.Send(libraryPhotos.result, sel("retain")), sel("autorelease"))
 }
 
 // fetchLibraryPhotos returns every photo in the library, newest first.
