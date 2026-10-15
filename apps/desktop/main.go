@@ -43,11 +43,12 @@ func serveLocalFile(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
-// servePreview serves a JPEG photo scaled down to fit maxEdge px, for the
-// lightbox to show at fit: painting a photo of 12 megapixels or more stalls
-// the webview for a frame of 100ms or longer, even decoded beforehand.
-// Other files (which may be transparent or animated), and photos no larger
-// than maxEdge, are served as they are.
+// servePreview serves a JPEG or PNG photo scaled down to fit maxEdge px,
+// for the lightbox to show at fit: painting a photo of 12 megapixels or more
+// stalls the webview for a frame of 100ms or longer (a PNG for up to 0.5s),
+// even decoded beforehand. A PNG is scaled to a JPEG too, unless it is
+// transparent; an animated one, other files (WebP, GIF and BMP paint fast
+// enough), and photos no larger than maxEdge are served as they are.
 func servePreview(w http.ResponseWriter, r *http.Request, path string, maxEdge int) {
 	// The viewer drops photos it skipped past; scaling those would hold up
 	// the one now shown.
@@ -56,23 +57,36 @@ func servePreview(w http.ResponseWriter, r *http.Request, path string, maxEdge i
 	}
 	ext := strings.ToLower(filepath.Ext(path))
 	width, height, err := imageDimensions(path)
-	if (ext != ".jpg" && ext != ".jpeg") || err != nil || max(width, height) <= maxEdge {
+	if (ext != ".jpg" && ext != ".jpeg" && ext != ".png") || err != nil || max(width, height) <= maxEdge {
 		http.ServeFile(w, r, path)
 		return
+	}
+	write := func(dst string) error { return writeThumbnail(path, dst, maxEdge, previewJPEGQuality) }
+	mimeType := "image/jpeg"
+	if ext == ".png" {
+		alpha, animated, err := imageKind(path)
+		if err != nil || animated {
+			http.ServeFile(w, r, path)
+			return
+		}
+		if alpha {
+			write = func(dst string) error { return writePNGThumbnail(path, dst, maxEdge) }
+			mimeType = "image/png"
+		}
 	}
 	info, err := os.Stat(path)
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	tmp, err := os.CreateTemp("", "picnest-preview-*.jpg")
+	tmp, err := os.CreateTemp("", "picnest-preview-*")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	tmp.Close()
 	defer os.Remove(tmp.Name())
-	if err := writeThumbnail(path, tmp.Name(), maxEdge, previewJPEGQuality); err != nil {
+	if err := write(tmp.Name()); err != nil {
 		http.ServeFile(w, r, path)
 		return
 	}
@@ -81,7 +95,7 @@ func servePreview(w http.ResponseWriter, r *http.Request, path string, maxEdge i
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "image/jpeg")
+	w.Header().Set("Content-Type", mimeType)
 	http.ServeContent(w, r, "", info.ModTime(), bytes.NewReader(data))
 }
 

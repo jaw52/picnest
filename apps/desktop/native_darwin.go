@@ -46,6 +46,7 @@ var (
 		SourceCreateWithURL      func(url, opts cfRef) cfRef
 		SourceCreateWithData     func(data, opts cfRef) cfRef
 		SourceCopyProperties     func(src cfRef, idx int, opts cfRef) cfRef
+		SourceGetCount           func(src cfRef) int
 		SourceCreateThumbnail    func(src cfRef, idx int, opts cfRef) cfRef
 		DestinationCreateWithURL func(url, typ cfRef, count int, opts cfRef) cfRef
 		DestinationAddImage      func(dest, img, props cfRef)
@@ -61,6 +62,7 @@ var (
 	kTypeValueCallbacks cfRef
 
 	kPixelWidth, kPixelHeight, kOrientation       cfRef
+	kHasAlpha                                     cfRef
 	kThumbFromImageAlways, kThumbMaxPixelSize     cfRef
 	kThumbWithTransform                           cfRef
 	kShouldCache, kShouldCacheImmediately         cfRef
@@ -115,6 +117,7 @@ func loadFrameworks() error {
 		purego.RegisterLibFunc(&imgio.SourceCreateWithURL, imageIO, "CGImageSourceCreateWithURL")
 		purego.RegisterLibFunc(&imgio.SourceCreateWithData, imageIO, "CGImageSourceCreateWithData")
 		purego.RegisterLibFunc(&imgio.SourceCopyProperties, imageIO, "CGImageSourceCopyPropertiesAtIndex")
+		purego.RegisterLibFunc(&imgio.SourceGetCount, imageIO, "CGImageSourceGetCount")
 		purego.RegisterLibFunc(&imgio.SourceCreateThumbnail, imageIO, "CGImageSourceCreateThumbnailAtIndex")
 		purego.RegisterLibFunc(&imgio.DestinationCreateWithURL, imageIO, "CGImageDestinationCreateWithURL")
 		purego.RegisterLibFunc(&imgio.DestinationAddImage, imageIO, "CGImageDestinationAddImage")
@@ -151,6 +154,7 @@ func loadFrameworks() error {
 		kPixelWidth = sym(imageIO, "kCGImagePropertyPixelWidth")
 		kPixelHeight = sym(imageIO, "kCGImagePropertyPixelHeight")
 		kOrientation = sym(imageIO, "kCGImagePropertyOrientation")
+		kHasAlpha = sym(imageIO, "kCGImagePropertyHasAlpha")
 		kThumbFromImageAlways = sym(imageIO, "kCGImageSourceCreateThumbnailFromImageAlways")
 		kThumbMaxPixelSize = sym(imageIO, "kCGImageSourceThumbnailMaxPixelSize")
 		kThumbWithTransform = sym(imageIO, "kCGImageSourceCreateThumbnailWithTransform")
@@ -300,10 +304,45 @@ func imageDimensions(path string) (int, int, error) {
 	return w, h, nil
 }
 
+// imageKind reports whether an image has an alpha channel, and whether it
+// has more than one frame (an animated PNG or GIF).
+func imageKind(path string) (alpha, animated bool, err error) {
+	if err := loadFrameworks(); err != nil {
+		return false, false, err
+	}
+	src := openSource(path)
+	if src == 0 {
+		return false, false, errors.New("unsupported image")
+	}
+	defer cf.Release(src)
+	props := imgio.SourceCopyProperties(src, 0, 0)
+	if props == 0 {
+		return false, false, errors.New("failed to read image properties")
+	}
+	defer cf.Release(props)
+	return cf.DictionaryGetValue(props, kHasAlpha) == kCFBooleanTrue, imgio.SourceGetCount(src) > 1, nil
+}
+
 // writeThumbnail decodes straight to a reduced size (ImageIO uses subsampled
 // JPEG decoding), turns it upright by the photo's EXIF orientation, and
 // writes it out as a JPEG.
 func writeThumbnail(src, dst string, maxEdge int, quality float64) error {
+	return withScaledImage(src, maxEdge, func(img cfRef) error {
+		return writeJPEG(img, dst, quality)
+	})
+}
+
+// writePNGThumbnail is writeThumbnail written out as a PNG, which keeps
+// transparency.
+func writePNGThumbnail(src, dst string, maxEdge int) error {
+	return withScaledImage(src, maxEdge, func(img cfRef) error {
+		return writeImage(img, dst, "public.png", 0)
+	})
+}
+
+// withScaledImage decodes src at most maxEdge px on its longest side,
+// turned upright, and passes the CGImage to use, during which it is valid.
+func withScaledImage(src string, maxEdge int, use func(img cfRef) error) error {
 	if err := loadFrameworks(); err != nil {
 		return err
 	}
@@ -325,28 +364,37 @@ func writeThumbnail(src, dst string, maxEdge int, quality float64) error {
 		return errors.New("failed to decode image")
 	}
 	defer imgio.ImageRelease(thumb)
-	return writeJPEG(thumb, dst, quality)
+	return use(thumb)
 }
 
 // writeJPEG encodes a CGImage to dst.
 func writeJPEG(img cfRef, dst string, quality float64) error {
+	return writeImage(img, dst, "public.jpeg", quality)
+}
+
+// writeImage encodes a CGImage to dst as the type uti, at quality if it is
+// lossy (quality > 0).
+func writeImage(img cfRef, dst, uti string, quality float64) error {
 	url := newURL(dst)
 	if url == 0 {
 		return errors.New("failed to create thumbnail file")
 	}
 	defer cf.Release(url)
-	jpeg := newCFString("public.jpeg")
-	defer cf.Release(jpeg)
-	dest := imgio.DestinationCreateWithURL(url, jpeg, 1, 0)
+	typ := newCFString(uti)
+	defer cf.Release(typ)
+	dest := imgio.DestinationCreateWithURL(url, typ, 1, 0)
 	if dest == 0 {
 		return errors.New("failed to create thumbnail file")
 	}
 	defer cf.Release(dest)
 
-	q := newCFFloat(quality)
-	defer cf.Release(q)
-	props := newCFDict([]cfRef{kLossyQuality}, []cfRef{q})
-	defer cf.Release(props)
+	var props cfRef
+	if quality > 0 {
+		q := newCFFloat(quality)
+		defer cf.Release(q)
+		props = newCFDict([]cfRef{kLossyQuality}, []cfRef{q})
+		defer cf.Release(props)
+	}
 	imgio.DestinationAddImage(dest, img, props)
 	if !imgio.DestinationFinalize(dest) {
 		return errors.New("failed to encode thumbnail")
