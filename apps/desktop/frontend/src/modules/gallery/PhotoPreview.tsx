@@ -455,7 +455,7 @@ export function PhotoPreview() {
                       // for a closer look. A library photo is read at one
                       // size whatever is asked.
                       full={!isLibraryPath(folderPath) && Math.max(photo.width, photo.height) > edge
-                        ? { src: convertFileSrc(photo.path), width: photo.width, height: photo.height }
+                        ? { src: convertFileSrc(photo.path), width: photo.width }
                         : undefined}
                       // A photo already decoded shows straight away, without
                       // its thumbnail and spinner blinking up first.

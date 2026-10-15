@@ -72,7 +72,7 @@ func servePreview(w http.ResponseWriter, r *http.Request, path string, maxEdge i
 	}
 	tmp.Close()
 	defer os.Remove(tmp.Name())
-	if err := writePreview(path, tmp.Name(), maxEdge, previewJPEGQuality); err != nil {
+	if err := writeThumbnail(path, tmp.Name(), maxEdge, previewJPEGQuality); err != nil {
 		http.ServeFile(w, r, path)
 		return
 	}

@@ -123,11 +123,10 @@ function PlaceholderImage({ placeholder }: { placeholder: Placeholder }) {
   )
 }
 
-/** The photo itself, and its size as stored, when `src` is a scaled copy of it. */
+/** The photo itself, and its width in pixels, when `src` is a scaled copy of it. */
 export interface FullImage {
   src: string
   width: number
-  height: number
 }
 
 interface ZoomableImageProps {
@@ -199,12 +198,7 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
 
   /** The photo's own width in pixels, however large `src` is. */
   function photoWidth(image: HTMLImageElement) {
-    if (!full)
-      return image.naturalWidth
-    // Its size is as stored: a photo turned upright by its EXIF
-    // orientation shows it the other way round.
-    const landscape = image.offsetWidth >= image.offsetHeight
-    return landscape === (full.width >= full.height) ? full.width : full.height
+    return full?.width ?? image.naturalWidth
   }
 
   function measure() {

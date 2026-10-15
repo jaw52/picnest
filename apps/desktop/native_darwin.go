@@ -60,7 +60,7 @@ var (
 	kTypeKeyCallbacks   cfRef
 	kTypeValueCallbacks cfRef
 
-	kPixelWidth, kPixelHeight                     cfRef
+	kPixelWidth, kPixelHeight, kOrientation       cfRef
 	kThumbFromImageAlways, kThumbMaxPixelSize     cfRef
 	kThumbWithTransform                           cfRef
 	kShouldCache, kShouldCacheImmediately         cfRef
@@ -150,6 +150,7 @@ func loadFrameworks() error {
 
 		kPixelWidth = sym(imageIO, "kCGImagePropertyPixelWidth")
 		kPixelHeight = sym(imageIO, "kCGImagePropertyPixelHeight")
+		kOrientation = sym(imageIO, "kCGImagePropertyOrientation")
 		kThumbFromImageAlways = sym(imageIO, "kCGImageSourceCreateThumbnailFromImageAlways")
 		kThumbMaxPixelSize = sym(imageIO, "kCGImageSourceThumbnailMaxPixelSize")
 		kThumbWithTransform = sym(imageIO, "kCGImageSourceCreateThumbnailWithTransform")
@@ -269,7 +270,8 @@ func cfToGo(v cfRef) (any, bool) {
 	return nil, false
 }
 
-// imageDimensions reads pixel dimensions from the file header without decoding pixels.
+// imageDimensions reads the photo's dimensions as shown, turned upright by its
+// EXIF orientation, from the file header without decoding pixels.
 func imageDimensions(path string) (int, int, error) {
 	if err := loadFrameworks(); err != nil {
 		return 0, 0, err
@@ -289,22 +291,19 @@ func imageDimensions(path string) (int, int, error) {
 	if !okW || !okH {
 		return 0, 0, errors.New("failed to read image dimensions")
 	}
+	// Orientations 5–8 are stored turned a quarter.
+	if o := cf.DictionaryGetValue(props, kOrientation); o != 0 {
+		if n, ok := cfNumberToInt(o); ok && n >= 5 && n <= 8 {
+			w, h = h, w
+		}
+	}
 	return w, h, nil
 }
 
 // writeThumbnail decodes straight to a reduced size (ImageIO uses subsampled
-// JPEG decoding) and writes it out as a JPEG.
+// JPEG decoding), turns it upright by the photo's EXIF orientation, and
+// writes it out as a JPEG.
 func writeThumbnail(src, dst string, maxEdge int, quality float64) error {
-	return writeScaled(src, dst, maxEdge, quality, false)
-}
-
-// writePreview is writeThumbnail turned upright by the photo's EXIF
-// orientation, as the webview shows the photo itself.
-func writePreview(src, dst string, maxEdge int, quality float64) error {
-	return writeScaled(src, dst, maxEdge, quality, true)
-}
-
-func writeScaled(src, dst string, maxEdge int, quality float64, upright bool) error {
 	if err := loadFrameworks(); err != nil {
 		return err
 	}
@@ -316,13 +315,9 @@ func writeScaled(src, dst string, maxEdge int, quality float64, upright bool) er
 
 	edge := newCFInt(int32(maxEdge))
 	defer cf.Release(edge)
-	transform := kBooleanFalse
-	if upright {
-		transform = kCFBooleanTrue
-	}
 	opts := newCFDict(
 		[]cfRef{kThumbFromImageAlways, kThumbMaxPixelSize, kShouldCacheImmediately, kThumbWithTransform},
-		[]cfRef{kCFBooleanTrue, edge, kCFBooleanTrue, transform},
+		[]cfRef{kCFBooleanTrue, edge, kCFBooleanTrue, kCFBooleanTrue},
 	)
 	defer cf.Release(opts)
 	thumb := imgio.SourceCreateThumbnail(source, 0, opts)
