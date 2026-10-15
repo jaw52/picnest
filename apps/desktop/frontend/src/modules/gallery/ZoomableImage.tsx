@@ -17,6 +17,12 @@ const CAPTION_STRIP = 112
 const BUTTON_STRIP = 64
 /** Movement under this is a click, not a drag. */
 const DRAG_THRESHOLD = 3
+/**
+ * How long the view stays still before the full-size photo shows over the
+ * scaled copy: past the 200ms zoom animation (styles.smooth), and between a
+ * pinch's or a drag's steps.
+ */
+const VIEW_SETTLE_MS = 250
 /** Pinch deltas arrive as small wheel `deltaY`s with ctrl held; this turns them into a zoom factor. */
 const WHEEL_ZOOM_RATE = 0.01
 
@@ -190,10 +196,20 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
   const dragRef = useRef<{ x: number, y: number, view: View, moved: boolean } | null>(null)
   const suppressClickRef = useRef(false)
 
+  // WebKit stalls a frame for 150-220ms painting a photo of 12 megapixels
+  // or more the first time, so the full-size one shows once the view stops
+  // moving rather than halting a zoom animation or a pinch midway.
+  const [moving, setMoving] = useState(false)
+  const settleRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(settleRef.current), [])
+
   function updateView(next: View, animated = false) {
     viewRef.current = next
     setSmooth(animated)
     setView(next)
+    setMoving(true)
+    clearTimeout(settleRef.current)
+    settleRef.current = setTimeout(setMoving, VIEW_SETTLE_MS, false)
   }
 
   /** The photo's own width in pixels, however large `src` is. */
@@ -300,6 +316,9 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
   const [wantFull, setWantFull] = useState(false)
   if (zoomed && full && !wantFull)
     setWantFull(true)
+  const [fullShown, setFullShown] = useState(false)
+  if (fullLoaded && !moving && !fullShown)
+    setFullShown(true)
 
   return (
     <div
@@ -382,7 +401,7 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
               src={full.src}
               alt=""
               {...fullLoadHandlers}
-              {...stylex.props(styles.image, styles.over, styles.passThrough, !fullLoaded && styles.unloaded)}
+              {...stylex.props(styles.image, styles.over, styles.passThrough, !fullShown && styles.unloaded)}
               draggable={false}
             />
           )}
