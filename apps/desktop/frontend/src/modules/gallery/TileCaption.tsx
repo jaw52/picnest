@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import StarFilled from '~icons/mingcute/star-fill'
 import StarRegular from '~icons/mingcute/star-line'
 import { StarRating } from '~/components/StarRating'
+import { useFileName } from '~/hooks/useFileName'
 import { colors } from '~/theme/colors.stylex'
 import { motion } from '~/theme/layout.stylex'
 import { text, utility, weight } from '~/theme/text'
@@ -73,6 +74,7 @@ interface TileCaptionProps {
 export function TileCaption({ photo, onRate }: TileCaptionProps) {
   const { t } = useTranslation()
   const [rating, setRating] = useState(false)
+  const fileName = useFileName(photo)
 
   return (
     <div
@@ -83,7 +85,7 @@ export function TileCaption({ photo, onRate }: TileCaptionProps) {
     >
       <div {...stylex.props(styles.row)}>
         <span {...stylex.props(utility.truncate, styles.fileName, text.caption)}>
-          {photo.fileName}
+          {fileName}
         </span>
         <button
           type="button"

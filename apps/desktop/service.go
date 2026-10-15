@@ -69,6 +69,13 @@ func (a *App) ScanFolderPage(folderPath string, offset, limit int) (PhotoPage, e
 	return scanFolderPage(folderPath, offset, limit)
 }
 
+// LibraryFileNames returns the names photos in the Photos library had when
+// imported, by path. Scans leave them out, as reading them is slow; the
+// photos shown ask for theirs.
+func (a *App) LibraryFileNames(paths []string) (map[string]string, error) {
+	return libraryFileNames(paths)
+}
+
 // LibraryAccess reports whether the Photos library may be read, without
 // asking.
 func (a *App) LibraryAccess() (LibraryAccess, error) {

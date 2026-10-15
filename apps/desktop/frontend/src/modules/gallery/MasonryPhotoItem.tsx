@@ -27,6 +27,7 @@ import { ContextMenu } from '~/components/ContextMenu'
 import { IconButton } from '~/components/IconButton'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
+import { useFileName } from '~/hooks/useFileName'
 import { useMovePhotos } from '~/hooks/useMovePhotos'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { largestCachedThumbnail, thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
@@ -144,7 +145,7 @@ function selectOnKeyboardFocus(e: React.FocusEvent<HTMLElement>, selected: boole
  * button for an undownloaded file, or a "not downloaded" tile if iCloud has
  * none.
  */
-function TileImage({ photo, thumbnailUrl, folderPath }: { photo: Photo, thumbnailUrl: string | undefined, folderPath: string | null }) {
+function TileImage({ photo, fileName, thumbnailUrl, folderPath }: { photo: Photo, fileName: string, thumbnailUrl: string | undefined, folderPath: string | null }) {
   const { t } = useTranslation()
   const downloadPlaceholder = useDownloadPlaceholder(folderPath)
   const downloading = useAtomValue(downloadingIdsAtom).has(photo.id)
@@ -157,7 +158,7 @@ function TileImage({ photo, thumbnailUrl, folderPath }: { photo: Photo, thumbnai
   const image = thumbnailUrl && (
     <img
       src={thumbnailUrl}
-      alt={photo.fileName}
+      alt={fileName}
       decoding="async"
       {...stylex.props(styles.fill, styles.cover)}
       draggable={false}
@@ -207,6 +208,7 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
   // until this size is ready.
   const thumbnailUrl = useThumbnail(folderPath, data.path, maxEdge, true, data.isCloudPlaceholder, background)
     ?? largestCachedThumbnail(folderPath, data.path)
+  const fileName = useFileName(data)
   const deletePhoto = useDeletePhoto(folderPath)
   const movePhotos = useMovePhotos(folderPath)
   const rate = useRatePhoto(folderPath)
@@ -317,7 +319,7 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
         role="option"
         tabIndex={isTabStop ? 0 : -1}
         aria-selected={selected}
-        aria-label={data.fileName}
+        aria-label={fileName}
         data-photo-id={data.id}
         onClick={handleSelect}
         onFocus={e => selectOnKeyboardFocus(e, selected, () => {
@@ -334,7 +336,7 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
         }}
         onDoubleClick={openPreview}
       >
-        <TileImage photo={data} thumbnailUrl={thumbnailUrl} folderPath={folderPath} />
+        <TileImage photo={data} fileName={fileName} thumbnailUrl={thumbnailUrl} folderPath={folderPath} />
         <TileCaption photo={data} onRate={r => rate([data], r)} />
         {data.rating > 0 && (
           <div {...stylex.props(styles.ratingBadge, text.caption, weight.semibold)}>

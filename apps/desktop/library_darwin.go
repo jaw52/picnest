@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -298,9 +299,11 @@ func scanLibraryPage(offset, limit int) (PhotoPage, error) {
 			pool := objc.PoolPush()
 			asset := objc.SendIndex(result, sel("objectAtIndex:"), uint(i))
 			id := nsStringValue(objc.Send(asset, sel("localIdentifier")))
+			// FileName is left out: reading it is a query of Photos' own,
+			// which for a library of 10,000 took 11s of the 12s its pages
+			// took. The photos shown ask for theirs (libraryFileNames).
 			page.Photos = append(page.Photos, PhotoMeta{
 				Path:     libraryRoot + id,
-				FileName: assetFileName(asset),
 				Width:    pk.SendInt(asset, sel("pixelWidth")),
 				Height:   pk.SendInt(asset, sel("pixelHeight")),
 				Rating:   ratings[id],
@@ -311,6 +314,30 @@ func scanLibraryPage(offset, limit int) (PhotoPage, error) {
 		return nil
 	})
 	return page, err
+}
+
+// libraryFileNames returns the names the photos at paths had when imported,
+// by path, leaving out photos no longer in the library.
+func libraryFileNames(paths []string) (map[string]string, error) {
+	names := make(map[string]string, len(paths))
+	err := withPool(func() error {
+		if err := requireLibraryAccess(); err != nil {
+			return err
+		}
+		ids := objc.Send(objc.GetClass("NSMutableArray"), sel("array"))
+		for _, path := range paths {
+			objc.SendID(ids, sel("addObject:"), nsString(libraryAssetID(path)))
+		}
+		result := pk.SendID2(objc.GetClass("PHAsset"), sel("fetchAssetsWithLocalIdentifiers:options:"), ids, 0)
+		for i := range int(objc.SendCount(result, sel("count"))) {
+			pool := objc.PoolPush()
+			asset := objc.SendIndex(result, sel("objectAtIndex:"), uint(i))
+			names[libraryRoot+nsStringValue(objc.Send(asset, sel("localIdentifier")))] = assetFileName(asset)
+			objc.PoolPop(pool)
+		}
+		return nil
+	})
+	return names, err
 }
 
 func newImageRequestOptions() objcID {
@@ -422,6 +449,10 @@ func serveLibraryPhoto(w http.ResponseWriter, r *http.Request, path string) {
 	if r.Context().Err() != nil {
 		return
 	}
+	// The lightbox asks for the photo at the window's size, which Photos
+	// renders in a fraction of a second; the original, often 24 megapixels or
+	// more, took seconds to read and stalled the webview for seconds to decode.
+	edge, _ := strconv.Atoi(r.URL.Query().Get("edge"))
 	var (
 		data     []byte
 		mimeType string
@@ -436,9 +467,12 @@ func serveLibraryPhoto(w http.ResponseWriter, r *http.Request, path string) {
 			return err
 		}
 		modified = assetStamp(asset)
-		data, mimeType = libraryImageData(asset)
-		if data != nil {
-			return nil
+		if edge <= 0 {
+			data, mimeType = libraryImageData(asset)
+			if data != nil {
+				return nil
+			}
+			edge = libraryPreviewEdge
 		}
 		tmp, err := os.CreateTemp("", "picnest-library-*.jpg")
 		if err != nil {
@@ -446,8 +480,8 @@ func serveLibraryPhoto(w http.ResponseWriter, r *http.Request, path string) {
 		}
 		tmp.Close()
 		defer os.Remove(tmp.Name())
-		if err := withLibraryImage(asset, libraryPreviewEdge, func(img cfRef) error {
-			return writeJPEG(img, tmp.Name(), thumbJPEGQuality)
+		if err := withLibraryImage(asset, edge, func(img cfRef) error {
+			return writeJPEG(img, tmp.Name(), previewJPEGQuality)
 		}); err != nil {
 			return err
 		}

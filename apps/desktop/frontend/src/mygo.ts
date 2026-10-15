@@ -141,6 +141,14 @@ export const App = {
   libraryAccess(): Promise<LibraryAccess> {
     return call("App.LibraryAccess");
   },
+  /**
+   * LibraryFileNames returns the names photos in the Photos library had when
+   * imported, by path. Scans leave them out, as reading them is slow; the
+   * photos shown ask for theirs.
+   */
+  libraryFileNames(paths: string[]): Promise<Record<string, string>> {
+    return call("App.LibraryFileNames", paths);
+  },
   listSubfolders(folderPath: string): Promise<FolderEntry[]> {
     return call("App.ListSubfolders", folderPath);
   },

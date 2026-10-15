@@ -26,6 +26,7 @@ import { Tooltip } from '~/components/Tooltip'
 import { useDecodedImages } from '~/hooks/useDecodedImages'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
+import { useFileName } from '~/hooks/useFileName'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { largestCachedThumbnail, useThumbnail } from '~/hooks/useThumbnail'
 import { isLibraryPath } from '~/lib/library'
@@ -218,9 +219,10 @@ function usePreviewEdge() {
 
 /** The photo either side of the one shown, in place for a swipe to slide in. */
 function Neighbour({ photo, folderPath, src }: { photo: Photo, folderPath: string | null, src: string }) {
+  const fileName = useFileName(photo)
   return photo.isCloudPlaceholder
     ? <CloudPreview photo={photo} folderPath={folderPath} />
-    : <FittedImage src={src} placeholder={placeholderFor(folderPath, photo)} alt={photo.fileName} />
+    : <FittedImage src={src} placeholder={placeholderFor(folderPath, photo)} alt={fileName} />
 }
 
 /** Marks an undownloaded photo in the caption, with a button to download it. */
@@ -247,6 +249,7 @@ export function PhotoPreview() {
   const { t } = useTranslation()
   const photos = useAtomValue(previewPhotosAtom)
   const photo = useAtomValue(previewPhotoAtom)
+  const fileName = useFileName(photo)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
   // Closing selects the photo last shown in the grid, which takes the focus.
   const close = useSetAtom(closePreviewAtom)
@@ -428,7 +431,7 @@ export function PhotoPreview() {
           ref={overlayRef}
           role="dialog"
           aria-modal="true"
-          aria-label={photo.fileName}
+          aria-label={fileName}
           tabIndex={-1}
           {...stylex.props(styles.overlay)}
           initial={{ opacity: 0 }}
@@ -452,19 +455,18 @@ export function PhotoPreview() {
                       key={photo.id}
                       src={srcOf(photo)}
                       // Shown from a scaled copy, the photo itself loads
-                      // for a closer look. A library photo is read at one
-                      // size whatever is asked.
-                      full={!isLibraryPath(folderPath) && Math.max(photo.width, photo.height) > edge
+                      // for a closer look.
+                      full={Math.max(photo.width, photo.height) > edge
                         ? { src: convertFileSrc(photo.path), width: photo.width }
                         : undefined}
                       // A photo already decoded shows straight away, without
                       // its thumbnail and spinner blinking up first.
                       placeholder={isDecoded(srcOf(photo)) ? undefined : placeholderFor(folderPath, photo)}
-                      alt={photo.fileName}
+                      alt={fileName}
                       fadeIn={photo.id === openedId}
                       menuItems={isLibraryPath(folderPath)
                         // Not a file of its own to point at or delete.
-                        ? [{ label: t('photoInfo.copyFileName'), icon: CopyRegular, onSelect: () => void writeText(photo.fileName) }]
+                        ? [{ label: t('photoInfo.copyFileName'), icon: CopyRegular, onSelect: () => void writeText(fileName) }]
                         : [
                             { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
                             {
@@ -512,7 +514,7 @@ export function PhotoPreview() {
             />
           )}
           <div {...stylex.props(styles.caption, text.caption)} onClick={e => e.stopPropagation()}>
-            <span {...stylex.props(styles.captionName)}>{photo.fileName}</span>
+            <span {...stylex.props(styles.captionName)}>{fileName}</span>
             {index !== -1 && (
               <span {...stylex.props(styles.captionCount)}>{`${index + 1} / ${photos.length}`}</span>
             )}

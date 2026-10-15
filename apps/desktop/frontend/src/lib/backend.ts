@@ -75,6 +75,11 @@ export function setRating(folderPath: string, filePath: string, rating: number):
   return call(App.setRating(folderPath, filePath, rating))
 }
 
+/** The names photos in the Photos library had when imported, by path; scans leave them out. */
+export async function libraryFileNames(paths: string[]): Promise<Record<string, string>> {
+  return (await call(App.libraryFileNames(paths))) ?? {}
+}
+
 /** Whether the Photos library may be read, without asking. */
 export function libraryAccess(): Promise<LibraryAccess> {
   return call(App.libraryAccess())

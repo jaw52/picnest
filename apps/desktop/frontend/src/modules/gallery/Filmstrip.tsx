@@ -3,6 +3,7 @@ import type { Photo } from '~/types/photo'
 import * as stylex from '@stylexjs/stylex'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import CloudRegular from '~icons/mingcute/cloud-line'
+import { useFileName } from '~/hooks/useFileName'
 import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
 
 /** A thumbnail's side, in CSS px. */
@@ -65,6 +66,8 @@ const styles = stylex.create({
 
 function FilmThumb({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
   const url = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(FILM_THUMB), true, photo.isCloudPlaceholder)
+  // Names the button, for a library photo, whose name is read as it shows.
+  const fileName = useFileName(photo)
   if (photo.isCloudPlaceholder && !url) {
     return (
       <span {...stylex.props(styles.cloud)}>
@@ -72,7 +75,7 @@ function FilmThumb({ photo, folderPath }: { photo: Photo, folderPath: string | n
       </span>
     )
   }
-  return url ? <img src={url} alt="" draggable={false} {...stylex.props(styles.image)} /> : null
+  return url ? <img src={url} alt={fileName} draggable={false} {...stylex.props(styles.image)} /> : null
 }
 
 /** The strip spans the window. */
@@ -146,7 +149,7 @@ export function Filmstrip({ photos, index, folderPath, onSelect }: FilmstripProp
             <button
               key={photo.id}
               type="button"
-              aria-label={photo.fileName}
+              aria-label={photo.fileName || undefined}
               aria-current={at === index}
               // The lightbox's arrow keys move through these already.
               tabIndex={-1}

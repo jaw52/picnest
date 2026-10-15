@@ -11,6 +11,7 @@ import { IconButton } from '~/components/IconButton'
 import { StarRating } from '~/components/StarRating'
 import { Tooltip } from '~/components/Tooltip'
 import { SurfaceProvider, useSurface } from '~/context/surface'
+import { useFileName } from '~/hooks/useFileName'
 import { usePhotoDetails } from '~/hooks/usePhotoDetails'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { useRenamePhoto } from '~/hooks/useRenamePhoto'
@@ -110,6 +111,7 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename?: (newName: s
   const [draft, setDraft] = useState(photo.fileName)
   const inputRef = useRef<HTMLInputElement>(null)
   const [renamingId, setRenamingId] = useAtom(renamingPhotoIdAtom)
+  const fileName = useFileName(photo)
 
   // A rename asked for from elsewhere (the grid's context menu); the
   // request is cleared once editing starts.
@@ -160,16 +162,16 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename?: (newName: s
     <div {...stylex.props(styles.nameRow)}>
       <div
         {...stylex.props(styles.name, utility.truncate, text.subtitleCompact, weight.semibold)}
-        title={onRename ? t('photoInfo.renameHint', { name: photo.fileName }) : photo.fileName}
+        title={onRename ? t('photoInfo.renameHint', { name: fileName }) : fileName}
         onDoubleClick={startEditing}
       >
-        {photo.fileName}
+        {fileName}
       </div>
       <IconButton
         label={t('photoInfo.copyFileName')}
         icon={CopyRegular}
         xstyle={styles.shrink}
-        onClick={() => void writeText(photo.fileName)}
+        onClick={() => void writeText(fileName)}
       />
     </div>
   )
@@ -180,6 +182,7 @@ function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | n
   const rate = useRatePhoto(folderPath)
   const renamePhoto = useRenamePhoto(folderPath)
   const { details } = usePhotoDetails(photo.path)
+  const fileName = useFileName(photo)
 
   return (
     <>
@@ -195,7 +198,7 @@ function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | n
 
       <Section title={t('photoInfo.basics')}>
         <Row label={t('photoInfo.dimensions')} value={photo.isCloudPlaceholder ? t('photoInfo.unknown') : `${photo.width} × ${photo.height}`} />
-        <Row label={t('photoInfo.type')} value={fileExtension(photo.fileName) || t('photoInfo.unknown')} />
+        <Row label={t('photoInfo.type')} value={fileExtension(fileName) || t('photoInfo.unknown')} />
         {!isLibraryPath(folderPath) && (
           <Row label={t('photoInfo.size')} value={details ? formatFileSize(details.fileSize) : '...'} />
         )}
