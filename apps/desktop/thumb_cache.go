@@ -33,6 +33,7 @@ func thumbKey(path string, modTime, size int64, cloud bool) string {
 	h.Write([]byte(path))
 	binary.Write(h, binary.LittleEndian, modTime)
 	binary.Write(h, binary.LittleEndian, uint64(size))
+	h.Write([]byte("upright")) // drops thumbnails cached before they were turned upright
 	if cloud {
 		h.Write([]byte("cloud"))
 	}

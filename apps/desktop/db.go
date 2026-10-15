@@ -14,7 +14,7 @@ import (
 // ratings database and the thumbnail cache, and never touches originals.
 const sidecarDirName = ".picnest"
 
-var recordTables = []string{"ratings", "photo_meta"}
+var recordTables = []string{"ratings", "photo_size"}
 
 func sidecarDir(folder string) string {
 	return filepath.Join(folder, sidecarDirName)
@@ -42,7 +42,7 @@ func openRatingsDB(folder string) (*sql.DB, error) {
 			rating     INTEGER NOT NULL CHECK(rating BETWEEN 0 AND 5),
 			updated_at INTEGER NOT NULL
 		);
-		CREATE TABLE IF NOT EXISTS photo_meta (
+		CREATE TABLE IF NOT EXISTS photo_size (
 			file_name TEXT PRIMARY KEY,
 			width     INTEGER NOT NULL,
 			height    INTEGER NOT NULL,
@@ -64,7 +64,7 @@ type cachedPhotoMeta struct {
 }
 
 func getAllPhotoMeta(db *sql.DB) (map[string]cachedPhotoMeta, error) {
-	rows, err := db.Query("SELECT file_name, width, height, size, mtime FROM photo_meta")
+	rows, err := db.Query("SELECT file_name, width, height, size, mtime FROM photo_size")
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func upsertPhotoMetaBatch(db *sql.DB, entries []photoMetaUpdate) error {
 	}
 	defer tx.Rollback()
 	for _, e := range entries {
-		_, err := tx.Exec(`INSERT INTO photo_meta (file_name, width, height, size, mtime) VALUES (?, ?, ?, ?, ?)
+		_, err := tx.Exec(`INSERT INTO photo_size (file_name, width, height, size, mtime) VALUES (?, ?, ?, ?, ?)
 			ON CONFLICT(file_name) DO UPDATE SET width = excluded.width, height = excluded.height,
 				size = excluded.size, mtime = excluded.mtime`,
 			e.FileName, e.Width, e.Height, e.Size, e.Mtime)
