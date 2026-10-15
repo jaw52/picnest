@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -66,13 +67,23 @@ type cachedPhotoMeta struct {
 	Size, Mtime   int64
 }
 
-func getAllPhotoMeta(db *sql.DB) (map[string]cachedPhotoMeta, error) {
-	rows, err := db.Query("SELECT file_name, width, height, size, mtime FROM photo_size")
+// getPhotoMeta returns the cached dimensions of the named files that have
+// any.
+func getPhotoMeta(db *sql.DB, names []string) (map[string]cachedPhotoMeta, error) {
+	out := map[string]cachedPhotoMeta{}
+	if len(names) == 0 {
+		return out, nil
+	}
+	args := make([]any, len(names))
+	for i, name := range names {
+		args[i] = name
+	}
+	rows, err := db.Query("SELECT file_name, width, height, size, mtime FROM photo_size WHERE file_name IN (?"+
+		strings.Repeat(", ?", len(names)-1)+")", args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := map[string]cachedPhotoMeta{}
 	for rows.Next() {
 		var name string
 		var m cachedPhotoMeta

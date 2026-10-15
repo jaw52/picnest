@@ -82,10 +82,32 @@ func listFiles(folder string) ([]fileStat, error) {
 	return files, nil
 }
 
+// folderListings keeps the listing a scan took for its first page, so the
+// pages after it don't each list (and stat) the whole folder again: for
+// 10,000 photos that made every page cost as much as the first, and loading
+// them all take seconds. The last page lets it go.
+var folderListings sync.Map // folder -> []fileStat
+
+// scanListing lists folder for the first page of a scan, and reuses that
+// listing for the pages after it.
+func scanListing(folder string, offset int) ([]fileStat, error) {
+	if offset > 0 {
+		if files, ok := folderListings.Load(folder); ok {
+			return files.([]fileStat), nil
+		}
+	}
+	files, err := listFiles(folder)
+	if err != nil {
+		return nil, err
+	}
+	folderListings.Store(folder, files)
+	return files, nil
+}
+
 // scanFolderPage returns one page of photo metadata, probing dimensions only
 // for files in the page that are new or changed since the last scan.
 func scanFolderPage(folder string, offset, limit int) (PhotoPage, error) {
-	files, err := listFiles(folder)
+	files, err := scanListing(folder, offset)
 	if err != nil {
 		return PhotoPage{}, err
 	}
@@ -93,6 +115,9 @@ func scanFolderPage(folder string, offset, limit int) (PhotoPage, error) {
 	total := len(files)
 	start := min(max(offset, 0), total)
 	end := min(start+max(limit, 0), total)
+	if end == total {
+		folderListings.Delete(folder)
+	}
 
 	db, err := openRatingsDB(folder)
 	if err != nil {
@@ -103,12 +128,16 @@ func scanFolderPage(folder string, offset, limit int) (PhotoPage, error) {
 	if err != nil {
 		return PhotoPage{}, err
 	}
-	cached, err := getAllPhotoMeta(db)
+	page := files[start:end]
+	names := make([]string, len(page))
+	for i, f := range page {
+		names[i] = f.name
+	}
+	cached, err := getPhotoMeta(db, names)
 	if err != nil {
 		return PhotoPage{}, err
 	}
 
-	page := files[start:end]
 	results := make([]*PhotoMeta, len(page))
 	var updates []photoMetaUpdate
 	var mu sync.Mutex

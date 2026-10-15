@@ -49,6 +49,32 @@ func TestScanFolderReadsDimensionsAndJoinsRatings(t *testing.T) {
 	}
 }
 
+func TestScanPagesShareTheFirstPagesListing(t *testing.T) {
+	dir := t.TempDir()
+	writePNG(t, filepath.Join(dir, "a.png"), 4, 4)
+	writePNG(t, filepath.Join(dir, "b.png"), 4, 4)
+	writePNG(t, filepath.Join(dir, "c.png"), 8, 2)
+
+	first, err := scanFolderPage(dir, 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A file added mid-scan waits for the next scan, so the pages keep to
+	// the total and order the first one gave.
+	writePNG(t, filepath.Join(dir, "ab.png"), 4, 4)
+	second, _ := scanFolderPage(dir, 1, 1)
+	last, _ := scanFolderPage(dir, 2, 1)
+	if first.Total != 3 || second.Total != 3 || second.Photos[0].FileName != "b.png" ||
+		last.Total != 3 || last.Photos[0].FileName != "c.png" || last.Photos[0].Width != 8 {
+		t.Fatalf("pages = %+v, %+v, %+v", first, second, last)
+	}
+
+	again, _ := scanFolderPage(dir, 0, 10)
+	if again.Total != 4 || again.Photos[1].FileName != "ab.png" {
+		t.Fatalf("next scan = %+v, want the added file in it", again)
+	}
+}
+
 // A sparse file reads as a placeholder but has no cloud thumbnail, so it
 // falls back to a neutral aspect ratio and no thumbnail.
 func TestCloudPlaceholderWithoutCloudThumbnail(t *testing.T) {
