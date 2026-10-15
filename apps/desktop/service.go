@@ -50,7 +50,37 @@ func NewApp() *App {
 }
 
 func (a *App) ScanFolderPage(folderPath string, offset, limit int) (PhotoPage, error) {
+	if isLibraryPath(folderPath) {
+		return scanLibraryPage(offset, limit)
+	}
 	return scanFolderPage(folderPath, offset, limit)
+}
+
+// LibraryAccess reports whether the Photos library may be read, without
+// asking.
+func (a *App) LibraryAccess() (LibraryAccess, error) {
+	return currentLibraryAccess()
+}
+
+// RequestLibraryAccess asks for access to the Photos library, with the
+// system prompt the first time, and reports the answer.
+func (a *App) RequestLibraryAccess() (LibraryAccess, error) {
+	return requestLibraryAccess()
+}
+
+// OpenLibraryPrivacySettings opens the Photos pane of Privacy & Security,
+// where access refused earlier can be granted.
+func (a *App) OpenLibraryPrivacySettings() error {
+	return mygo.Shell.OpenExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")
+}
+
+// errIfLibrary refuses changes to photos in the Photos library, which is
+// read-only here.
+func errIfLibrary(folderPath string) error {
+	if isLibraryPath(folderPath) {
+		return errors.New(text().libraryReadOnly)
+	}
+	return nil
 }
 
 // EnsureThumbnail returns the cached thumbnail path, generating it if needed.
@@ -76,26 +106,38 @@ func (a *App) CancelThumbnail(requestID string) {
 	a.thumbs.cancel(requestID)
 }
 
-func (a *App) SetRating(folderPath, fileName string, rating int) error {
+// SetRating rates the photo at filePath. A library photo's rating is kept
+// by its asset identifier, since names repeat across a library.
+func (a *App) SetRating(folderPath, filePath string, rating int) error {
 	db, err := openRatingsDB(folderPath)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	return setRating(db, fileName, rating)
+	key := filepath.Base(filePath)
+	if isLibraryPath(filePath) {
+		key = libraryAssetID(filePath)
+	}
+	return setRating(db, key, rating)
 }
 
 // IsICloudFolder reports whether a folder is in iCloud Drive, including a
 // Desktop or Documents folder synced to it.
 func (a *App) IsICloudFolder(folderPath string) bool {
-	return isICloudItem(folderPath)
+	return !isLibraryPath(folderPath) && isICloudItem(folderPath)
 }
 
 func (a *App) ListSubfolders(folderPath string) ([]FolderEntry, error) {
+	if isLibraryPath(folderPath) {
+		return []FolderEntry{}, nil
+	}
 	return listSubfolders(folderPath)
 }
 
 func (a *App) GetPhotoDetails(filePath string) (PhotoDetails, error) {
+	if isLibraryPath(filePath) {
+		return libraryPhotoDetails(filePath)
+	}
 	return readPhotoDetails(filePath)
 }
 
@@ -115,6 +157,9 @@ type DeleteResult struct {
 }
 
 func (a *App) DeletePhotos(folderPath string, filePaths []string) (DeleteResult, error) {
+	if err := errIfLibrary(folderPath); err != nil {
+		return DeleteResult{}, err
+	}
 	db, err := openRatingsDB(folderPath)
 	if err != nil {
 		return DeleteResult{}, err
@@ -149,6 +194,9 @@ func (a *App) DeletePhotos(folderPath string, filePaths []string) (DeleteResult,
 // ratings, undoing DeletePhotos. A photo whose name has since been taken
 // stays in the trash.
 func (a *App) RestorePhotos(folderPath string, photos []TrashedPhoto) error {
+	if err := errIfLibrary(folderPath); err != nil {
+		return err
+	}
 	db, err := openRatingsDB(folderPath)
 	if err != nil {
 		return err
@@ -196,10 +244,16 @@ func (a *App) DownloadPlaceholder(filePath string) error {
 }
 
 func (a *App) DeleteFolder(folderPath string) error {
+	if err := errIfLibrary(folderPath); err != nil {
+		return err
+	}
 	return mygo.Shell.TrashItem(folderPath)
 }
 
 func (a *App) RenamePhoto(folderPath, oldName, newName string) error {
+	if err := errIfLibrary(folderPath); err != nil {
+		return err
+	}
 	if newName == "" || strings.Contains(newName, "/") {
 		return errors.New(text().invalidName)
 	}
@@ -222,6 +276,9 @@ func (a *App) RenamePhoto(folderPath, oldName, newName string) error {
 // Name collisions are skipped and every per-file failure is reported
 // together, so one bad file doesn't abort the batch.
 func (a *App) MovePhotos(folderPath string, fileNames []string, destFolder string) error {
+	if err := errIfLibrary(folderPath); err != nil {
+		return err
+	}
 	if filepath.Clean(folderPath) == filepath.Clean(destFolder) {
 		return errors.New(text().sameFolder)
 	}
@@ -287,6 +344,10 @@ func moveFile(from, to string) error {
 // WatchFolder (re)starts watching the open folder, replacing any previous
 // watch, and emits folder-changed with the folder path on changes.
 func (a *App) WatchFolder(folderPath string) error {
+	if isLibraryPath(folderPath) {
+		a.folderWatcher.unwatch()
+		return nil
+	}
 	return a.folderWatcher.watch(folderPath, func() { folderChanged.Broadcast(folderPath) })
 }
 

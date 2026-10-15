@@ -17,6 +17,9 @@ const sidecarDirName = ".picnest"
 var recordTables = []string{"ratings", "photo_meta"}
 
 func sidecarDir(folder string) string {
+	if isLibraryPath(folder) {
+		return libraryDataDir()
+	}
 	return filepath.Join(folder, sidecarDirName)
 }
 

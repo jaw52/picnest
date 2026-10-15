@@ -11,6 +11,7 @@ import { colors } from '~/theme/colors.stylex'
 import { text, weight } from '~/theme/text'
 
 import { FolderCard } from './FolderCard'
+import { LibraryCard } from './LibraryCard'
 
 const styles = stylex.create({
   page: {
@@ -42,8 +43,9 @@ const styles = stylex.create({
 })
 
 /**
- * What an empty tab shows: add a folder, or open one of the folders added
- * before. Folders open in their own tabs, so this page stays open.
+ * What an empty tab shows: add a folder, open the Photos library, or open
+ * one of the folders added before. Each opens in its own tab, so this page
+ * stays open.
  */
 export function NewTabPage() {
   const { t } = useTranslation()
@@ -69,6 +71,14 @@ export function NewTabPage() {
         >
           {t('newTab.addFolder')}
         </Button>
+        <div {...stylex.props(styles.section)}>
+          <div {...stylex.props(styles.heading, size.type.caption, weight.semibold)}>
+            {t('newTab.fromPhotos')}
+          </div>
+          <div {...stylex.props(styles.grid)}>
+            <LibraryCard />
+          </div>
+        </div>
         {recentFolders.length > 0 && (
           <div {...stylex.props(styles.section)}>
             <div {...stylex.props(styles.heading, size.type.caption, weight.semibold)}>

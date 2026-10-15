@@ -19,7 +19,7 @@ export function useRatePhoto(folderPath: string | null) {
       // laggy.
       setPhotoRating(photos.map(p => p.id), rating)
       for (const photo of photos)
-        void setRating(folderPath, photo.fileName, rating)
+        void setRating(folderPath, photo.path, rating)
     },
     [folderPath, setPhotoRating],
   )

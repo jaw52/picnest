@@ -11,6 +11,7 @@ import FolderDeleteRegular from '~icons/mingcute/folder-delete-line'
 import FolderOpenRegular from '~icons/mingcute/folder-open-line'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
+import { useOpenOnHover } from '~/hooks/useOpenOnHover'
 import { useThumbnail } from '~/hooks/useThumbnail'
 import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { openPath, writeText } from '~/lib/native'
@@ -431,21 +432,6 @@ function folderMenuItems(
     ...(onRemove ? [{ label: t('tabs.removeFromList'), icon: CloseRegular, onSelect: onRemove }] : []),
     { label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
   ]
-}
-
-/** Whether the folder icon should be open: while pointed at or focused from the keyboard. */
-function useOpenOnHover() {
-  const [hovered, setHovered] = useState(false)
-  const [focused, setFocused] = useState(false)
-  return {
-    open: hovered || focused,
-    handlers: {
-      onPointerEnter: () => setHovered(true),
-      onPointerLeave: () => setHovered(false),
-      onFocus: (e: React.FocusEvent<HTMLElement>) => setFocused(e.currentTarget.matches(':focus-visible')),
-      onBlur: () => setFocused(false),
-    },
-  }
 }
 
 function useCoverUrl(path: string) {

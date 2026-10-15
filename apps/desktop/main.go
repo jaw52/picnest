@@ -16,6 +16,10 @@ const localFileScheme = "localfile"
 
 func serveLocalFile(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
+	if isLibraryPath(path) {
+		serveLibraryPhoto(w, r, path)
+		return
+	}
 	if !strings.HasPrefix(path, "/") {
 		http.Error(w, "invalid path", http.StatusBadRequest)
 		return

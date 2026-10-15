@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { currentFolderAtom } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
 import { movePhotos, pickFolder } from '~/lib/backend'
+import { isLibraryPath } from '~/lib/library'
 import { message } from '~/lib/native'
 
 import { useOpenFolder } from './useOpenFolder'
@@ -18,7 +19,7 @@ export function useMovePhotos(folderPath: string | null) {
 
   return useCallback(
     async (photos: Photo[]) => {
-      if (!folderPath || photos.length === 0 || store.get(movePendingAtom))
+      if (!folderPath || isLibraryPath(folderPath) || photos.length === 0 || store.get(movePendingAtom))
         return
 
       store.set(movePendingAtom, true)

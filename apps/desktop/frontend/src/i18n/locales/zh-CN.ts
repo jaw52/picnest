@@ -53,6 +53,13 @@ export const zhCN = {
     intro: '添加一个文件夹，或从下面选择已添加的文件夹，在新标签页中打开。也可以直接把文件夹拖进窗口。',
     addFolder: '添加文件夹',
     added: '已添加的文件夹',
+    fromPhotos: '来自「照片」',
+  },
+  library: {
+    name: '照片图库',
+    photos_other: '{{count}} 张照片',
+    allowAccess: '点按以允许访问',
+    denied: '在系统设置中允许访问',
   },
   gallery: {
     photos: '照片',

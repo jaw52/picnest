@@ -1,4 +1,4 @@
-import type { DeleteResult, TrashedPhoto } from '~/mygo'
+import type { DeleteResult, LibraryAccess, TrashedPhoto } from '~/mygo'
 import type { FolderEntry } from '~/types/folder'
 import type { PhotoDetails, PhotoPage } from '~/types/photo'
 
@@ -71,8 +71,23 @@ export async function ensureThumbnailUrl(
   }
 }
 
-export function setRating(folderPath: string, fileName: string, rating: number): Promise<void> {
-  return call(App.setRating(folderPath, fileName, rating))
+export function setRating(folderPath: string, filePath: string, rating: number): Promise<void> {
+  return call(App.setRating(folderPath, filePath, rating))
+}
+
+/** Whether the Photos library may be read, without asking. */
+export function libraryAccess(): Promise<LibraryAccess> {
+  return call(App.libraryAccess())
+}
+
+/** Asks for the Photos library, with the system prompt the first time. */
+export function requestLibraryAccess(): Promise<LibraryAccess> {
+  return call(App.requestLibraryAccess())
+}
+
+/** Opens System Settings where Photos access refused earlier can be granted. */
+export function openLibraryPrivacySettings(): Promise<void> {
+  return call(App.openLibraryPrivacySettings())
 }
 
 export async function listSubfolders(folderPath: string): Promise<FolderEntry[]> {

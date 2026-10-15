@@ -16,6 +16,8 @@ import FolderRegular from '~icons/mingcute/folder-line'
 import FolderOpenRegular from '~icons/mingcute/folder-open-line'
 import LayoutGridFilled from '~icons/mingcute/layout-grid-fill'
 import LayoutGridRegular from '~icons/mingcute/layout-grid-line'
+import PicFilled from '~icons/mingcute/pic-fill'
+import PicRegular from '~icons/mingcute/pic-line'
 import { folderNameFromPath } from '~/atoms/recentFolders'
 import { tabsStateAtom } from '~/atoms/tabs'
 import { ContextMenu } from '~/components/ContextMenu'
@@ -24,6 +26,7 @@ import { IconButton } from '~/components/IconButton'
 import { useFluidHover } from '~/hooks/use-fluid-hover'
 import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
 import { useTabs } from '~/hooks/useTabs'
+import { isLibraryPath } from '~/lib/library'
 import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
@@ -154,7 +157,8 @@ const styles = stylex.create({
 })
 
 /**
- * The new-tab page's grid, or where a folder lives: iCloud Drive or this Mac.
+ * The new-tab page's grid, the Photos library, or where a folder lives:
+ * iCloud Drive or this Mac.
  * Until that is known, an empty space the icon's size, so the title doesn't
  * shift when it arrives.
  */
@@ -162,13 +166,15 @@ const TAB_ICONS = {
   newTab: [LayoutGridRegular, LayoutGridFilled],
   iCloud: [CloudRegular, CloudFilled],
   local: [FolderRegular, FolderFilled],
+  library: [PicRegular, PicFilled],
 } as const
 
 function TabIcon({ path, active }: { path: string | null, active: boolean }) {
   const iCloud = useIsICloudFolder(path)
-  if (path !== null && iCloud === undefined)
+  const library = isLibraryPath(path)
+  if (path !== null && !library && iCloud === undefined)
     return <span {...stylex.props(styles.icon, styles.iconSpace)} />
-  const kind = path === null ? 'newTab' : iCloud ? 'iCloud' : 'local'
+  const kind = path === null ? 'newTab' : library ? 'library' : iCloud ? 'iCloud' : 'local'
   const Icon = TAB_ICONS[kind][active ? 1 : 0]
   return <Icon width={14} height={14} {...stylex.props(styles.icon)} />
 }
@@ -185,7 +191,9 @@ interface TabItemProps {
 function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemProps) {
   const { t } = useTranslation()
   const { activateTab, closeTab, closeOtherTabs, closeTabsToRight } = useTabs()
-  const title = tab.path ? folderNameFromPath(tab.path) : t('common.newTab')
+  const title = tab.path === null
+    ? t('common.newTab')
+    : isLibraryPath(tab.path) ? t('library.name') : folderNameFromPath(tab.path)
 
   // A closed tab leaves its slot as it starts fading out, in the same commit
   // the tabs after it move down a slot, so it never clears its successor's.
@@ -246,7 +254,8 @@ function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemPr
         { label: t('common.close'), icon: CloseRegular, shortcut: active ? '⌘W' : undefined, onSelect: () => closeTab(tab.id) },
         { label: t('tabs.closeOthers'), icon: CloseSquareRegular, disabled: isOnly, onSelect: () => closeOtherTabs(tab.id) },
         { label: t('tabs.closeToRight'), icon: AlignArrowRightRegular, disabled: isLast, onSelect: () => closeTabsToRight(tab.id) },
-        ...(path
+        // The Photos library has no path in Finder.
+        ...(path && !isLibraryPath(path)
           ? [
               { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(path) },
               {

@@ -15,6 +15,7 @@ import { usePhotoDetails } from '~/hooks/usePhotoDetails'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { useRenamePhoto } from '~/hooks/useRenamePhoto'
 import { fileExtension, formatFileSize, formatUnixSeconds } from '~/lib/format'
+import { isLibraryPath } from '~/lib/library'
 import { writeText } from '~/lib/native'
 import { colors } from '~/theme/colors.stylex'
 import { radius } from '~/theme/layout.stylex'
@@ -103,7 +104,7 @@ function Section({ title, children }: { title: string, children: ReactNode }) {
  * Double-click (or 重命名 in a photo's context menu) to rename, synced to the
  * real file on disk; click the icon to copy.
  */
-function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: string) => void }) {
+function FileNameRow({ photo, onRename }: { photo: Photo, onRename?: (newName: string) => void }) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(photo.fileName)
@@ -112,7 +113,7 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
 
   // A rename asked for from elsewhere (the grid's context menu); the
   // request is cleared once editing starts.
-  if (renamingId === photo.id && !isEditing) {
+  if (renamingId === photo.id && !isEditing && onRename) {
     setDraft(photo.fileName)
     setIsEditing(true)
   }
@@ -126,13 +127,15 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
   }, [isEditing, setRenamingId])
 
   function startEditing() {
+    if (!onRename)
+      return
     setDraft(photo.fileName)
     setIsEditing(true)
   }
 
   function commit() {
     setIsEditing(false)
-    onRename(draft)
+    onRename?.(draft)
   }
 
   if (isEditing) {
@@ -157,7 +160,7 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename: (newName: st
     <div {...stylex.props(styles.nameRow)}>
       <div
         {...stylex.props(styles.name, utility.truncate, text.subtitleCompact, weight.semibold)}
-        title={t('photoInfo.renameHint', { name: photo.fileName })}
+        title={onRename ? t('photoInfo.renameHint', { name: photo.fileName }) : photo.fileName}
         onDoubleClick={startEditing}
       >
         {photo.fileName}
@@ -181,7 +184,8 @@ function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | n
   return (
     <>
       <div {...stylex.props(styles.info)}>
-        <FileNameRow photo={photo} onRename={newName => void renamePhoto(photo, newName)} />
+        {/* A photo in the Photos library has no file of its own to rename. */}
+        <FileNameRow photo={photo} onRename={isLibraryPath(folderPath) ? undefined : newName => void renamePhoto(photo, newName)} />
         <Tooltip content={t('photoInfo.rateHint')} side="bottom">
           <div {...stylex.props(styles.rating)}>
             <StarRating rating={photo.rating} onChange={r => rate([photo], r)} />
@@ -192,7 +196,9 @@ function PhotoInfo({ photo, folderPath }: { photo: Photo, folderPath: string | n
       <Section title={t('photoInfo.basics')}>
         <Row label={t('photoInfo.dimensions')} value={photo.isCloudPlaceholder ? t('photoInfo.unknown') : `${photo.width} × ${photo.height}`} />
         <Row label={t('photoInfo.type')} value={fileExtension(photo.fileName) || t('photoInfo.unknown')} />
-        <Row label={t('photoInfo.size')} value={details ? formatFileSize(details.fileSize) : '...'} />
+        {!isLibraryPath(folderPath) && (
+          <Row label={t('photoInfo.size')} value={details ? formatFileSize(details.fileSize) : '...'} />
+        )}
         {details?.created !== undefined && (
           <Row label={t('photoInfo.created')} value={formatUnixSeconds(details.created)} />
         )}

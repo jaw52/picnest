@@ -171,6 +171,9 @@ const (
 // exists. A larger cached thumbnail (see thumbReuseFactor) is reused rather
 // than generating a second size.
 func thumbnailTarget(folder, filePath string, maxEdge int) (thumbPath string, cached bool, err error) {
+	if isLibraryPath(filePath) {
+		return libraryThumbnailTarget(filePath, maxEdge)
+	}
 	maxEdge = min(max(maxEdge, thumbMinEdge), thumbMaxEdge)
 	info, err := os.Stat(filePath)
 	if err != nil {
@@ -197,19 +200,23 @@ var thumbTmpSeq atomic.Uint64
 // generateThumbnail writes the thumbnail at thumbPath unless another request
 // finished it while this one waited for a slot.
 func generateThumbnail(filePath, thumbPath string, maxEdge int) (string, error) {
-	info, err := os.Stat(filePath)
-	if err != nil {
-		return "", err
-	}
 	if _, err := os.Stat(thumbPath); err == nil {
 		return thumbPath, nil
 	}
 	maxEdge = min(max(maxEdge, thumbMinEdge), thumbMaxEdge)
-	// Decoding an undownloaded iCloud file would download it; its cloud
-	// thumbnail doesn't.
 	write := writeThumbnail
-	if isCloudPlaceholder(info) {
-		write = writeCloudThumbnail
+	if isLibraryPath(filePath) {
+		write = writeLibraryThumbnail
+	} else {
+		info, err := os.Stat(filePath)
+		if err != nil {
+			return "", err
+		}
+		// Decoding an undownloaded iCloud file would download it; its cloud
+		// thumbnail doesn't.
+		if isCloudPlaceholder(info) {
+			write = writeCloudThumbnail
+		}
 	}
 
 	// Write to a unique temp name first so a concurrent request for the same

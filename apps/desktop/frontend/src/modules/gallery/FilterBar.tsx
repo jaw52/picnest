@@ -4,7 +4,9 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  isScanningAtom,
   photosAtom,
+  photosTotalAtom,
   previewPhotoIdAtom,
   ratingFilterAtom,
   selectedPhotoIdAtom,
@@ -42,6 +44,11 @@ export function FilterBar() {
   const [filter, setRatingFilter] = useAtom(ratingFilterAtom)
   const photos = useAtomValue(photosAtom)
   const counts = ratingCounts(photos)
+  // While pages are still loading, the backend's count, rather than one
+  // climbing a page at a time.
+  const isScanning = useAtomValue(isScanningAtom)
+  const photosTotal = useAtomValue(photosTotalAtom)
+  const allCount = isScanning ? Math.max(photosTotal, photos.length) : photos.length
   const setSelectedIds = useSetAtom(selectedPhotoIdsAtom)
   const setAnchorId = useSetAtom(selectedPhotoIdAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
@@ -66,7 +73,7 @@ export function FilterBar() {
           selectedIndex={Math.max(0, FILTERS.indexOf(filter))}
           onSelect={index => setFilter(FILTERS[index] ?? null)}
         >
-          <TabsSubtleItem index={0} label={t('gallery.filterAll', { count: photos.length })} />
+          <TabsSubtleItem index={0} label={t('gallery.filterAll', { count: allCount })} />
           <TabsSubtleItem index={1} label={t('gallery.filterUnrated', { count: counts[0] })} dimmed={counts[0] === 0} />
           {STARS.map(star => (
             <TabsSubtleItem

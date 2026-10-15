@@ -37,6 +37,9 @@ export interface LanguageState {
   language: Language;
 }
 
+/** LibraryAccess is what the app may do with the Photos library. */
+export type LibraryAccess = "undetermined" | "granted" | "denied";
+
 export interface PhotoDetails {
   fileSize: number;
   created?: number;
@@ -131,6 +134,13 @@ export const App = {
   isICloudFolder(folderPath: string): Promise<boolean> {
     return call("App.IsICloudFolder", folderPath);
   },
+  /**
+   * LibraryAccess reports whether the Photos library may be read, without
+   * asking.
+   */
+  libraryAccess(): Promise<LibraryAccess> {
+    return call("App.LibraryAccess");
+  },
   listSubfolders(folderPath: string): Promise<FolderEntry[]> {
     return call("App.ListSubfolders", folderPath);
   },
@@ -142,8 +152,22 @@ export const App = {
   movePhotos(folderPath: string, fileNames: string[], destFolder: string): Promise<void> {
     return call("App.MovePhotos", folderPath, fileNames, destFolder);
   },
+  /**
+   * OpenLibraryPrivacySettings opens the Photos pane of Privacy & Security,
+   * where access refused earlier can be granted.
+   */
+  openLibraryPrivacySettings(): Promise<void> {
+    return call("App.OpenLibraryPrivacySettings");
+  },
   renamePhoto(folderPath: string, oldName: string, newName: string): Promise<void> {
     return call("App.RenamePhoto", folderPath, oldName, newName);
+  },
+  /**
+   * RequestLibraryAccess asks for access to the Photos library, with the
+   * system prompt the first time, and reports the answer.
+   */
+  requestLibraryAccess(): Promise<LibraryAccess> {
+    return call("App.RequestLibraryAccess");
   },
   /**
    * RestorePhotos moves trashed photos back into folderPath with their
@@ -163,8 +187,12 @@ export const App = {
   setLanguage(preference: LanguagePreference): Promise<LanguageState> {
     return call("App.SetLanguage", preference);
   },
-  setRating(folderPath: string, fileName: string, rating: number): Promise<void> {
-    return call("App.SetRating", folderPath, fileName, rating);
+  /**
+   * SetRating rates the photo at filePath. A library photo's rating is kept
+   * by its asset identifier, since names repeat across a library.
+   */
+  setRating(folderPath: string, filePath: string, rating: number): Promise<void> {
+    return call("App.SetRating", folderPath, filePath, rating);
   },
   unwatchFolder(): Promise<void> {
     return call("App.UnwatchFolder");

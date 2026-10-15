@@ -18,6 +18,23 @@ export function thumbnailCacheKey(folderPath: string | null, filePath: string, m
 }
 
 /**
+ * The largest thumbnail of a photo already resolved at any size, to stand in
+ * for the photo while it loads; undefined if none is.
+ */
+export function largestCachedThumbnail(folderPath: string | null, filePath: string): string | undefined {
+  const prefix = `${folderPath ?? ''}:${filePath}:`
+  let best: { edge: number, url: string } | undefined
+  for (const [key, url] of thumbnailCache) {
+    if (!key.startsWith(prefix))
+      continue
+    const edge = Number.parseInt(key.slice(prefix.length), 10)
+    if (!best || edge > best.edge)
+      best = { edge, url }
+  }
+  return best?.url
+}
+
+/**
  * Pixels to request for a tile rendered `width` CSS px wide on this display,
  * bucketed to powers of two so dragging the slider doesn't regenerate every
  * step.

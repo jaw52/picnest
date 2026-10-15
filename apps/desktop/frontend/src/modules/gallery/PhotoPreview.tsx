@@ -1,5 +1,6 @@
 import type { AnimationPlaybackControls } from 'framer-motion'
 import type { MouseEvent, WheelEvent } from 'react'
+import type { Placeholder } from './ZoomableImage'
 import type { IconComponent } from '~/lib/icon'
 import type { PageDirection, SwipePager } from '~/lib/swipe-pager'
 import type { Photo } from '~/types/photo'
@@ -26,7 +27,8 @@ import { useDecodedImages } from '~/hooks/useDecodedImages'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadPlaceholder'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
-import { useThumbnail } from '~/hooks/useThumbnail'
+import { largestCachedThumbnail, useThumbnail } from '~/hooks/useThumbnail'
+import { isLibraryPath } from '~/lib/library'
 import { convertFileSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
@@ -174,11 +176,26 @@ function CloudPreview({ photo, folderPath }: { photo: Photo, folderPath: string 
   return url ? <FittedImage src={url} alt={photo.fileName} /> : <CloudNotice />
 }
 
+/**
+ * What stands in for a photo in the Photos library while it loads: its
+ * thumbnail from the grid or the filmstrip. Reading the photo itself goes
+ * through Photos, and may download it from iCloud, so the viewer moves on
+ * with the thumbnail rather than wait. A file on disk loads fast enough to
+ * wait for.
+ */
+/** How long a switch waits for a library photo before showing its thumbnail. */
+const LIBRARY_SWITCH_WAIT_MS = 120
+
+function placeholderFor(folderPath: string | null, photo: Photo): Placeholder | undefined {
+  const src = isLibraryPath(folderPath) ? largestCachedThumbnail(folderPath, photo.path) : undefined
+  return src ? { src, width: photo.width, height: photo.height } : undefined
+}
+
 /** The photo either side of the one shown, in place for a swipe to slide in. */
 function Neighbour({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
   return photo.isCloudPlaceholder
     ? <CloudPreview photo={photo} folderPath={folderPath} />
-    : <FittedImage src={convertFileSrc(photo.path)} alt={photo.fileName} />
+    : <FittedImage src={convertFileSrc(photo.path)} placeholder={placeholderFor(folderPath, photo)} alt={photo.fileName} />
 }
 
 /** Marks an undownloaded photo in the caption, with a button to download it. */
@@ -233,7 +250,7 @@ export function PhotoPreview() {
 
   // Neighbours are decoded in the background, and a switch waits for the next
   // photo to decode, so the current one stays up until the next can paint.
-  const { decode, retain } = useDecodedImages()
+  const { decode, retain, isDecoded } = useDecodedImages()
   useEffect(() => {
     if (index === -1)
       return
@@ -272,8 +289,21 @@ export function PhotoPreview() {
     slide.jump(0)
   }, [shownId, slide])
   const ready = useCallback(
-    (photo: Photo) => (photo.isCloudPlaceholder ? Promise.resolve() : decode(convertFileSrc(photo.path))),
-    [decode],
+    (photo: Photo) => {
+      if (photo.isCloudPlaceholder)
+        return Promise.resolve()
+      const full = decode(convertFileSrc(photo.path))
+      if (!isLibraryPath(folderPath))
+        return full
+      // A photo in the Photos library may take a while to read: the switch
+      // waits only briefly for it (a neighbour is decoded already), then
+      // goes ahead on its thumbnail.
+      const placeholder = placeholderFor(folderPath, photo)
+      const fallback = new Promise<void>(resolve => setTimeout(resolve, LIBRARY_SWITCH_WAIT_MS))
+        .then(() => placeholder && decode(placeholder.src))
+      return Promise.race([full, fallback])
+    },
+    [decode, folderPath],
   )
   const goTo = useCallback(
     (delta: number) => {
@@ -394,17 +424,23 @@ export function PhotoPreview() {
                     <ZoomableImage
                       key={photo.id}
                       src={convertFileSrc(photo.path)}
+                      // A photo already decoded shows straight away, without
+                      // its thumbnail and spinner blinking up first.
+                      placeholder={isDecoded(convertFileSrc(photo.path)) ? undefined : placeholderFor(folderPath, photo)}
                       alt={photo.fileName}
                       fadeIn={photo.id === openedId}
-                      menuItems={[
-                        { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
-                        {
-                          label: t('common.delete'),
-                          icon: Delete2Regular,
-                          destructive: true,
-                          onSelect: () => void deletePhoto([photo]),
-                        },
-                      ]}
+                      menuItems={isLibraryPath(folderPath)
+                        // Not a file of its own to point at or delete.
+                        ? [{ label: t('photoInfo.copyFileName'), icon: CopyRegular, onSelect: () => void writeText(photo.fileName) }]
+                        : [
+                            { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
+                            {
+                              label: t('common.delete'),
+                              icon: Delete2Regular,
+                              destructive: true,
+                              onSelect: () => void deletePhoto([photo]),
+                            },
+                          ]}
                     />
                   )}
             </div>

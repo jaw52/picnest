@@ -30,6 +30,7 @@ import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadP
 import { useMovePhotos } from '~/hooks/useMovePhotos'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
+import { isLibraryPath } from '~/lib/library'
 import { writeText } from '~/lib/native'
 import { colors } from '~/theme/colors.stylex'
 import { motion } from '~/theme/layout.stylex'
@@ -260,26 +261,33 @@ function MasonryPhotoItemInner({ data, width, folderPath }: MasonryPhotoItemProp
     openInfo()
   }
 
+  // Photos in the Photos library aren't files of their own to rename, move
+  // or delete.
+  const isFile = !isLibraryPath(folderPath)
   const menuItems: ContextMenuItem[] = [
-    ...(selectedCount === 1
+    ...(selectedCount === 1 ? [{ label: t('gallery.info'), icon: InformationRegular, onSelect: openInfo }] : []),
+    ...(selectedCount === 1 && isFile
       ? [
-          { label: t('gallery.info'), icon: InformationRegular, onSelect: openInfo },
           { label: t('gallery.rename'), icon: EditRegular, onSelect: handleRename },
           { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(data.path) },
         ]
       : []),
-    {
-      label: selectedCount > 1 ? t('common.movePhotosTo', { count: selectedCount }) : t('gallery.moveTo'),
-      icon: MoveRegular,
-      onSelect: handleMove,
-    },
-    {
-      label: deleteLabel(t, selectedCount, bulkDeleteBlocked),
-      icon: Delete2Regular,
-      destructive: true,
-      disabled: selectedCount > 1 && bulkDeleteBlocked,
-      onSelect: handleDelete,
-    },
+    ...(isFile
+      ? [
+          {
+            label: selectedCount > 1 ? t('common.movePhotosTo', { count: selectedCount }) : t('gallery.moveTo'),
+            icon: MoveRegular,
+            onSelect: handleMove,
+          },
+          {
+            label: deleteLabel(t, selectedCount, bulkDeleteBlocked),
+            icon: Delete2Regular,
+            destructive: true,
+            disabled: selectedCount > 1 && bulkDeleteBlocked,
+            onSelect: handleDelete,
+          },
+        ]
+      : []),
   ]
 
   return (

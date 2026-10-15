@@ -17,11 +17,14 @@ export const isScanningAtom = atom<boolean>(false)
 export const THUMBNAIL_WIDTH_MIN = 120
 export const THUMBNAIL_WIDTH_MAX = 480
 export const thumbnailWidthAtom = atomWithStorage('picnest.thumbnailWidth', 240)
+/** Photos the backend reported that later pages haven't brought in yet. */
+export const unloadedPhotosAtom = atom(get => Math.max(0, get(photosTotalAtom) - get(photosAtom).length))
 /**
- * Tracks the folder's background thumbnail prefetch (see
- * useThumbnailPrefetch); on-screen tiles don't count, so each photo is
- * counted once. Resets to { total: 0, done: 0 } once the prefetch drains, so
- * the progress bar disappears instead of showing a stale 100%.
+ * How many of the folder's photos have their thumbnail ready, out of all of
+ * them - including those in pages still loading, so the total is known from
+ * the first page and the bar only moves forward (see useThumbnailPrefetch).
+ * Resets to { total: 0, done: 0 } once every one is ready, so the progress
+ * bar disappears instead of showing a stale 100%.
  */
 export const thumbnailProgressAtom = atom<{ total: number, done: number }>({
   total: 0,

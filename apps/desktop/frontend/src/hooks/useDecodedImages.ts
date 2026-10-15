@@ -9,6 +9,7 @@ import { useCallback, useRef } from 'react'
  */
 export function useDecodedImages() {
   const imagesRef = useRef(new Map<string, HTMLImageElement>())
+  const decodedRef = useRef(new Set<string>())
 
   const decode = useCallback((src: string) => {
     const images = imagesRef.current
@@ -18,16 +19,24 @@ export function useDecodedImages() {
       image.src = src
       images.set(src, image)
     }
-    return image.decode().catch(() => {})
+    return image.decode().then(() => {
+      if (images.get(src) === image)
+        decodedRef.current.add(src)
+    }, () => {})
   }, [])
 
   const retain = useCallback((srcs: string[]) => {
     const images = imagesRef.current
     for (const src of images.keys()) {
-      if (!srcs.includes(src))
+      if (!srcs.includes(src)) {
         images.delete(src)
+        decodedRef.current.delete(src)
+      }
     }
   }, [])
 
-  return { decode, retain }
+  /** Whether `src` is decoded and held, so an `<img>` of it paints at once. */
+  const isDecoded = useCallback((src: string) => decodedRef.current.has(src), [])
+
+  return { decode, retain, isDecoded }
 }

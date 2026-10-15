@@ -22,6 +22,8 @@ type messages struct {
 	cannotTrash, iCloudMacOnly, invalidName, sameFolder string
 	fileFailed, existsNotRestored, ratingNotRestored    string
 	nameTaken, existsInDestination, recordsNotMoved     string
+
+	libraryNoAccess, libraryPhotoGone, libraryNoImage, libraryReadOnly string
 }
 
 var catalogs = map[Language]*messages{
@@ -59,6 +61,11 @@ var catalogs = map[Language]*messages{
 
 		ok:     "确定",
 		cancel: "取消",
+
+		libraryNoAccess:  "Picnest 没有访问照片图库的权限",
+		libraryPhotoGone: "这张照片已不在照片图库中",
+		libraryNoImage:   "无法读取这张照片",
+		libraryReadOnly:  "照片图库中的照片只能浏览，不能修改",
 
 		cannotTrash:         "无法移到废纸篓",
 		iCloudMacOnly:       "只有 macOS 支持下载 iCloud 文件",
@@ -105,6 +112,11 @@ var catalogs = map[Language]*messages{
 
 		ok:     "OK",
 		cancel: "Cancel",
+
+		libraryNoAccess:  "Picnest doesn't have access to the Photos library",
+		libraryPhotoGone: "This photo is no longer in the Photos library",
+		libraryNoImage:   "Couldn't read this photo",
+		libraryReadOnly:  "Photos in the Photos library can be viewed but not changed",
 
 		cannotTrash:         "Couldn't move it to the Trash",
 		iCloudMacOnly:       "Downloading iCloud files needs macOS",

@@ -55,6 +55,14 @@ export const en = {
     intro: 'Add a folder, or pick one you\'ve added below, to open it in a new tab. You can also drag a folder into the window.',
     addFolder: 'Add Folder',
     added: 'Added Folders',
+    fromPhotos: 'From Photos',
+  },
+  library: {
+    name: 'Photos Library',
+    photos_one: '{{count}} Photo',
+    photos_other: '{{count}} Photos',
+    allowAccess: 'Click to Allow Access',
+    denied: 'Allow Access in System Settings',
   },
   gallery: {
     photos: 'Photos',

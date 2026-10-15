@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { renamePhotoAtom } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
 import { renamePhoto } from '~/lib/backend'
+import { isLibraryPath } from '~/lib/library'
 import { message } from '~/lib/native'
 
 import { useOpenFolder } from './useOpenFolder'
@@ -16,7 +17,7 @@ export function useRenamePhoto(folderPath: string | null) {
   return useCallback(
     async (photo: Photo, newFileName: string) => {
       const trimmed = newFileName.trim()
-      if (!folderPath || trimmed === '' || trimmed.includes('/') || trimmed === photo.fileName)
+      if (!folderPath || isLibraryPath(folderPath) || trimmed === '' || trimmed.includes('/') || trimmed === photo.fileName)
         return
 
       const newPath = `${folderPath}/${trimmed}`

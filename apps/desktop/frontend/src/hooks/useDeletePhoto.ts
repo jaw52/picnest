@@ -17,6 +17,7 @@ import {
 } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
 import { deletePhotos, restorePhotos } from '~/lib/backend'
+import { isLibraryPath } from '~/lib/library'
 import { message } from '~/lib/native'
 import { successorOf } from '~/lib/photo'
 
@@ -59,7 +60,8 @@ export function useDeletePhoto(folderPath: string | null) {
 
   return useCallback(
     async (photos: Photo[]) => {
-      if (!folderPath || photos.length === 0 || store.get(deletionPendingAtom))
+      // The Photos library is read-only here.
+      if (!folderPath || isLibraryPath(folderPath) || photos.length === 0 || store.get(deletionPendingAtom))
         return
       if (photos.length > 1 && store.get(bulkDeleteBlockedAtom))
         return

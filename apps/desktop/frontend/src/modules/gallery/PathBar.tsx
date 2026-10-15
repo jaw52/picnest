@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import ArrowLeftRegular from '~icons/mingcute/arrow-left-line'
 import ArrowRightRegular from '~icons/mingcute/arrow-right-line'
 import FolderRegular from '~icons/mingcute/folder-line'
+import PicRegular from '~icons/mingcute/pic-line'
 import RightRegular from '~icons/mingcute/right-line'
 import { subfoldersAtom } from '~/atoms/gallery'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
@@ -14,6 +15,7 @@ import { DropdownMenu } from '~/components/ContextMenu'
 import { IconButton } from '~/components/IconButton'
 import { useTabs } from '~/hooks/useTabs'
 import { listSubfolders } from '~/lib/backend'
+import { isLibraryPath } from '~/lib/library'
 import { colors } from '~/theme/colors.stylex'
 import { radius } from '~/theme/layout.stylex'
 import { text, utility, weight } from '~/theme/text'
@@ -152,6 +154,8 @@ export function PathBar() {
       </div>
       {segments.map((segment, i) => {
         const isCurrent = i === segments.length - 1
+        const library = isLibraryPath(segment)
+        const SegmentIcon = library ? PicRegular : FolderRegular
         return (
           <Fragment key={segment}>
             <button
@@ -167,9 +171,9 @@ export function PathBar() {
               }}
               {...stylex.props(styles.segment, isCurrent && styles.current, text.caption)}
             >
-              {i === 0 && <FolderRegular width={14} height={14} {...stylex.props(styles.icon)} />}
+              {i === 0 && <SegmentIcon width={14} height={14} {...stylex.props(styles.icon)} />}
               <span {...stylex.props(utility.truncate, isCurrent ? weight.semibold : weight.normal)}>
-                {folderNameFromPath(segment)}
+                {library ? t('library.name') : folderNameFromPath(segment)}
               </span>
             </button>
             {/* The current folder's subfolders are in the grid below. */}

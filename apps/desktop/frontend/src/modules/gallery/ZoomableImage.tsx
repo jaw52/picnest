@@ -1,8 +1,10 @@
+import type { SyntheticEvent } from 'react'
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { View } from '~/lib/zoom'
 import * as stylex from '@stylexjs/stylex'
 import { motion } from 'framer-motion'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import LoadingRegular from '~icons/mingcute/loading-line'
 import { ContextMenu } from '~/components/ContextMenu'
 import { spring } from '~/lib/springs'
 import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
@@ -18,6 +20,10 @@ const DRAG_THRESHOLD = 3
 /** Pinch deltas arrive as small wheel `deltaY`s with ctrl held; this turns them into a zoom factor. */
 const WHEEL_ZOOM_RATE = 0.01
 
+const spin = stylex.keyframes({
+  to: { transform: 'rotate(360deg)' },
+})
+
 const styles = stylex.create({
   // Fills the overlay. The padding leaves the traffic lights, and the caption
   // and filmstrip, strips of their own, so a tall photo is fitted between
@@ -32,13 +38,37 @@ const styles = stylex.create({
     paddingBottom: CAPTION_STRIP,
     touchAction: 'none',
   },
-  stage: { margin: 'auto', transformOrigin: 'center' },
+  stage: { position: 'relative', margin: 'auto', transformOrigin: 'center' },
   smooth: { transitionProperty: 'transform', transitionDuration: '200ms', transitionTimingFunction: 'ease-out' },
   image: {
     display: 'block',
     maxHeight: `calc(100vh - ${TITLEBAR_STRIP + CAPTION_STRIP}px)`,
     maxWidth: `calc(100vw - ${2 * BUTTON_STRIP}px)`,
     objectFit: 'contain',
+  },
+  // The photo's fitted box, worked out from its size since the placeholder
+  // has too few pixels to set it: no larger than the photo, nor than the
+  // room the image style leaves it.
+  placeholderBox: (width: number, height: number) => ({
+    width: `min(${width}px, calc(100vw - ${2 * BUTTON_STRIP}px), calc((100vh - ${TITLEBAR_STRIP + CAPTION_STRIP}px) * ${width / height}))`,
+    aspectRatio: `${width} / ${height}`,
+  }),
+  // The photo over its placeholder, unseen until it has loaded.
+  over: { position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none' },
+  unloaded: { visibility: 'hidden' },
+  spinner: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -12,
+    marginLeft: -12,
+    pointerEvents: 'none',
+    color: 'white',
+    filter: 'drop-shadow(0 1px 2px rgb(0 0 0 / 0.5))',
+    animationName: spin,
+    animationDuration: '1s',
+    animationTimingFunction: 'linear',
+    animationIterationCount: 'infinite',
   },
   fit: { cursor: 'zoom-in' },
   zoomed: { cursor: 'grab' },
@@ -51,8 +81,50 @@ interface WebKitGestureEvent extends UIEvent {
   clientY: number
 }
 
+/** A smaller picture of a photo, and the photo's size, to show while the photo loads. */
+export interface Placeholder {
+  src: string
+  width: number
+  height: number
+}
+
+/**
+ * Whether `src` has loaded (or failed to: the placeholder then gives way, to
+ * show that it failed). The photo's own element reports it, so the load is
+ * the one that paints.
+ */
+function useLoaded(src: string) {
+  const [loaded, setLoaded] = useState<string | null>(null)
+  const done = () => setLoaded(src)
+  return {
+    loaded: loaded === src,
+    // Decoded off the main thread before it shows: shown as soon as it
+    // loads, a large photo would decode on it (decoding="sync") and hold up
+    // the page, a switch to the next photo included.
+    onLoad: (e: SyntheticEvent<HTMLImageElement>) => void e.currentTarget.decode().catch(() => {}).then(done),
+    onError: done,
+  }
+}
+
+/**
+ * The placeholder, as large as the photo will show: its own pixels are far
+ * fewer. The photo goes over it, filling the same box.
+ */
+function PlaceholderImage({ placeholder }: { placeholder: Placeholder }) {
+  return (
+    <img
+      src={placeholder.src}
+      alt=""
+      draggable={false}
+      {...stylex.props(styles.image, styles.placeholderBox(placeholder.width, placeholder.height))}
+    />
+  )
+}
+
 interface ZoomableImageProps {
   src: string
+  /** Shown while `src` loads, with a spinner over it. */
+  placeholder?: Placeholder
   alt: string
   /** Fade and scale the photo in on mount; off when it replaces another. */
   fadeIn: boolean
@@ -63,14 +135,23 @@ interface ZoomableImageProps {
  * A photo laid out as the lightbox fits it, without the zoom: a neighbour
  * waiting beside the photo shown, for a swipe to bring in.
  */
-export function FittedImage({ src, alt }: { src: string, alt: string }) {
+export function FittedImage({ src, placeholder, alt }: { src: string, placeholder?: Placeholder, alt: string }) {
+  const { loaded, ...loadHandlers } = useLoaded(src)
   return (
     <div {...stylex.props(styles.viewport)}>
       <div {...stylex.props(styles.stage)}>
+        {placeholder && <PlaceholderImage placeholder={placeholder} />}
         {/* WebKit decodes a large photo off the main thread the first time it
             paints, leaving it blank meanwhile: a neighbour offscreen until a
             swipe slides it in would come in empty. */}
-        <img src={src} alt={alt} decoding="sync" {...stylex.props(styles.image)} draggable={false} />
+        <img
+          src={src}
+          alt={alt}
+          decoding="sync"
+          {...loadHandlers}
+          {...stylex.props(styles.image, placeholder && styles.over, placeholder && !loaded && styles.unloaded)}
+          draggable={false}
+        />
       </div>
     </div>
   )
@@ -83,7 +164,8 @@ export function FittedImage({ src, alt }: { src: string, alt: string }) {
  * fit and actual size. Pinch arrives as `gesture*` events in WebKit (the
  * macOS webview) and as ctrl+wheel in Chromium; both are handled.
  */
-export function ZoomableImage({ src, alt, fadeIn, menuItems }: ZoomableImageProps) {
+export function ZoomableImage({ src, placeholder, alt, fadeIn, menuItems }: ZoomableImageProps) {
+  const { loaded, ...loadHandlers } = useLoaded(src)
   const viewportRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -247,12 +329,19 @@ export function ZoomableImage({ src, alt, fadeIn, menuItems }: ZoomableImageProp
           className={stylex.props(styles.stage, smooth && styles.smooth).className}
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
         >
+          {placeholder && <PlaceholderImage placeholder={placeholder} />}
           <motion.img
             ref={imageRef}
             src={src}
             alt={alt}
             decoding="sync"
-            {...stylex.props(styles.image, dragging ? styles.dragging : zoomed ? styles.zoomed : styles.fit)}
+            {...loadHandlers}
+            {...stylex.props(
+              styles.image,
+              placeholder && styles.over,
+              placeholder && !loaded && styles.unloaded,
+              dragging ? styles.dragging : zoomed ? styles.zoomed : styles.fit,
+            )}
             draggable={false}
             initial={fadeIn ? { opacity: 0, scale: 0.98 } : false}
             animate={{ opacity: 1, scale: 1 }}
@@ -268,6 +357,7 @@ export function ZoomableImage({ src, alt, fadeIn, menuItems }: ZoomableImageProp
                 zoomTo(m.actual, e.clientX, e.clientY, true)
             }}
           />
+          {placeholder && !loaded && <LoadingRegular width={24} height={24} {...stylex.props(styles.spinner)} />}
         </div>
       </ContextMenu>
     </div>

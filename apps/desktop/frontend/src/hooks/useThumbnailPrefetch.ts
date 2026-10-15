@@ -1,7 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useEffect } from 'react'
 
-import { prefetchPathsAtom, thumbnailProgressAtom } from '~/atoms/gallery'
+import { prefetchPathsAtom, thumbnailProgressAtom, unloadedPhotosAtom } from '~/atoms/gallery'
 import { ensureThumbnailUrl } from '~/lib/backend'
 import { thumbnailCache, thumbnailCacheKey } from './useThumbnail'
 
@@ -13,9 +13,15 @@ const CONCURRENCY = 4
  * scrolling a freshly opened large folder mostly hits ready thumbnails.
  * Requests are marked `background`, so tiles actually on screen (which ask
  * for their own thumbnail) are always served first by the backend.
+ *
+ * Progress counts every photo in the folder: ready ones (cached, by an
+ * earlier run or by a tile on screen) are done, and photos in pages not yet
+ * loaded are still to do. A new page restarts the run, which counts what is
+ * cached afresh, so progress never steps back.
  */
 export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number) {
   const paths = useAtomValue(prefetchPathsAtom)
+  const unloaded = useAtomValue(unloadedPhotosAtom)
   const setProgress = useSetAtom(thumbnailProgressAtom)
 
   useEffect(() => {
@@ -23,13 +29,13 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
       return
 
     const queue = paths.filter(path => !thumbnailCache.has(thumbnailCacheKey(folderPath, path, maxEdge)))
-    if (queue.length === 0)
-      return
+    const total = paths.length + unloaded
+    let done = paths.length - queue.length
+    const report = () => setProgress(done >= total ? { total: 0, done: 0 } : { total, done })
+    report()
 
     const controller = new AbortController()
     let next = 0
-    let finished = 0
-    setProgress(prev => ({ total: prev.total + queue.length, done: prev.done }))
 
     async function worker() {
       while (!controller.signal.aborted && next < queue.length) {
@@ -42,14 +48,11 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
         catch {
           // Per-tile failures surface when that tile mounts.
         }
-        // The cleanup already took in-flight requests out of the total.
+        // The next run (or none, for a closed folder) reports from here.
         if (controller.signal.aborted)
           return
-        finished++
-        setProgress((prev) => {
-          const done = prev.done + 1
-          return done >= prev.total ? { total: 0, done: 0 } : { ...prev, done }
-        })
+        done++
+        report()
       }
     }
     for (let i = 0; i < CONCURRENCY; i++)
@@ -57,14 +60,7 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
 
     return () => {
       controller.abort()
-      // Give back the share of the total this run never completed. Queued
-      // requests are dropped; ones already decoding finish into the cache
-      // but no longer count.
-      const unfinished = queue.length - finished
-      setProgress((prev) => {
-        const total = Math.max(prev.total - unfinished, 0)
-        return prev.done >= total ? { total: 0, done: 0 } : { ...prev, total }
-      })
+      setProgress({ total: 0, done: 0 })
     }
-  }, [paths, folderPath, maxEdge, setProgress])
+  }, [paths, unloaded, folderPath, maxEdge, setProgress])
 }
