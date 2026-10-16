@@ -1,0 +1,33 @@
+{
+  "name": "picnest-framework-bench",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "images": "node scripts/gen-images.ts",
+    "build": "node scripts/build.ts",
+    "typecheck": "tsc -p src/react && tsc -p src/solid && tsc -p src/vue && tsc -p scripts",
+    "serve": "node scripts/serve.ts",
+    "bench": "node scripts/run.ts --headed"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "solid-js": "1.9.17",
+    "vue": "3.5.44"
+  },
+  "devDependencies": {
+    "@babel/core": "^8.0.7",
+    "@rolldown/plugin-babel": "^0.2.4",
+    "@types/node": "^26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "@vitejs/plugin-vue-jsx": "5.1.6",
+    "babel-plugin-react-compiler": "1.0.0",
+    "playwright": "1.64.1",
+    "sharp": "0.35.5",
+    "typescript": "6",
+    "vite": "8.3.4",
+    "vite-plugin-solid": "2.11.14"
+  }
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>design.jaw.picnest.bench.export-photos</string>
+  <key>CFBundleName</key>
+  <string>picnest bench export</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Exports thumbnails and previews of your photos to a local folder, for the Picnest framework benchmark to run on real pictures.</string>
+</dict>
+</plist>

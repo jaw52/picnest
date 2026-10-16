@@ -1,0 +1,7 @@
+dist
+public/img
+results/*.json
+results/*.log
+.build
+results/flicker
+public/real
