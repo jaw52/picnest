@@ -13,9 +13,10 @@
     "generate": "cd apps/desktop && CGO_ENABLED=0 go tool mygo generate",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test && cd apps/desktop && go test ./...",
-    "lint": "oxlint && eslint . && bun run lint:go",
+    "lint": "oxlint && eslint . && bun run lint:go && bun run lint:dup",
     "lint:fix": "oxlint --fix && eslint . --fix && gofmt -w apps/desktop/*.go",
     "lint:go": "cd apps/desktop && test -z \"$(gofmt -l .)\" && go vet ./...",
+    "lint:dup": "jscpd",
     "prepare": "simple-git-hooks"
   },
   "devDependencies": {
@@ -28,13 +29,14 @@
     "eslint-plugin-slop": "^0.1.3",
     "eslint-plugin-sonarjs": "^4.2.2",
     "jiti": "^2.7.0",
+    "jscpd": "^5.4.1",
     "lint-staged": "^17.5.0",
     "oxlint": "^1.85.0",
     "simple-git-hooks": "^2.14.0",
     "typescript": "~6.0.3"
   },
   "simple-git-hooks": {
-    "pre-commit": "bunx lint-staged"
+    "pre-commit": "bunx lint-staged && bunx jscpd --silent"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [
