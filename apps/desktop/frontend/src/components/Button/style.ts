@@ -131,6 +131,8 @@ export const styles = stylex.create({
       [stylex.when.ancestor(':active', buttonMarker)]: `0 0 0 0px ${colors['--ps-border']}, inset 0 0 0 1px ${colors['--ps-border']}`,
     },
   },
+  // jscpd:ignore-start -- ghost happens to share tertiary's fill, but each
+  // variant keeps its whole surface in one style.
   // Translucent fill + same-color spread never double up: outer shadows render
   // only outside the surface box.
   surfaceGhost: {
@@ -145,6 +147,7 @@ export const styles = stylex.create({
       [stylex.when.ancestor(':active', buttonMarker)]: `0 0 0 0px ${colors['--ps-active']}`,
     },
   },
+  // jscpd:ignore-end
 
   // Forced-active (`active` prop): pressed colors at full size; the geometric
   // press-collapse still reacts on top.
