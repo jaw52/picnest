@@ -10,7 +10,7 @@ import { TabsSubtle, TabsSubtleItem } from '~/components/TabsSubtle'
 import { SurfaceProvider } from '~/context/surface'
 import { changeLanguage } from '~/i18n'
 import { App } from '~/mygo'
-import { motion as motionTokens, radius } from '~/theme/layout.stylex'
+import { dialog } from '~/theme/dialog'
 import { surfaceStyles } from '~/theme/surface'
 import { text, weight } from '~/theme/text'
 
@@ -18,39 +18,11 @@ const SURFACE_LEVEL = 3
 
 const LANGUAGES: LanguagePreference[] = ['system', 'zh-CN', 'en']
 
-const hidden = ':is([data-starting-style], [data-ending-style])'
-
 const styles = stylex.create({
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 60,
-    backgroundColor: 'rgb(0 0 0 / 0.4)',
-    opacity: { default: 1, [hidden]: 0 },
-    transitionProperty: 'opacity',
-    transitionDuration: '150ms',
-  },
   popup: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    zIndex: 60,
-    display: 'flex',
-    flexDirection: 'column',
     gap: 16,
-    boxSizing: 'border-box',
     width: 'min(440px, calc(100vw - 64px))',
     padding: 20,
-    borderRadius: radius.container,
-    outline: 'none',
-    opacity: { default: 1, [hidden]: 0 },
-    transform: {
-      default: 'translate(-50%, -50%)',
-      [hidden]: 'translate(-50%, -50%) scale(0.97)',
-    },
-    transitionProperty: 'opacity, transform',
-    transitionDuration: '150ms',
-    transitionTimingFunction: motionTokens.easeOut,
   },
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   row: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
@@ -80,9 +52,9 @@ export function SettingsDialog() {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
-        <Dialog.Backdrop {...stylex.props(styles.backdrop)} />
+        <Dialog.Backdrop {...stylex.props(dialog.backdrop)} />
         <SurfaceProvider value={SURFACE_LEVEL}>
-          <Dialog.Popup {...stylex.props(styles.popup, ...surfaceStyles(SURFACE_LEVEL, 8))}>
+          <Dialog.Popup {...stylex.props(dialog.popup, styles.popup, ...surfaceStyles(SURFACE_LEVEL, 8))}>
             <div {...stylex.props(styles.header)}>
               <Dialog.Title {...stylex.props(text.title, weight.semibold)}>{t('settings.title')}</Dialog.Title>
               <Dialog.Close render={<IconButton label={t('common.close')} icon={CloseRegular} />} />

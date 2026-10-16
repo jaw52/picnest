@@ -16,6 +16,7 @@ import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
 import { cellsInRange, layoutMasonry } from '~/lib/masonry'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
+import { dialog } from '~/theme/dialog'
 import { motion as motionTokens, radius } from '~/theme/layout.stylex'
 import { surfaceStyles } from '~/theme/surface'
 import { text, utility, weight } from '~/theme/text'
@@ -25,38 +26,10 @@ const MIN_COLUMN_WIDTH = 140
 const GUTTER = 8
 const SURFACE_LEVEL = 3
 
-const hidden = ':is([data-starting-style], [data-ending-style])'
-
 const styles = stylex.create({
-  backdrop: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 60,
-    backgroundColor: 'rgb(0 0 0 / 0.4)',
-    opacity: { default: 1, [hidden]: 0 },
-    transitionProperty: 'opacity',
-    transitionDuration: '150ms',
-  },
   popup: {
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    zIndex: 60,
-    display: 'flex',
-    flexDirection: 'column',
-    boxSizing: 'border-box',
     width: 'min(880px, calc(100vw - 64px))',
     maxHeight: 'calc(100vh - 96px)',
-    borderRadius: radius.container,
-    outline: 'none',
-    opacity: { default: 1, [hidden]: 0 },
-    transform: {
-      default: 'translate(-50%, -50%)',
-      [hidden]: 'translate(-50%, -50%) scale(0.97)',
-    },
-    transitionProperty: 'opacity, transform',
-    transitionDuration: '150ms',
-    transitionTimingFunction: motionTokens.easeOut,
   },
   header: {
     display: 'flex',
@@ -345,9 +318,9 @@ export function DeleteConfirmDialog() {
       }}
     >
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop {...stylex.props(styles.backdrop)} />
+        <AlertDialog.Backdrop {...stylex.props(dialog.backdrop)} />
         <SurfaceProvider value={SURFACE_LEVEL}>
-          <AlertDialog.Popup initialFocus={cancelRef} {...stylex.props(styles.popup, ...surfaceStyles(SURFACE_LEVEL, 8))}>
+          <AlertDialog.Popup initialFocus={cancelRef} {...stylex.props(dialog.popup, styles.popup, ...surfaceStyles(SURFACE_LEVEL, 8))}>
             {shown && <DeleteConfirmContent request={shown} cancelRef={cancelRef} onClose={close} />}
           </AlertDialog.Popup>
         </SurfaceProvider>
