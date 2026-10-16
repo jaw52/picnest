@@ -1,10 +1,8 @@
-import type { FolderView } from './useOpenFolder'
-import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { useCallback, useEffect, useRef } from 'react'
+import { useSetAtom } from 'jotai'
+import { useCallback } from 'react'
 
-import { ratingFilterAtom, selectedPhotoIdAtom, selectedPhotoIdsAtom } from '~/atoms/gallery'
 import { recentFoldersAtom, withFolderAdded } from '~/atoms/recentFolders'
-import { activeTabIdAtom, activeTabPathAtom, tabsStateAtom } from '~/atoms/tabs'
+import { tabsStateAtom } from '~/atoms/tabs'
 import { pickFolder } from '~/lib/backend'
 import {
   withBack,
@@ -20,8 +18,6 @@ import {
   withTabOpened,
   withTabsToRightClosed,
 } from '~/lib/tabs'
-
-import { useOpenFolder } from './useOpenFolder'
 
 export function useTabs() {
   const setTabs = useSetAtom(tabsStateAtom)
@@ -130,92 +126,4 @@ export function useTabs() {
     cycleTab,
     closeFolderTabs,
   }
-}
-
-/**
- * Runs `fn` once the next frame has painted: the first animation frame comes
- * before that paint, the second after it. Returns a cancel.
- */
-function afterNextPaint(fn: () => void) {
-  let frame = requestAnimationFrame(() => {
-    frame = requestAnimationFrame(fn)
-  })
-  return () => cancelAnimationFrame(frame)
-}
-
-/** What a tab showed when it was left, so switching back picks up there. */
-interface TabView extends FolderView {
-  path: string
-}
-
-/**
- * Keeps the gallery showing the active tab's folder: switching tabs (or
- * restoring them on launch) rescans that folder; the new-tab page clears it.
- * Only one folder is loaded at a time, so each tab's view (scroll position,
- * rating filter, selection) is set aside when it's left and put back when
- * it's switched to, if it still shows the same folder.
- */
-export function useActiveTabSync() {
-  const store = useStore()
-  const tabId = useAtomValue(activeTabIdAtom)
-  const path = useAtomValue(activeTabPathAtom)
-  const { navigateToFolder, closeFolder } = useOpenFolder()
-  const { closeFolderTabs } = useTabs()
-
-  const viewsRef = useRef(new Map<string, TabView>())
-  const shownRef = useRef<{ tabId: string, path: string | null } | null>(null)
-  // Kept as it changes: a switch to the new-tab page swaps the grid out,
-  // clamping the window's scroll position before the switch is seen here.
-  const scrollYRef = useRef(0)
-  useEffect(() => {
-    const track = () => {
-      scrollYRef.current = window.scrollY
-    }
-    window.addEventListener('scroll', track, { passive: true })
-    return () => window.removeEventListener('scroll', track)
-  }, [])
-
-  useEffect(() => {
-    const views = viewsRef.current
-    const left = shownRef.current
-    shownRef.current = { tabId, path }
-    const switched = left !== null && left.tabId !== tabId
-    if (switched && left.path !== null) {
-      views.set(left.tabId, {
-        path: left.path,
-        scrollY: scrollYRef.current,
-        ratingFilter: store.get(ratingFilterAtom),
-        selectedIds: store.get(selectedPhotoIdsAtom),
-        anchorId: store.get(selectedPhotoIdAtom),
-      })
-      const open = new Set(store.get(tabsStateAtom).tabs.map(t => t.id))
-      for (const id of views.keys()) {
-        if (!open.has(id))
-          views.delete(id)
-      }
-    }
-    // A tab gone on to another folder shows that one afresh.
-    const view = views.get(tabId)
-    views.delete(tabId)
-    const restore = view?.path === path ? view : undefined
-
-    // Loading a folder renders its whole grid, which holds the main thread.
-    // On a switch, it waits for the tab strip to paint first, so the
-    // selection's slide is already on the compositor and runs through it.
-    const load = () => {
-      if (path === null) {
-        closeFolder()
-        return
-      }
-      void navigateToFolder(path, restore ?? (switched ? { ratingFilter: null } : {})).then((ok) => {
-        if (!ok)
-          closeFolderTabs(path)
-      })
-    }
-    if (!switched) {
-      load()
-      return
-    }
-    return afterNextPaint(load)
-  }, [tabId, path, store, navigateToFolder, closeFolder, closeFolderTabs])
 }

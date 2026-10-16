@@ -1,68 +1,38 @@
-import type { RefObject } from 'react'
+import type { Tab } from '~/lib/tabs'
 import * as stylex from '@stylexjs/stylex'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { currentFolderAtom, ratingFilterAtom } from '~/atoms/gallery'
-import { activeTabPathAtom } from '~/atoms/tabs'
-import { ErrorBoundary } from '~/components/ErrorBoundary'
+import { tabsStateAtom } from '~/atoms/tabs'
 import { useSize } from '~/context/size'
-import { useUndoShortcut } from '~/hooks/useDeletePhoto'
-import { useFolderWatcher } from '~/hooks/useFolderWatcher'
-import { useOpenFolder } from '~/hooks/useOpenFolder'
 import { useSettingsEvents } from '~/hooks/useSettingsEvents'
-import { useActiveTabSync } from '~/hooks/useTabs'
 import { useFolderDrop, useTabShortcuts } from '~/hooks/useTabShortcuts'
 import { spring } from '~/lib/springs'
-import { DeleteConfirmDialog } from '~/modules/gallery/DeleteConfirmDialog'
-import { FilterBar } from '~/modules/gallery/FilterBar'
-import { MasonryView } from '~/modules/gallery/MasonryView'
-import { PhotoInfoPopover } from '~/modules/gallery/PhotoInfo'
-import { PhotoPreview } from '~/modules/gallery/PhotoPreview'
-import { ThumbnailProgressBar } from '~/modules/gallery/ThumbnailProgressBar'
 import { Toolbar } from '~/modules/gallery/Toolbar'
-import { UndoToast } from '~/modules/gallery/UndoToast'
 import { SettingsDialog } from '~/modules/settings/SettingsDialog'
-import { NewTabPage } from '~/modules/tabs/NewTabPage'
+import { TabPane } from '~/modules/tabs/TabPane'
 import { colors } from '~/theme/colors.stylex'
 import { radius } from '~/theme/layout.stylex'
 import { weight } from '~/theme/text'
 
-// The window has no native title bar (macOS "Overlay" style: just the
-// traffic lights float over our content, in the window's top-left corner).
-// Toolbar - the tab bar - reserves space to their right.
-const TITLEBAR_HEIGHT = 38
-
-/** An element's height, kept up to date as it changes. */
-function useHeight(ref: RefObject<HTMLElement | null>, initial: number) {
-  const [height, setHeight] = useState(initial)
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el)
-      return
-    const observer = new ResizeObserver(([entry]) => setHeight(entry.contentRect.height))
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [ref])
-  return height
-}
+/**
+ * How many tabs keep their gallery while others are shown: the ones used
+ * last. Each holds its photos' list and decoded thumbnails; one left out
+ * loads its folder again when it is switched back to.
+ */
+const KEPT_TABS = 5
 
 const styles = stylex.create({
   root: {
-    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
     backgroundColor: colors['--ps-background'],
     color: colors['--ps-foreground'],
   },
-  header: {
-    position: 'sticky',
-    top: 0,
-    zIndex: 10,
-    backgroundColor: colors['--ps-background'],
-  },
-  // The filter bar sticks just below the tab bar.
-  stickAt: (top: number) => ({ top }),
-  main: { padding: 12 },
+  // The tabs' pages, each scrolling on its own (see TabPane).
+  pages: { position: 'relative', flexGrow: 1, minHeight: 0 },
   dropOverlay: {
     pointerEvents: 'none',
     position: 'fixed',
@@ -80,53 +50,42 @@ const styles = stylex.create({
   },
 })
 
+/**
+ * The tabs that keep their gallery: the active one and those used last
+ * before it, up to KEPT_TABS, in the tabs' order.
+ */
+function useKeptTabs(tabs: Tab[], activeId: string) {
+  const [used, setUsed] = useState<string[]>([activeId])
+  // Kept in step during render, so a tab switched to mounts at once.
+  if (used[0] !== activeId)
+    setUsed([activeId, ...used.filter(id => id !== activeId)])
+  const open = new Set(tabs.map(t => t.id))
+  const kept = new Set([activeId, ...used.filter(id => open.has(id))].slice(0, KEPT_TABS))
+  return tabs.filter(t => kept.has(t.id))
+}
+
 export default function App() {
   const { t } = useTranslation()
-  useActiveTabSync()
   useSettingsEvents()
   useTabShortcuts()
-  useUndoShortcut()
   const isDraggingOver = useFolderDrop()
-  const tabPath = useAtomValue(activeTabPathAtom)
-  const folder = useAtomValue(currentFolderAtom)
-  const filter = useAtomValue(ratingFilterAtom)
   const size = useSize()
-  const { refreshFolder } = useOpenFolder()
-  useFolderWatcher(() => {
-    if (folder)
-      void refreshFolder(folder)
-  })
-
-  // FilterBar sticks just below the tab bar, whose height is measured.
-  const toolbarRef = useRef<HTMLDivElement>(null)
-  const toolbarHeight = useHeight(toolbarRef, TITLEBAR_HEIGHT)
+  const { tabs, activeId } = useAtomValue(tabsStateAtom)
+  const kept = useKeptTabs(tabs, activeId)
+  const [controlsSlot, setControlsSlot] = useState<HTMLDivElement | null>(null)
 
   return (
     <div {...stylex.props(styles.root)}>
-      <div ref={toolbarRef} {...stylex.props(styles.header)}>
-        {/* The tab bar doubles as a drag handle, like a native app's
-         * title bar - clicking a tab or button still works, only
-         * click+drag on empty space moves the window. Toolbar marks itself
-         * with data-drag-region (see theme/theme.css). */}
-        <Toolbar />
+      {/* The tab bar doubles as a drag handle, like a native app's title
+       * bar - clicking a tab or button still works, only click+drag on
+       * empty space moves the window. Toolbar marks itself with
+       * data-drag-region (see theme/theme.css). */}
+      <Toolbar controlsRef={setControlsSlot} />
+      <div {...stylex.props(styles.pages)}>
+        {kept.map(tab => (
+          <TabPane key={tab.id} tab={tab} active={tab.id === activeId} controlsSlot={controlsSlot} />
+        ))}
       </div>
-      <div data-grid-header {...stylex.props(styles.header, styles.stickAt(toolbarHeight))}>
-        {tabPath !== null && <FilterBar />}
-        <ThumbnailProgressBar />
-      </div>
-      {tabPath === null
-        ? <NewTabPage />
-        : (
-            <main {...stylex.props(styles.main)}>
-              <ErrorBoundary resetKey={`${folder}:${filter}`}>
-                <MasonryView />
-              </ErrorBoundary>
-            </main>
-          )}
-      <PhotoInfoPopover />
-      <PhotoPreview />
-      <DeleteConfirmDialog />
-      <UndoToast />
       <SettingsDialog />
       <AnimatePresence>
         {isDraggingOver && (

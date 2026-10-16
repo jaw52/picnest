@@ -228,12 +228,14 @@ export const App = {
   setRating(folderPath: string, filePath: string, rating: number): Promise<void> {
     return call("App.SetRating", folderPath, filePath, rating);
   },
-  unwatchFolder(): Promise<void> {
-    return call("App.UnwatchFolder");
+  /** UnwatchFolder undoes a WatchFolder of the folder. */
+  unwatchFolder(folderPath: string): Promise<void> {
+    return call("App.UnwatchFolder", folderPath);
   },
   /**
-   * WatchFolder (re)starts watching the open folder, replacing any previous
-   * watch, and emits folder-changed with the folder path on changes.
+   * WatchFolder watches a folder a tab shows, emitting folder-changed with its
+   * path on changes; each call wants an UnwatchFolder once the tab is done
+   * with it.
    */
   watchFolder(folderPath: string): Promise<void> {
     return call("App.WatchFolder", folderPath);

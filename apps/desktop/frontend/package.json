@@ -19,6 +19,7 @@
     "framer-motion": "^14.0.0",
     "i18next": "^26.4.4",
     "jotai": "^2.20.3",
+    "jotai-scope": "0.12.2",
     "mygo-runtime": "0.4.8",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

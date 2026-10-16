@@ -10,7 +10,7 @@ import { message } from '~/lib/native'
 
 import { useOpenFolder } from './useOpenFolder'
 
-// Shared by every move entry point in the same application store.
+// Shared by every move entry point in the window, whichever tab it is in.
 const movePendingAtom = atom(false)
 
 export function useMovePhotos(folderPath: string | null) {

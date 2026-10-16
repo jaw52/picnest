@@ -1,4 +1,3 @@
-import type { RatingFilter } from '~/lib/photo'
 import type { Photo } from '~/types/photo'
 import { useAtom, useSetAtom, useStore } from 'jotai'
 import { useCallback } from 'react'
@@ -6,17 +5,16 @@ import { useCallback } from 'react'
 import {
   currentFolderAtom,
   isScanningAtom,
-  pendingScrollAtom,
   photosAtom,
   photosTotalAtom,
   previewPhotoIdAtom,
-  ratingFilterAtom,
+  scanIdAtom,
   selectedPhotoIdAtom,
   selectedPhotoIdsAtom,
   subfoldersAtom,
 } from '~/atoms/gallery'
 import { recentFoldersAtom, withFolderRemoved } from '~/atoms/recentFolders'
-import { listSubfolders, scanFolderPage, unwatchFolder, watchFolder } from '~/lib/backend'
+import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { toPhoto } from '~/lib/photo'
 
 // How many photos to fetch per backend round-trip. Keeps a single scan from
@@ -25,37 +23,20 @@ import { toPhoto } from '~/lib/photo'
 // while later pages are still loading in the background.
 const PAGE_SIZE = 300
 
-// Guards against a slow page fetch from a folder the user has since
-// navigated away from clobbering the newer folder's photos. Module-level
-// because `useOpenFolder` is called from multiple components that all need
-// to agree on which scan is the latest one.
-let latestScanId = 0
-
-/**
- * How a folder is shown: what a tab switched back to puts back. Left out,
- * the rating filter stays as it is and the rest starts afresh.
- */
-export interface FolderView {
-  ratingFilter: RatingFilter
-  scrollY: number
-  selectedIds: ReadonlySet<string>
-  anchorId: string | null
-}
-
 /**
  * Fetches `folder`'s pages after the ones in `photos`, appending each to it
- * and handing it to `onPage`. False if `scanId` was superseded meanwhile.
+ * and handing it to `onPage`. False if the scan was superseded meanwhile.
  */
 async function loadRemainingPages(
   folder: string,
   photos: Photo[],
   total: number,
-  scanId: number,
+  isLatest: () => boolean,
   onPage?: (page: Photo[]) => void,
 ) {
   while (photos.length < total) {
     const page = await scanFolderPage(folder, photos.length, PAGE_SIZE)
-    if (scanId !== latestScanId)
+    if (!isLatest())
       return false
     if (page.photos.length === 0)
       break // Shrunk on disk mid-scan; avoid looping forever.
@@ -74,8 +55,19 @@ function subfoldersOf(folder: string) {
   })
 }
 
+/**
+ * Loads folders into the tab it is used in - each tab has a gallery of its
+ * own (see TabPane) - and keeps them up to date.
+ */
 export function useOpenFolder() {
   const store = useStore()
+  // Guards against a slow page fetch from a folder the tab has since gone
+  // on from clobbering the newer folder's photos.
+  const startScan = useCallback(() => {
+    const scanId = store.get(scanIdAtom) + 1
+    store.set(scanIdAtom, scanId)
+    return () => store.get(scanIdAtom) === scanId
+  }, [store])
   const [currentFolder, setCurrentFolder] = useAtom(currentFolderAtom)
   const setPhotos = useSetAtom(photosAtom)
   const setSubfolders = useSetAtom(subfoldersAtom)
@@ -85,12 +77,10 @@ export function useOpenFolder() {
   const setSelectedIds = useSetAtom(selectedPhotoIdsAtom)
   const setAnchorId = useSetAtom(selectedPhotoIdAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
-  const setRatingFilter = useSetAtom(ratingFilterAtom)
-  const setPendingScroll = useSetAtom(pendingScrollAtom)
 
   const scanAndSelect = useCallback(
-    async (folder: string, view: Partial<FolderView>): Promise<boolean> => {
-      const scanId = ++latestScanId
+    async (folder: string): Promise<boolean> => {
+      const isLatest = startScan()
       setIsScanning(true)
       setSelectedIds(new Set())
       setAnchorId(null)
@@ -100,31 +90,18 @@ export function useOpenFolder() {
           scanFolderPage(folder, 0, PAGE_SIZE),
           subfoldersOf(folder),
         ])
-        if (scanId !== latestScanId)
+        if (!isLatest())
           return true
         const photos = first.photos.map(toPhoto)
-        // A scroll position to go back to needs the grid's full height, so
-        // every page loads before the swap.
-        if (view.scrollY !== undefined && !await loadRemainingPages(folder, photos, first.total, scanId))
-          return true
 
         // The previous folder stays on screen until now, then everything
         // the grid shows changes in one render.
-        const ids = new Set(photos.map(p => p.id))
         setSubfolders(subfolders)
         setPhotos(photos)
         setPhotosTotal(first.total)
         setCurrentFolder(folder)
-        if (view.ratingFilter !== undefined)
-          setRatingFilter(view.ratingFilter)
-        setSelectedIds(new Set([...view.selectedIds ?? []].filter(id => ids.has(id))))
-        setAnchorId(view.anchorId && ids.has(view.anchorId) ? view.anchorId : null)
-        setPendingScroll(view.scrollY ?? 0)
-        void watchFolder(folder).catch((error) => {
-          console.warn(`failed to watch folder ${folder}:`, error)
-        })
 
-        await loadRemainingPages(folder, photos, first.total, scanId, (more) => {
+        await loadRemainingPages(folder, photos, first.total, isLatest, (more) => {
           setPhotos(prev => [...prev, ...more])
         })
         return true
@@ -134,11 +111,12 @@ export function useOpenFolder() {
         return false
       }
       finally {
-        if (scanId === latestScanId)
+        if (isLatest())
           setIsScanning(false)
       }
     },
     [
+      startScan,
       setCurrentFolder,
       setPhotos,
       setSubfolders,
@@ -147,8 +125,6 @@ export function useOpenFolder() {
       setSelectedIds,
       setAnchorId,
       setPreviewId,
-      setRatingFilter,
-      setPendingScroll,
     ],
   )
 
@@ -161,7 +137,7 @@ export function useOpenFolder() {
    */
   const refreshFolder = useCallback(
     async (folder: string): Promise<boolean> => {
-      const scanId = ++latestScanId
+      const isLatest = startScan()
       try {
         const [first, subfolders] = await Promise.all([
           scanFolderPage(folder, 0, PAGE_SIZE),
@@ -174,7 +150,7 @@ export function useOpenFolder() {
             break // Shrunk on disk mid-scan.
           photos.push(...page.photos.map(toPhoto))
         }
-        if (scanId !== latestScanId || store.get(currentFolderAtom) !== folder)
+        if (!isLatest() || store.get(currentFolderAtom) !== folder)
           return true
 
         const ids = new Set(photos.map(p => p.id))
@@ -199,17 +175,17 @@ export function useOpenFolder() {
         return false
       }
     },
-    [store, setPhotos, setSubfolders, setPhotosTotal, setSelectedIds, setAnchorId, setPreviewId],
+    [store, startScan, setPhotos, setSubfolders, setPhotosTotal, setSelectedIds, setAnchorId, setPreviewId],
   )
 
   /**
-   * Loads `folder` into the gallery. Driven by the active tab (see
-   * useActiveTabSync) - doesn't touch the bookmarked folders, except to drop
-   * one that can no longer be read.
+   * Loads `folder` into the gallery, keeping the rating filter. Driven by
+   * the tab (see TabSync) - doesn't touch the bookmarked folders, except to
+   * drop one that can no longer be read.
    */
   const navigateToFolder = useCallback(
-    async (folder: string, view: Partial<FolderView> = {}): Promise<boolean> => {
-      const ok = await scanAndSelect(folder, view)
+    async (folder: string): Promise<boolean> => {
+      const ok = await scanAndSelect(folder)
       if (!ok) {
         // The folder was likely moved/deleted/unmounted; if it was
         // bookmarked, drop the now-dead shortcut.
@@ -221,11 +197,11 @@ export function useOpenFolder() {
   )
 
   /**
-   * Clears the open folder back to the empty state and stops the backend's
-   * folder watcher. Used when the active tab switches to the new-tab page.
+   * Clears the open folder back to the empty state. Used when the tab goes
+   * on to the new-tab page.
    */
   const closeFolder = useCallback(() => {
-    latestScanId++ // Invalidate any in-flight scan for the folder being closed.
+    startScan() // Invalidates any in-flight scan for the folder being closed.
     setCurrentFolder(null)
     setPhotos([])
     setSubfolders([])
@@ -234,10 +210,8 @@ export function useOpenFolder() {
     setAnchorId(null)
     setPreviewId(null)
     setIsScanning(false)
-    void unwatchFolder().catch((error) => {
-      console.warn('failed to stop folder watcher:', error)
-    })
   }, [
+    startScan,
     setCurrentFolder,
     setPhotos,
     setSubfolders,

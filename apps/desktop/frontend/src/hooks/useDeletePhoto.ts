@@ -23,7 +23,7 @@ import { successorOf } from '~/lib/photo'
 
 import { useOpenFolder } from './useOpenFolder'
 
-// Shared by every deletion entry point in the same application store.
+// Shared by every deletion entry point in the window, whichever tab it is in.
 const deletionPendingAtom = atom(false)
 
 /** The photos the user confirmed for deletion, or null if they cancelled. */

@@ -9,7 +9,6 @@ import {
   currentFolderAtom,
   filteredPhotosAtom,
   isScanningAtom,
-  pendingScrollAtom,
   photosTotalAtom,
   previewPhotoIdAtom,
   ratingFilterAtom,
@@ -17,6 +16,7 @@ import {
   subfoldersAtom,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
+import { useScrollContainer } from '~/context/scroll'
 import { useBottomPull } from '~/hooks/useBottomPull'
 import { useDeleteFolder } from '~/hooks/useDeleteFolder'
 import { useGridShortcuts } from '~/hooks/useGridShortcuts'
@@ -81,9 +81,12 @@ function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout
   return { inputs, layout, key, columnByTile }
 }
 
-/** The bottom of the sticky bars over the grid, in viewport coordinates. */
-function gridHeaderBottom() {
-  return document.querySelector('[data-grid-header]')?.getBoundingClientRect().bottom ?? 0
+/**
+ * The bottom of the sticky bars over the grid, in viewport coordinates: of
+ * the tab's own, in its scroller.
+ */
+function gridHeaderBottom(scroller: HTMLElement | null) {
+  return scroller?.querySelector('[data-grid-header]')?.getBoundingClientRect().bottom ?? 0
 }
 
 const styles = stylex.create({
@@ -117,6 +120,7 @@ export function MasonryView() {
   const { openFromClick } = useTabs()
   const { refreshFolder } = useOpenFolder()
   const deleteFolder = useDeleteFolder()
+  const scroller = useScrollContainer()
 
   // The grid lays itself out from the photos' aspect ratios, so it only needs
   // the container's width; the window is what scrolls.
@@ -149,33 +153,37 @@ export function MasonryView() {
   const thumbnailEdge = thumbnailEdgeFor(layout.columnWidth)
   useThumbnailPrefetch(folderPath, containerWidth > 0 ? thumbnailEdge : 0)
 
-  // Which part of the grid the window shows, in grid coordinates. Tracked
-  // in SCROLL_STEP increments, so scrolling re-renders a few times per
-  // screen rather than every frame.
+  // Which part of the grid the tab's scroller shows, in grid coordinates.
+  // Tracked in SCROLL_STEP increments, so scrolling re-renders a few times
+  // per screen rather than every frame.
   const [viewport, setViewport] = useState({ top: 0, height: window.innerHeight })
   useEffect(() => {
+    if (!scroller)
+      return
     let frame = 0
     function update() {
       frame = 0
       const el = containerRef.current
-      if (!el)
+      if (!el || !scroller)
         return
-      const top = Math.floor(-el.getBoundingClientRect().top / SCROLL_STEP) * SCROLL_STEP
-      const height = window.innerHeight
+      const shown = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top
+      const top = Math.floor(shown / SCROLL_STEP) * SCROLL_STEP
+      const height = scroller.clientHeight
       setViewport(prev => (prev.top === top && prev.height === height ? prev : { top, height }))
     }
     function schedule() {
       frame ||= requestAnimationFrame(update)
     }
     schedule()
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule)
+    scroller.addEventListener('scroll', schedule, { passive: true })
+    const observer = new ResizeObserver(schedule)
+    observer.observe(scroller)
     return () => {
       cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
+      scroller.removeEventListener('scroll', schedule)
+      observer.disconnect()
     }
-  }, [hasItems])
+  }, [hasItems, scroller])
 
   // Mount a screen above and below the visible part, so fast scrolling with
   // 1000+ photos never shows blank gaps.
@@ -196,7 +204,7 @@ export function MasonryView() {
       const from = id === null ? -1 : photos.findIndex(p => p.id === id)
       if (from === -1) {
         // In grid coordinates, the first line not hidden under the bars.
-        const shownFrom = gridHeaderBottom() - (containerRef.current?.getBoundingClientRect().top ?? 0)
+        const shownFrom = gridHeaderBottom(scroller) - (containerRef.current?.getBoundingClientRect().top ?? 0)
         const onScreen = visible
           .filter(i => i >= offset && layout.cells[i].top >= shownFrom)
           .sort((a, b) => layout.cells[a].top - layout.cells[b].top || a - b)[0]
@@ -206,11 +214,11 @@ export function MasonryView() {
       const to = neighborCell(layout.cells, offset + from, direction, candidates)
       return to === undefined ? undefined : photos[to - offset].id
     },
-    [subfolders, photos, layout, visible],
+    [subfolders, photos, layout, visible, scroller],
   )
   useGridShortcuts(neighbor)
   useThumbnailPinch(previewId === null)
-  const pull = useBottomPull(previewId === null && hasItems)
+  const pull = useBottomPull(previewId === null && hasItems, scroller)
 
   // Brings a photo into view - scrolling only as far as needed - and moves
   // focus to it once its tile is mounted (it may be off in the virtualized
@@ -233,28 +241,20 @@ export function MasonryView() {
     setReveal(null)
     const index = photos.findIndex(p => p.id === reveal.id)
     const el = containerRef.current
-    if (index === -1 || !el)
+    if (index === -1 || !el || !scroller)
       return
+    // In viewport coordinates.
     const cell = layout.cells[subfolders.length + index]
-    const top = el.getBoundingClientRect().top + window.scrollY + cell.top
-    const visibleTop = window.scrollY + gridHeaderBottom() + REVEAL_MARGIN
-    const visibleBottom = window.scrollY + window.innerHeight - REVEAL_MARGIN
+    const top = el.getBoundingClientRect().top + cell.top
+    const visibleTop = gridHeaderBottom(scroller) + REVEAL_MARGIN
+    const visibleBottom = scroller.getBoundingClientRect().bottom - REVEAL_MARGIN
     if (top < visibleTop)
-      window.scrollTo({ top: window.scrollY - (visibleTop - top) })
+      scroller.scrollBy({ top: top - visibleTop })
     else if (top + cell.height > visibleBottom)
-      window.scrollTo({ top: window.scrollY + Math.min(top - visibleTop, top + cell.height - visibleBottom) })
+      scroller.scrollBy({ top: Math.min(top - visibleTop, top + cell.height - visibleBottom) })
     pendingFocusRef.current = reveal.id
     focusPending()
-  }, [reveal, setReveal, photos, subfolders, layout, focusPending])
-  // A tab switched back to scrolls to where it was left, once the grid has
-  // its height.
-  const [pendingScroll, setPendingScroll] = useAtom(pendingScrollAtom)
-  useLayoutEffect(() => {
-    if (pendingScroll === null || containerWidth === 0)
-      return
-    window.scrollTo(0, pendingScroll)
-    setPendingScroll(null)
-  }, [pendingScroll, containerWidth, setPendingScroll])
+  }, [reveal, setReveal, photos, subfolders, layout, focusPending, scroller])
   // A tile scrolled to from afar mounts once the grid catches up with the scroll.
   useLayoutEffect(() => {
     focusPending()

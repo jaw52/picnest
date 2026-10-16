@@ -383,16 +383,17 @@ func moveFile(from, to string) error {
 	return os.Remove(from)
 }
 
-// WatchFolder (re)starts watching the open folder, replacing any previous
-// watch, and emits folder-changed with the folder path on changes.
+// WatchFolder watches a folder a tab shows, emitting folder-changed with its
+// path on changes; each call wants an UnwatchFolder once the tab is done
+// with it.
 func (a *App) WatchFolder(folderPath string) error {
 	if isLibraryPath(folderPath) {
-		a.folderWatcher.unwatch()
 		return nil
 	}
 	return a.folderWatcher.watch(folderPath, func() { folderChanged.Broadcast(folderPath) })
 }
 
-func (a *App) UnwatchFolder() {
-	a.folderWatcher.unwatch()
+// UnwatchFolder undoes a WatchFolder of the folder.
+func (a *App) UnwatchFolder(folderPath string) {
+	a.folderWatcher.unwatch(folderPath)
 }

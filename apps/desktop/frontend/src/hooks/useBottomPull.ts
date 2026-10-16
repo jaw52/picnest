@@ -15,24 +15,25 @@ const RETRY_GAP_MS = 250
 /** Px per line, for wheels that report lines rather than pixels. */
 const LINE_HEIGHT = 16
 
-function atBottom() {
-  return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1
+function atBottom(scroller: HTMLElement) {
+  return scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
 }
 
 /**
  * How hard the end of the grid is pushed against: wheel scrolling on once
- * the window is at the bottom adds to it, against growing resistance, and it
- * springs back when the wheel goes quiet. A trackpad fling that runs into the
+ * `scroller` is at its bottom adds to it, against growing resistance, and
+ * it springs back when the wheel goes quiet. A trackpad fling that runs into the
  * end shows nothing, though: only another try after it does (RETRY_GAP_MS).
  *
  * The listener is passive: a cancelable one would hold up every scroll (see
  * useThumbnailPinch), and at the bottom there is nothing left to cancel.
  */
-export function useBottomPull(enabled: boolean) {
+export function useBottomPull(enabled: boolean, scroller: HTMLElement | null) {
   const pull = useMotionValue(0)
   useEffect(() => {
-    if (!enabled)
+    if (!enabled || !scroller)
       return
+    const el = scroller
     // The wheel distance taken in, before resistance.
     let raw = 0
     let release = 0
@@ -52,7 +53,7 @@ export function useBottomPull(enabled: boolean) {
       const now = performance.now()
       const sincePrevious = now - lastWheel
       lastWheel = now
-      if (e.deltaY <= 0 || !atBottom()) {
+      if (e.deltaY <= 0 || !atBottom(el)) {
         retrying = false
         if (pull.get() > 0)
           settle()
@@ -79,6 +80,6 @@ export function useBottomPull(enabled: boolean) {
       settling?.stop()
       pull.set(0)
     }
-  }, [enabled, pull])
+  }, [enabled, scroller, pull])
   return pull
 }

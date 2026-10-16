@@ -14,9 +14,9 @@ function wheel(deltaY: number) {
   })
 }
 
-// jsdom's page has no height, so the window is always at its bottom.
+// jsdom's page has no height, so it is always scrolled to its bottom.
 it('pulls past the end against growing resistance, up to PULL_MAX', () => {
-  const { result } = renderHook(() => useBottomPull(true))
+  const { result } = renderHook(() => useBottomPull(true, document.documentElement))
   wheel(40)
   const first = result.current.get()
   expect(first).toBeGreaterThan(0)
@@ -29,7 +29,7 @@ it('pulls past the end against growing resistance, up to PULL_MAX', () => {
 
 it('springs back once the wheel goes quiet', async () => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
-  const { result } = renderHook(() => useBottomPull(true))
+  const { result } = renderHook(() => useBottomPull(true, document.documentElement))
   wheel(60)
   expect(result.current.get()).toBeGreaterThan(0)
   act(() => {
@@ -40,7 +40,7 @@ it('springs back once the wheel goes quiet', async () => {
 })
 
 it('leaves pinch zoom and a disabled grid alone', () => {
-  const { result, rerender } = renderHook(({ enabled }) => useBottomPull(enabled), { initialProps: { enabled: true } })
+  const { result, rerender } = renderHook(({ enabled }) => useBottomPull(enabled, document.documentElement), { initialProps: { enabled: true } })
   act(() => {
     window.dispatchEvent(new WheelEvent('wheel', { deltaY: 50, ctrlKey: true }))
   })
@@ -54,7 +54,7 @@ it('shows nothing for the scroll that reaches the end, only for another try afte
   let now = 0
   vi.spyOn(performance, 'now').mockImplementation(() => now)
   const height = vi.spyOn(document.documentElement, 'scrollHeight', 'get').mockReturnValue(5000)
-  const { result } = renderHook(() => useBottomPull(true))
+  const { result } = renderHook(() => useBottomPull(true, document.documentElement))
   // Scrolling down to the end, then on with the same scroll's momentum.
   wheel(80)
   height.mockReturnValue(0)

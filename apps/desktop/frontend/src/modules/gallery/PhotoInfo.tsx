@@ -10,6 +10,7 @@ import { currentFolderAtom, photoInfoIdAtom, photosAtom, renamingPhotoIdAtom } f
 import { IconButton } from '~/components/IconButton'
 import { StarRating } from '~/components/StarRating'
 import { Tooltip } from '~/components/Tooltip'
+import { useScrollContainer } from '~/context/scroll'
 import { SurfaceProvider, useSurface } from '~/context/surface'
 import { useFileName } from '~/hooks/useFileName'
 import { usePhotoDetails } from '~/hooks/usePhotoDetails'
@@ -25,8 +26,9 @@ import { text, utility, weight } from '~/theme/text'
 
 const hidden = ':is([data-starting-style], [data-ending-style])'
 
-function tileOf(photoId: string) {
-  return document.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(photoId)}"]`)
+/** The photo's tile in the tab's grid: another tab may show the folder too. */
+function tileOf(scroller: HTMLElement | null, photoId: string) {
+  return scroller?.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(photoId)}"]`) ?? null
 }
 
 const styles = stylex.create({
@@ -235,18 +237,19 @@ function PhotoInfoCard({ photoId }: { photoId: string }) {
   const folderPath = useAtomValue(currentFolderAtom)
   const setOpenId = useSetAtom(photoInfoIdAtom)
   const photo = useAtomValue(photosAtom).find(p => p.id === photoId)
+  const scroller = useScrollContainer()
   // A card stacks two steps above the page, like a menu.
   const level = Math.min(useSurface() + 2, 8)
 
   useEffect(() => {
     function closeIfGone() {
-      if (!photo || !tileOf(photoId))
+      if (!photo || !tileOf(scroller, photoId))
         setOpenId(null)
     }
     closeIfGone()
-    window.addEventListener('scroll', closeIfGone, { passive: true })
-    return () => window.removeEventListener('scroll', closeIfGone)
-  }, [photoId, photo, setOpenId])
+    scroller?.addEventListener('scroll', closeIfGone, { passive: true })
+    return () => scroller?.removeEventListener('scroll', closeIfGone)
+  }, [photoId, photo, setOpenId, scroller])
 
   if (!photo)
     return null
@@ -254,7 +257,7 @@ function PhotoInfoCard({ photoId }: { photoId: string }) {
   return (
     <Popover.Portal>
       <Popover.Positioner
-        anchor={() => tileOf(photoId)}
+        anchor={() => tileOf(scroller, photoId)}
         side="right"
         align="start"
         sideOffset={8}

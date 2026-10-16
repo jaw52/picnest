@@ -70,32 +70,47 @@ func isRelevantPath(root, path string) bool {
 	return true
 }
 
-// folderWatcher holds at most one non-recursive watch on the open folder.
+// folderWatcher holds a non-recursive watch on each folder a tab shows,
+// shared by the tabs showing the same one.
 type folderWatcher struct {
 	mu      sync.Mutex
-	current *watch
+	watches map[string]*sharedWatch
 }
 
+type sharedWatch struct {
+	w     *watch
+	users int
+}
+
+// watch starts watching folder, or counts one more user of its watch.
 func (fw *folderWatcher) watch(folder string, emit func()) error {
 	fw.mu.Lock()
 	defer fw.mu.Unlock()
-	if fw.current != nil {
-		fw.current.stop()
-		fw.current = nil
+	if s := fw.watches[folder]; s != nil {
+		s.users++
+		return nil
 	}
 	w, err := startWatch(folder, emit)
 	if err != nil {
 		return err
 	}
-	fw.current = w
+	if fw.watches == nil {
+		fw.watches = map[string]*sharedWatch{}
+	}
+	fw.watches[folder] = &sharedWatch{w: w, users: 1}
 	return nil
 }
 
-func (fw *folderWatcher) unwatch() {
+// unwatch counts one user of folder's watch less, and stops it with the last.
+func (fw *folderWatcher) unwatch(folder string) {
 	fw.mu.Lock()
 	defer fw.mu.Unlock()
-	if fw.current != nil {
-		fw.current.stop()
-		fw.current = nil
+	s := fw.watches[folder]
+	if s == nil {
+		return
+	}
+	if s.users--; s.users == 0 {
+		s.w.stop()
+		delete(fw.watches, folder)
 	}
 }

@@ -30,17 +30,17 @@ export function scanFolderPage(
 
 /**
  * Starts watching `folderPath` for on-disk changes (files added/removed/
- * renamed); the backend emits a `folder-changed` event when that happens.
- * Only one folder is watched at a time - calling this again for a
- * different folder replaces the previous watch.
+ * renamed); the backend emits a `folder-changed` event with its path when
+ * that happens. Each tab showing a folder watches it, so every call wants an
+ * `unwatchFolder` of the same folder once its tab is done with it.
  */
 export function watchFolder(folderPath: string): Promise<void> {
   return call(App.watchFolder(folderPath))
 }
 
-/** Stops watching the currently open folder started by `watchFolder`. */
-export function unwatchFolder(): Promise<void> {
-  return call(App.unwatchFolder())
+/** Undoes a `watchFolder` of `folderPath`. */
+export function unwatchFolder(folderPath: string): Promise<void> {
+  return call(App.unwatchFolder(folderPath))
 }
 
 /** Rejection message of a thumbnail request aborted through its signal. */

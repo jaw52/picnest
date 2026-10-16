@@ -60,13 +60,6 @@
   color-scheme: light dark;
 }
 
-/* No explicit overflow here: scrollbar-gutter applies to the viewport when set
-   on the root, and an explicit `overflow-y: auto` would stop scroll locks
-   (`body { overflow: hidden }`) from propagating to the viewport. */
-html {
-  scrollbar-gutter: stable;
-}
-
 html,
 body {
   margin: 0;

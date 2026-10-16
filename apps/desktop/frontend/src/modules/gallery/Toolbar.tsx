@@ -44,6 +44,7 @@ const styles = stylex.create({
   },
   // Empty space between the tabs and the actions - still a drag handle.
   spacer: { flexGrow: 1, minWidth: 24 },
+  slot: { display: 'flex', flexShrink: 0 },
   // The folder's controls keep their room on the new-tab page, only hidden:
   // the tabs, which shrink to fit, would otherwise widen at once on switching.
   controls: { display: 'flex', flexShrink: 0, alignItems: 'center', gap: 4 },
@@ -57,7 +58,23 @@ const styles = stylex.create({
   },
 })
 
-export function Toolbar() {
+/**
+ * The tab bar across the window's top: the tabs, then the room the active
+ * tab puts its folder's controls in (see FolderControls), through
+ * `controlsRef`.
+ */
+export function Toolbar({ controlsRef }: { controlsRef: (el: HTMLDivElement | null) => void }) {
+  return (
+    <div data-drag-region {...stylex.props(styles.toolbar)}>
+      <TabStrip />
+      <div {...stylex.props(styles.spacer)} />
+      <div ref={controlsRef} {...stylex.props(styles.slot)} />
+    </div>
+  )
+}
+
+/** The controls of the folder a tab shows, which it puts in the tab bar. */
+export function FolderControls() {
   const { t } = useTranslation()
   const currentFolder = useAtomValue(currentFolderAtom)
   const isScanning = useAtomValue(isScanningAtom)
@@ -69,41 +86,37 @@ export function Toolbar() {
   const deletePhoto = useDeletePhoto(currentFolder)
 
   return (
-    <div data-drag-region {...stylex.props(styles.toolbar)}>
-      <TabStrip />
-      <div {...stylex.props(styles.spacer)} />
-      <div {...stylex.props(styles.controls, !currentFolder && styles.hidden)} aria-hidden={!currentFolder}>
-        {/* The whole track is clickable, not just the thumb, so none of it
-            may drag the window. */}
-        <div data-no-drag {...stylex.props(styles.slider)}>
-          {/* Also ⌘= / ⌘- / ⌘0, or a pinch on the grid. */}
-          <Slider
-            label={t('gallery.thumbnailSize')}
-            min={THUMBNAIL_WIDTH_MIN}
-            max={THUMBNAIL_WIDTH_MAX}
-            step={10}
-            value={thumbnailWidth}
-            onChange={setThumbnailWidth}
-            showValue={false}
-          />
-        </div>
-        {/* The Photos library is read-only here. */}
-        {!isLibraryPath(currentFolder) && (
-          <IconButton
-            label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
-            icon={Delete2Regular}
-            disabled={selectedIds.size === 0 || bulkDeleteBlocked}
-            onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
-          />
-        )}
-        <IconButton
-          label={t('gallery.rescan')}
-          icon={Refresh2Regular}
-          iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
-          disabled={!currentFolder || isScanning}
-          onClick={() => currentFolder && navigateToFolder(currentFolder)}
+    <div {...stylex.props(styles.controls, !currentFolder && styles.hidden)} aria-hidden={!currentFolder}>
+      {/* The whole track is clickable, not just the thumb, so none of it
+          may drag the window. */}
+      <div data-no-drag {...stylex.props(styles.slider)}>
+        {/* Also ⌘= / ⌘- / ⌘0, or a pinch on the grid. */}
+        <Slider
+          label={t('gallery.thumbnailSize')}
+          min={THUMBNAIL_WIDTH_MIN}
+          max={THUMBNAIL_WIDTH_MAX}
+          step={10}
+          value={thumbnailWidth}
+          onChange={setThumbnailWidth}
+          showValue={false}
         />
       </div>
+      {/* The Photos library is read-only here. */}
+      {!isLibraryPath(currentFolder) && (
+        <IconButton
+          label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
+          icon={Delete2Regular}
+          disabled={selectedIds.size === 0 || bulkDeleteBlocked}
+          onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
+        />
+      )}
+      <IconButton
+        label={t('gallery.rescan')}
+        icon={Refresh2Regular}
+        iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
+        disabled={!currentFolder || isScanning}
+        onClick={() => currentFolder && navigateToFolder(currentFolder)}
+      />
     </div>
   )
 }

@@ -36,11 +36,8 @@ export const thumbnailProgressAtom = atom<{ total: number, done: number }>({
  */
 export const bulkDeleteBlockedAtom = atom(get => get(thumbnailProgressAtom).total > 0)
 export const ratingFilterAtom = atom<RatingFilter>(null)
-/**
- * A scroll position for the grid to restore once it has laid out the
- * photos (see useActiveTabSync); the grid clears it when done.
- */
-export const pendingScrollAtom = atom<number | null>(null)
+/** The latest scan of the tab's folder; an older one's pages are dropped. */
+export const scanIdAtom = atom(0)
 /**
  * Anchor of the grid selection - the last photo clicked without a modifier
  * key. Used as the fixed end of a shift-click range select; not itself a
@@ -237,3 +234,28 @@ export const renamePhotoAtom = atom(
       set(previewPhotoIdAtom, newPath)
   },
 )
+
+/**
+ * The atoms each tab has a copy of: everything about the folder it shows,
+ * the rest being the window's (thumbnail size, tabs, settings). Atoms
+ * derived from them are the tab's too, read in it.
+ */
+export const galleryTabAtoms = [
+  currentFolderAtom,
+  photosAtom,
+  subfoldersAtom,
+  photosTotalAtom,
+  isScanningAtom,
+  scanIdAtom,
+  thumbnailProgressAtom,
+  ratingFilterAtom,
+  selectedPhotoIdAtom,
+  selectedPhotoIdsAtom,
+  previewIdBaseAtom,
+  previewIdsAtom,
+  revealPhotoAtom,
+  photoInfoIdAtom,
+  renamingPhotoIdAtom,
+  undoableDeletionAtom,
+  deleteConfirmRequestAtom,
+]
