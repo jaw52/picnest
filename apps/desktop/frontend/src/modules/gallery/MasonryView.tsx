@@ -17,6 +17,7 @@ import {
   subfoldersAtom,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
+import { useBottomPull } from '~/hooks/useBottomPull'
 import { useDeleteFolder } from '~/hooks/useDeleteFolder'
 import { useGridShortcuts } from '~/hooks/useGridShortcuts'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
@@ -30,6 +31,7 @@ import { colors } from '~/theme/colors.stylex'
 import { text } from '~/theme/text'
 
 import { MasonryPhotoItem } from './MasonryPhotoItem'
+import { OverscrollArc } from './OverscrollArc'
 
 // The selection ring sits 4px outside a tile, so neighbours need more than
 // 8px between them or two selected tiles' rings run together.
@@ -208,6 +210,7 @@ export function MasonryView() {
   )
   useGridShortcuts(neighbor)
   useThumbnailPinch(previewId === null)
+  const pull = useBottomPull(previewId === null && hasItems)
 
   // Brings a photo into view - scrolling only as far as needed - and moves
   // focus to it once its tile is mounted (it may be off in the virtualized
@@ -270,49 +273,52 @@ export function MasonryView() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      role="listbox"
-      aria-label={t('gallery.photos')}
-      aria-multiselectable
-      {...stylex.props(styles.grid, styles.gridHeight(layout.height))}
-    >
-      {containerWidth > 0 && visible.map((i) => {
-        const cell = layout.cells[i]
-        const position = stylex.props(styles.cell, styles.cellPosition(cell.top, cell.left))
-        if (i < subfolders.length) {
-          const folder = subfolders[i]
+    <>
+      <div
+        ref={containerRef}
+        role="listbox"
+        aria-label={t('gallery.photos')}
+        aria-multiselectable
+        {...stylex.props(styles.grid, styles.gridHeight(layout.height))}
+      >
+        {containerWidth > 0 && visible.map((i) => {
+          const cell = layout.cells[i]
+          const position = stylex.props(styles.cell, styles.cellPosition(cell.top, cell.left))
+          if (i < subfolders.length) {
+            const folder = subfolders[i]
+            return (
+              <div key={folder.path} {...position}>
+                <FolderTile
+                  path={folder.path}
+                  name={folder.name}
+                  width={layout.columnWidth}
+                  height={cell.height}
+                  onOpen={e => openFromClick(folder.path, e)}
+                  onDelete={() => void deleteFolder(folder.path).then(() => {
+                    if (folderPath)
+                      void refreshFolder(folderPath)
+                  })}
+                />
+              </div>
+            )
+          }
+          const photo = photos[i - subfolders.length]
+          // The window's top is somewhere in the SCROLL_STEP below viewport.top.
+          const onScreen = cell.top < viewport.top + SCROLL_STEP + viewport.height
+            && cell.top + cell.height > viewport.top
+          // A tile off screen asks for its thumbnail behind those on screen.
+          // One that has its thumbnail keeps the flag as it is, so scrolling
+          // past doesn't render it again.
+          const background = !onScreen
+            && !thumbnailCache.has(thumbnailCacheKey(folderPath, photo.path, thumbnailEdge, photo.isCloudPlaceholder))
           return (
-            <div key={folder.path} {...position}>
-              <FolderTile
-                path={folder.path}
-                name={folder.name}
-                width={layout.columnWidth}
-                height={cell.height}
-                onOpen={e => openFromClick(folder.path, e)}
-                onDelete={() => void deleteFolder(folder.path).then(() => {
-                  if (folderPath)
-                    void refreshFolder(folderPath)
-                })}
-              />
+            <div key={photo.id} {...position}>
+              <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} background={background} />
             </div>
           )
-        }
-        const photo = photos[i - subfolders.length]
-        // The window's top is somewhere in the SCROLL_STEP below viewport.top.
-        const onScreen = cell.top < viewport.top + SCROLL_STEP + viewport.height
-          && cell.top + cell.height > viewport.top
-        // A tile off screen asks for its thumbnail behind those on screen.
-        // One that has its thumbnail keeps the flag as it is, so scrolling
-        // past doesn't render it again.
-        const background = !onScreen
-          && !thumbnailCache.has(thumbnailCacheKey(folderPath, photo.path, thumbnailEdge, photo.isCloudPlaceholder))
-        return (
-          <div key={photo.id} {...position}>
-            <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} background={background} />
-          </div>
-        )
-      })}
-    </div>
+        })}
+      </div>
+      <OverscrollArc pull={pull} />
+    </>
   )
 }
