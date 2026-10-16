@@ -15,5 +15,5 @@
   "reporters": [
     "console"
   ],
-  "threshold": 0.9
+  "threshold": 0
 }
