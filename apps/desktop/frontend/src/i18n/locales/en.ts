@@ -52,10 +52,10 @@ export const en = {
     newTabShortcut: 'New Tab (⌘T)',
   },
   newTab: {
-    intro: 'Add a folder, or pick one you\'ve added below, to open it in a new tab. You can also drag a folder into the window.',
+    library: 'Library',
+    folders: 'Folders',
     addFolder: 'Add Folder',
-    added: 'Added Folders',
-    fromPhotos: 'From Photos',
+    dropHint: 'or drop one here',
   },
   library: {
     name: 'Photos Library',

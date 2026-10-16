@@ -50,10 +50,10 @@ export const zhCN = {
     newTabShortcut: '新标签页 (⌘T)',
   },
   newTab: {
-    intro: '添加一个文件夹，或从下面选择已添加的文件夹，在新标签页中打开。也可以直接把文件夹拖进窗口。',
+    library: '图库',
+    folders: '文件夹',
     addFolder: '添加文件夹',
-    added: '已添加的文件夹',
-    fromPhotos: '来自「照片」',
+    dropHint: '或拖入窗口',
   },
   library: {
     name: '照片图库',
