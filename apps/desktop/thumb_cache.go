@@ -21,8 +21,17 @@ import (
 // width changes.
 
 // thumbReuseFactor is how much larger than requested an existing thumbnail
-// may be and still be reused instead of generating a new one.
-const thumbReuseFactor = 4
+// may be and still be reused instead of generating a new one. A web view
+// holds a picture decoded at its full size, so a thumbnail twice as large as
+// its tile takes four times the memory: generating one more size is cheaper
+// than that.
+const thumbReuseFactor = 1.5
+
+// reusableThumbEdge reports whether a thumbnail of edge px may stand in for
+// one of want px.
+func reusableThumbEdge(edge, want int) bool {
+	return edge >= want && float64(edge) <= float64(want)*thumbReuseFactor
+}
 
 // thumbGrace protects files that look orphaned but may just belong to a photo
 // added after the folder listing was taken.
@@ -64,7 +73,7 @@ func findReusableThumb(thumbsDir, key string, edge int) (string, bool) {
 	best, bestEdge := "", 0
 	for _, m := range matches {
 		_, e, ok := parseThumbFileName(filepath.Base(m))
-		if !ok || e < edge || e > edge*thumbReuseFactor {
+		if !ok || !reusableThumbEdge(e, edge) {
 			continue
 		}
 		if best == "" || e < bestEdge {
@@ -142,7 +151,7 @@ func pruneThumbnails(thumbsDir string, files []fileStat) {
 	for key, edges := range edgesByKey {
 		for _, a := range edges {
 			for _, b := range edges {
-				if b > a && b <= a*thumbReuseFactor {
+				if b > a && reusableThumbEdge(b, a) {
 					os.Remove(filepath.Join(thumbsDir, thumbFileName(key, a)))
 					break
 				}
