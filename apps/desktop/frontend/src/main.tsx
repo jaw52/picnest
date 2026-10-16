@@ -6,14 +6,25 @@ import { languageStateAtom } from '~/atoms/settings'
 import { TooltipProvider } from '~/components/Tooltip'
 import { SizeProvider } from '~/context/size'
 import { initI18n } from '~/i18n'
+import { setCollectionPath } from '~/lib/collection'
+import { CollectPanel } from '~/modules/collect/CollectPanel'
 import { App as GoApp } from '~/mygo'
 import App from './App'
 import './theme/theme.css'
 
+// The menu bar icon's panel loads this page too, under #collect.
+const isCollectPanel = window.location.hash === '#collect'
+if (isCollectPanel) {
+  // The panel's window is see-through, so its rounded corners show.
+  document.documentElement.style.background = 'transparent'
+  document.body.style.background = 'transparent'
+}
+
 // The first render is already in the app's language.
-void GoApp.getLanguage().then((languageState) => {
+void Promise.all([GoApp.getLanguage(), GoApp.collectionPath()]).then(([languageState, collectionPath]) => {
   initI18n(languageState.language)
   getDefaultStore().set(languageStateAtom, languageState)
+  setCollectionPath(collectionPath)
 
   ReactDOM.createRoot(document.querySelector('#root')!).render(
     <React.StrictMode>
@@ -22,7 +33,7 @@ void GoApp.getLanguage().then((languageState) => {
         {/* A dense desktop tool: every control sits on the 28px compact step. */}
         <SizeProvider size="compact">
           <TooltipProvider>
-            <App />
+            {isCollectPanel ? <CollectPanel /> : <App />}
           </TooltipProvider>
         </SizeProvider>
       </MotionConfig>

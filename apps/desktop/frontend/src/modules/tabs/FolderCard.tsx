@@ -414,11 +414,11 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
   )
 }
 
-/** The menu every folder gets; `onRemove` and `onOpenInNewTab` add their items. */
+/** The menu every folder gets; `onOpenInNewTab`, `onRemove` and `onDelete` add their items. */
 function folderMenuItems(
   t: TFunction,
   path: string,
-  { onOpenInNewTab, onRemove, onDelete }: { onOpenInNewTab?: () => void, onRemove?: () => void, onDelete: () => void },
+  { onOpenInNewTab, onRemove, onDelete }: { onOpenInNewTab?: () => void, onRemove?: () => void, onDelete?: () => void },
 ): ContextMenuItem[] {
   return [
     ...(onOpenInNewTab ? [{ label: t('tabs.openInNewTab'), icon: ExternalLinkRegular, onSelect: onOpenInNewTab }] : []),
@@ -430,7 +430,7 @@ function folderMenuItems(
         void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
     },
     ...(onRemove ? [{ label: t('tabs.removeFromList'), icon: CloseRegular, onSelect: onRemove }] : []),
-    { label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete },
+    ...(onDelete ? [{ label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete }] : []),
   ]
 }
 
@@ -446,7 +446,8 @@ interface FolderCardProps {
   onOpen: () => void
   /** Forgets the folder from a list; the menu item is left out without it. */
   onRemove?: () => void
-  onDelete: () => void
+  /** Deletes the folder; the menu item is left out without it. */
+  onDelete?: () => void
 }
 
 /** A folder drawn like a Finder folder icon with its first photo inside. */

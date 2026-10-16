@@ -141,6 +141,7 @@ func main() {
 			URL:                  "/",
 		})
 		unlockFrameRate(w.NativeHandle())
+		setupCollector()
 	})
 
 	if err := mygo.App.Run(); err != nil {

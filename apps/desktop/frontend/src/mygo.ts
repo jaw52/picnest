@@ -4,6 +4,21 @@ import { call, event } from "mygo-runtime";
 
 // ---- Types ----
 
+/** CollectItem is a picture dropped to be collected. */
+export interface CollectItem {
+  id: number;
+  status: CollectStatus;
+  /** Path is where it was saved, once it is. */
+  path: string;
+  /** PageURL is the page it was dragged from, when the drag told. */
+  pageUrl: string;
+  /** Error says why it could not be saved. */
+  error: string;
+}
+
+/** CollectStatus is how far saving a dropped picture got. */
+export type CollectStatus = "saving" | "saved" | "failed";
+
 /** DeleteResult reports a batch delete that may have partially succeeded. */
 export interface DeleteResult {
   /** Trashed are the photos now in the trash, which RestorePhotos can put back. */
@@ -93,6 +108,17 @@ export const App = {
    */
   cancelThumbnail(requestID: string): Promise<void> {
     return call("App.CancelThumbnail", requestID);
+  },
+  /**
+   * CollectedItems returns the pictures dropped since the app started,
+   * newest first.
+   */
+  collectedItems(): Promise<CollectItem[]> {
+    return call("App.CollectedItems");
+  },
+  /** CollectionPath returns the folder collected pictures are saved in. */
+  collectionPath(): Promise<string> {
+    return call("App.CollectionPath");
   },
   deleteFolder(folderPath: string): Promise<void> {
     return call("App.DeleteFolder", folderPath);
@@ -244,6 +270,10 @@ export const Native = {
 
 /** Events sent by the Go side. Subscribe with `events.name.on(listener)`. */
 export const events = {
+  /** collectChanged carries the collected pictures, newest first, to the panel. */
+  collectChanged: event<CollectItem[]>("collect-changed"),
+  /** collectHover tells the panel a picture is dragged over it. */
+  collectHover: event<boolean>("collect-hover"),
   /** folderChanged carries the path of the watched folder. */
   folderChanged: event<string>("folder-changed"),
   /**

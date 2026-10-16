@@ -6,6 +6,7 @@ import { recentFoldersAtom, withFolderForgotten } from '~/atoms/recentFolders'
 import { useSize } from '~/context/size'
 import { useDeleteFolder } from '~/hooks/useDeleteFolder'
 import { useTabs } from '~/hooks/useTabs'
+import { getCollectionPath } from '~/lib/collection'
 import { colors } from '~/theme/colors.stylex'
 import { motion, radius } from '~/theme/layout.stylex'
 import { text, weight } from '~/theme/text'
@@ -118,6 +119,11 @@ export function NewTabPage() {
           </h2>
           <div {...stylex.props(styles.grid)}>
             <LibraryCard />
+            <FolderCard
+              path={getCollectionPath()}
+              name={t('collection.name')}
+              onOpen={() => openInNewTab(getCollectionPath())}
+            />
           </div>
         </section>
         <section {...stylex.props(styles.section)}>

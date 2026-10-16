@@ -15,7 +15,7 @@ import (
 // ratings database and the thumbnail cache, and never touches originals.
 const sidecarDirName = ".picnest"
 
-var recordTables = []string{"ratings", "photo_size"}
+var recordTables = []string{"ratings", "photo_size", "sources"}
 
 func sidecarDir(folder string) string {
 	if isLibraryPath(folder) {
@@ -52,6 +52,13 @@ func openRatingsDB(folder string) (*sql.DB, error) {
 			height    INTEGER NOT NULL,
 			size      INTEGER NOT NULL,
 			mtime     INTEGER NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS sources (
+			file_name    TEXT PRIMARY KEY,
+			page_url     TEXT NOT NULL,
+			image_url    TEXT NOT NULL,
+			dropped_url  TEXT NOT NULL,
+			collected_at INTEGER NOT NULL
 		);`)
 	if err != nil {
 		db.Close()

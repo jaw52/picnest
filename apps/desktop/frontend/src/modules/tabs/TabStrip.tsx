@@ -26,6 +26,7 @@ import { IconButton } from '~/components/IconButton'
 import { useFluidHover } from '~/hooks/use-fluid-hover'
 import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
 import { useTabs } from '~/hooks/useTabs'
+import { isCollectionPath } from '~/lib/collection'
 import { isLibraryPath } from '~/lib/library'
 import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
@@ -193,7 +194,7 @@ function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemPr
   const { activateTab, closeTab, closeOtherTabs, closeTabsToRight } = useTabs()
   const title = tab.path === null
     ? t('common.newTab')
-    : isLibraryPath(tab.path) ? t('library.name') : folderNameFromPath(tab.path)
+    : isLibraryPath(tab.path) ? t('library.name') : isCollectionPath(tab.path) ? t('collection.name') : folderNameFromPath(tab.path)
 
   // A closed tab leaves its slot as it starts fading out, in the same commit
   // the tabs after it move down a slot, so it never clears its successor's.

@@ -57,6 +57,18 @@ export const en = {
     addFolder: 'Add Folder',
     dropHint: 'or drop one here',
   },
+  collection: {
+    name: 'Collection',
+  },
+  collect: {
+    dropHere: 'Drop a picture from a web page here',
+    release: 'Release to collect',
+    picture: 'Picture',
+    saving: 'Saving the original…',
+    saved: 'Saved',
+    failed: 'Couldn\'t save it',
+    openFolder: 'Open the Collection Folder',
+  },
   library: {
     name: 'Photos Library',
     photos_one: '{{count}} Photo',

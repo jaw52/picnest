@@ -55,6 +55,18 @@ export const zhCN = {
     addFolder: '添加文件夹',
     dropHint: '或拖入窗口',
   },
+  collection: {
+    name: '收藏',
+  },
+  collect: {
+    dropHere: '把网页上的图片拖到这里',
+    release: '松开以收藏',
+    picture: '图片',
+    saving: '正在保存原图…',
+    saved: '已保存',
+    failed: '保存失败',
+    openFolder: '打开收藏文件夹',
+  },
   library: {
     name: '照片图库',
     photos_other: '{{count}} 张照片',
