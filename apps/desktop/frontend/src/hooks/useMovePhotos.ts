@@ -1,62 +1,36 @@
-import type { Photo } from '~/types/photo'
-import { atom, useStore } from 'jotai'
-import { useCallback } from 'react'
+import type { PhotoOperation } from './usePhotoOperation'
+import { atom } from 'jotai'
 
-import { currentFolderAtom } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
 import { movePhotos, pickFolder } from '~/lib/backend'
-import { isLibraryPath } from '~/lib/library'
-import { message } from '~/lib/native'
 
-import { useOpenFolder } from './useOpenFolder'
+import { usePhotoOperation } from './usePhotoOperation'
 
 // Shared by every move entry point in the window, whichever tab it is in.
 const movePendingAtom = atom(false)
 
+const move: PhotoOperation = async (_store, folderPath, photos) => {
+  const title
+    = photos.length === 1
+      ? i18n.t('dialogs.movePhotoTo', { name: photos[0].fileName })
+      : i18n.t('common.movePhotosTo', { count: photos.length })
+  const destFolder = await pickFolder({ title, defaultPath: folderPath })
+  if (!destFolder || destFolder === folderPath)
+    return null
+
+  try {
+    await movePhotos(
+      folderPath,
+      photos.map(p => p.fileName),
+      destFolder,
+    )
+    return []
+  }
+  catch (error) {
+    return [`${error}`]
+  }
+}
+
 export function useMovePhotos(folderPath: string | null) {
-  const store = useStore()
-  const { refreshFolder } = useOpenFolder()
-
-  return useCallback(
-    async (photos: Photo[]) => {
-      if (!folderPath || isLibraryPath(folderPath) || photos.length === 0 || store.get(movePendingAtom))
-        return
-
-      store.set(movePendingAtom, true)
-      try {
-        const title
-          = photos.length === 1
-            ? i18n.t('dialogs.movePhotoTo', { name: photos[0].fileName })
-            : i18n.t('common.movePhotosTo', { count: photos.length })
-        const destFolder = await pickFolder({ title, defaultPath: folderPath })
-        if (!destFolder || destFolder === folderPath)
-          return
-
-        const errors: string[] = []
-        try {
-          await movePhotos(
-            folderPath,
-            photos.map(p => p.fileName),
-            destFolder,
-          )
-        }
-        catch (error) {
-          errors.push(`${error}`)
-        }
-        // Refresh even after partial failure, without navigating back if the
-        // user switched folders while the move was running.
-        if (store.get(currentFolderAtom) === folderPath) {
-          const refreshed = await refreshFolder(folderPath)
-          if (!refreshed)
-            errors.push(i18n.t('common.rescanFailed'))
-        }
-        if (errors.length > 0)
-          await message(errors.join('\n'), { title: i18n.t('dialogs.movePhotosTitle'), kind: 'error' })
-      }
-      finally {
-        store.set(movePendingAtom, false)
-      }
-    },
-    [folderPath, store, refreshFolder],
-  )
+  return usePhotoOperation(folderPath, movePendingAtom, 'dialogs.movePhotosTitle', move)
 }

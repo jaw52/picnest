@@ -1,3 +1,4 @@
+import type { PhotoOperation } from './usePhotoOperation'
 import type { Photo } from '~/types/photo'
 import { atom, useStore } from 'jotai'
 import { useCallback, useEffect } from 'react'
@@ -17,11 +18,11 @@ import {
 } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
 import { deletePhotos, restorePhotos } from '~/lib/backend'
-import { isLibraryPath } from '~/lib/library'
 import { message } from '~/lib/native'
 import { successorOf } from '~/lib/photo'
 
 import { useOpenFolder } from './useOpenFolder'
+import { usePhotoOperation } from './usePhotoOperation'
 
 // Shared by every deletion entry point in the window, whichever tab it is in.
 const deletionPendingAtom = atom(false)
@@ -54,61 +55,37 @@ function moveOnFrom(
     store.set(previewPhotoIdAtom, successorOf(previewBefore, removed)?.id ?? null)
 }
 
+const trash: PhotoOperation = async (store, folderPath, photos) => {
+  if (photos.length > 1 && store.get(bulkDeleteBlockedAtom))
+    return null
+  const targets = await confirmTargets(store, folderPath, photos)
+  if (!targets || targets.length === 0)
+    return null
+
+  // What the grid and viewer showed, to pick the photo after the deleted
+  // ones once they are gone.
+  const gridBefore = store.get(filteredPhotosAtom)
+  const previewBefore = store.get(previewPhotosAtom)
+
+  try {
+    const result = await deletePhotos(
+      folderPath,
+      targets.map(p => p.path),
+    )
+    if (result.trashed.length > 0) {
+      store.set(undoableDeletionAtom, { folderPath, trashed: result.trashed })
+      if (store.get(currentFolderAtom) === folderPath)
+        moveOnFrom(store, new Set(result.trashed.map(t => t.path)), gridBefore, previewBefore)
+    }
+    return result.failures.map(failure => i18n.t('dialogs.deleteFailed', { error: failure }))
+  }
+  catch (error) {
+    return [i18n.t('dialogs.deleteFailed', { error })]
+  }
+}
+
 export function useDeletePhoto(folderPath: string | null) {
-  const store = useStore()
-  const { refreshFolder } = useOpenFolder()
-
-  return useCallback(
-    async (photos: Photo[]) => {
-      // The Photos library is read-only here.
-      if (!folderPath || isLibraryPath(folderPath) || photos.length === 0 || store.get(deletionPendingAtom))
-        return
-      if (photos.length > 1 && store.get(bulkDeleteBlockedAtom))
-        return
-
-      store.set(deletionPendingAtom, true)
-      try {
-        const targets = await confirmTargets(store, folderPath, photos)
-        if (!targets || targets.length === 0)
-          return
-
-        // What the grid and viewer showed, to pick the photo after the
-        // deleted ones once they are gone.
-        const gridBefore = store.get(filteredPhotosAtom)
-        const previewBefore = store.get(previewPhotosAtom)
-
-        const errors: string[] = []
-        try {
-          const result = await deletePhotos(
-            folderPath,
-            targets.map(p => p.path),
-          )
-          errors.push(...result.failures.map(failure => i18n.t('dialogs.deleteFailed', { error: failure })))
-          if (result.trashed.length > 0) {
-            store.set(undoableDeletionAtom, { folderPath, trashed: result.trashed })
-            if (store.get(currentFolderAtom) === folderPath)
-              moveOnFrom(store, new Set(result.trashed.map(t => t.path)), gridBefore, previewBefore)
-          }
-        }
-        catch (error) {
-          errors.push(i18n.t('dialogs.deleteFailed', { error }))
-        }
-        // Refresh even after partial failure, without navigating back if the
-        // user switched folders while the native trash operation was running.
-        if (store.get(currentFolderAtom) === folderPath) {
-          const refreshed = await refreshFolder(folderPath)
-          if (!refreshed)
-            errors.push(i18n.t('common.rescanFailed'))
-        }
-        if (errors.length > 0)
-          await message(errors.join('\n'), { title: i18n.t('dialogs.deletePhotosTitle'), kind: 'error' })
-      }
-      finally {
-        store.set(deletionPendingAtom, false)
-      }
-    },
-    [folderPath, store, refreshFolder],
-  )
+  return usePhotoOperation(folderPath, deletionPendingAtom, 'dialogs.deletePhotosTitle', trash)
 }
 
 /** Puts the last deleted photos back, selecting them in the grid. */
