@@ -17,9 +17,10 @@ import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
-import { motion as motionTokens, radius } from '~/theme/layout.stylex'
+import { motion as motionTokens } from '~/theme/layout.stylex'
 import { text, utility } from '~/theme/text'
 
+import { card } from './card'
 import { cardMarker } from './markers.stylex'
 
 /**
@@ -194,28 +195,6 @@ function frontPath(high: number) {
 }
 
 const styles = stylex.create({
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 6,
-    padding: 4,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    color: colors['--ps-foreground'],
-  },
-  // Like Finder, hovering highlights the icon, not the whole cell.
-  iconWell: {
-    padding: 8,
-    borderRadius: radius.item,
-    backgroundColor: {
-      default: 'transparent',
-      [stylex.when.ancestor(':hover', cardMarker)]: colors['--ps-hover'],
-    },
-    transitionProperty: 'background-color',
-    transitionDuration: '80ms',
-  },
   icon: { display: 'block', width: W, height: H },
   // In a tile the icon scales with the column instead.
   fluidIcon: { width: '100%', height: 'auto' },
@@ -463,9 +442,9 @@ export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCar
         type="button"
         onClick={onOpen}
         {...handlers}
-        {...stylex.props(cardMarker, styles.card)}
+        {...stylex.props(cardMarker, card.root)}
       >
-        <span aria-hidden {...stylex.props(styles.iconWell)}>
+        <span aria-hidden {...stylex.props(card.iconWell)}>
           <FolderIcon coverUrl={coverUrl} open={open} iCloud={iCloud} />
         </span>
         <span {...stylex.props(styles.name, text.caption)}>{name}</span>

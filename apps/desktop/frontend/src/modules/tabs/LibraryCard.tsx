@@ -16,9 +16,9 @@ import {
 import { LIBRARY_PATH } from '~/lib/library'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
-import { radius } from '~/theme/layout.stylex'
 import { text } from '~/theme/text'
 
+import { card } from './card'
 import { cardMarker } from './markers.stylex'
 
 /** Thumbnail edge for the fanned photos: small, and shared with nothing else. */
@@ -55,28 +55,6 @@ const PLACEHOLDERS = [
 ] as const
 
 const styles = stylex.create({
-  card: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 6,
-    padding: 4,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    color: colors['--ps-foreground'],
-  },
-  // Like a folder, hovering highlights the icon, not the whole cell.
-  iconWell: {
-    padding: 8,
-    borderRadius: radius.item,
-    backgroundColor: {
-      default: 'transparent',
-      [stylex.when.ancestor(':hover', cardMarker)]: colors['--ps-hover'],
-    },
-    transitionProperty: 'background-color',
-    transitionDuration: '80ms',
-  },
   icon: { display: 'block', width: W, height: H, overflow: 'visible' },
   label: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, maxWidth: '100%' },
   status: { color: colors['--ps-muted-foreground'], textAlign: 'center' },
@@ -249,9 +227,9 @@ export function LibraryCard() {
       type="button"
       onClick={() => void activate().catch(error => console.warn('failed to open the Photos library:', error))}
       {...handlers}
-      {...stylex.props(cardMarker, styles.card)}
+      {...stylex.props(cardMarker, card.root)}
     >
-      <span aria-hidden {...stylex.props(styles.iconWell)}>
+      <span aria-hidden {...stylex.props(card.iconWell)}>
         <LibraryIcon coverUrls={access === 'granted' ? coverUrls : []} open={open} />
       </span>
       <span {...stylex.props(styles.label)}>
