@@ -30,6 +30,11 @@ const (
 	nsDragOperationCopy = 1
 	// nsViewSizable makes a view follow its superview's size.
 	nsViewSizable = 2 | 16
+	// NSTrackingAreaOptions.
+	nsTrackingMouseEnteredAndExited = 0x01
+	nsTrackingMouseMoved            = 0x02
+	nsTrackingActiveAlways          = 0x80
+	nsTrackingInVisibleRect         = 0x200
 )
 
 // collectHover tells the panel a picture is dragged over it.
@@ -119,6 +124,9 @@ func installDropTargets(tray *mygo.Tray, panel *mygo.Window) error {
 	if err := loadFrameworks(); err != nil {
 		return err
 	}
+	if err := loadObjC(); err != nil {
+		return err
+	}
 	sel := pobjc.RegisterName
 
 	button := statusButton(tray)
@@ -143,18 +151,48 @@ func installDropTargets(tray *mygo.Tray, panel *mygo.Window) error {
 	// targets by the dragged types views take, not by hit testing. The
 	// NSPoint argument is two doubles, passed as two separate ones are.
 	passClicks := pobjc.MethodDef{Cmd: sel("hitTest:"), Fn: func(_ pobjc.ID, _ pobjc.SEL, _, _ float64) pobjc.ID { return 0 }}
-	overlayClass, err := pobjc.RegisterClass("PicnestDropOverlay", pobjc.GetClass("NSView"), nil, nil, append(dropMethods(dropOnPanel), passClicks))
+	content := pobjc.ID(panel.NativeHandle()).Send(sel("contentView"))
+	webView := pobjc.ID(findWebView(objcID(content)))
+	overlayClass, err := pobjc.RegisterClass("PicnestDropOverlay", pobjc.GetClass("NSView"), nil, nil,
+		append(append(dropMethods(dropOnPanel), passClicks), forwardMouseMoves(webView)...))
 	if err != nil {
 		return err
 	}
-	content := pobjc.ID(panel.NativeHandle()).Send(sel("contentView"))
 	bounds := pobjc.Send[nsRect](content, sel("bounds"))
 	overlay := pobjc.ID(overlayClass).Send(sel("alloc")).Send(sel("initWithFrame:"), bounds)
 	overlay.Send(sel("setAutoresizingMask:"), uint(nsViewSizable))
 	overlay.Send(sel("registerForDraggedTypes:"), nsStringArray(dragTypes))
 	content.Send(sel("addSubview:"), overlay)
+	if webView != 0 {
+		tracking := pobjc.ID(pobjc.GetClass("NSTrackingArea")).Send(sel("alloc")).Send(sel("initWithRect:options:owner:userInfo:"),
+			nsRect{}, uint(nsTrackingMouseEnteredAndExited|nsTrackingMouseMoved|nsTrackingActiveAlways|nsTrackingInVisibleRect), overlay, pobjc.ID(0))
+		overlay.Send(sel("addTrackingArea:"), tracking)
+	}
 	collectUI.overlay = overlay
 	return nil
+}
+
+// forwardMouseMoves passes the pointer's moves over the panel to its page
+// while the app is in the background. The panel opens without activating
+// the app, and a web view hears moves only in an active app, so the page's
+// hover states - a menu's highlight following the pointer - would stand
+// still.
+func forwardMouseMoves(webView pobjc.ID) []pobjc.MethodDef {
+	if webView == 0 {
+		return nil
+	}
+	sel := pobjc.RegisterName
+	app := pobjc.ID(pobjc.GetClass("NSApplication")).Send(sel("sharedApplication"))
+	forward := func(_ pobjc.ID, cmd pobjc.SEL, ev pobjc.ID) {
+		if !pobjc.Send[bool](app, sel("isActive")) {
+			webView.Send(cmd, ev)
+		}
+	}
+	return []pobjc.MethodDef{
+		{Cmd: sel("mouseMoved:"), Fn: forward},
+		{Cmd: sel("mouseEntered:"), Fn: forward},
+		{Cmd: sel("mouseExited:"), Fn: forward},
+	}
 }
 
 type dropSite int
