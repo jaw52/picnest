@@ -57,9 +57,6 @@ export const en = {
     addFolder: 'Add Folder',
     dropHint: 'or drop one here',
   },
-  collection: {
-    name: 'Collection',
-  },
   collect: {
     dropHere: 'Drop a picture from a web page here',
     release: 'Release to collect',
@@ -67,7 +64,10 @@ export const en = {
     saving: 'Saving the original…',
     saved: 'Saved',
     failed: 'Couldn\'t save it',
-    openFolder: 'Open the Collection Folder',
+    saveTo: 'Save to',
+    pickFolder: 'Pick a Folder',
+    noFolders: 'Add a folder in the main window first',
+    openFolder: 'Open Folder',
   },
   library: {
     name: 'Photos Library',

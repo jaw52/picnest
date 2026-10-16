@@ -23,11 +23,9 @@ import (
 )
 
 // Collecting: pictures dragged out of a web page onto the menu bar icon, or
-// the panel it opens, are saved into the collection folder in the largest
-// size the site keeps, with where they came from.
-
-// collectionDirName is the collection folder, inside the app's data dir.
-const collectionDirName = "Collection"
+// the panel it opens, are saved into the folder picked in the panel - one
+// the user added - in the largest size the site keeps, with where they came
+// from.
 
 // maxCollectedBytes bounds a download: no picture a site serves comes near.
 const maxCollectedBytes = 256 << 20
@@ -104,16 +102,47 @@ type collectSource struct {
 	PageURL    string
 }
 
-func collectionDir() (string, error) {
-	dir, err := configFile(collectionDirName)
+// collectTargetFile keeps the folder the panel saves into.
+const collectTargetFile = "collect-target"
+
+// errNoTarget is a drop with no folder picked to save it in.
+var errNoTarget = errors.New("no folder picked to save into")
+
+// CollectTarget returns the folder the panel saves into, or "" when none is
+// picked or it is gone.
+func (a *App) CollectTarget() string { return collectTarget() }
+
+// SetCollectTarget makes the panel save into dir; "" picks none.
+func (a *App) SetCollectTarget(dir string) error {
+	file, err := configFile(collectTargetFile)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return dir, os.MkdirAll(dir, 0o755)
+	if dir == "" {
+		if err := os.Remove(file); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	return os.WriteFile(file, []byte(dir), 0o644)
 }
 
-// CollectionPath returns the folder collected pictures are saved in.
-func (a *App) CollectionPath() (string, error) { return collectionDir() }
+// collectTarget is the folder picked to save into, while it is still there.
+func collectTarget() string {
+	file, err := configFile(collectTargetFile)
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(file)
+	if err != nil {
+		return ""
+	}
+	dir := string(data)
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		return ""
+	}
+	return dir
+}
 
 // collector keeps the pictures dropped since the app started, for the panel.
 type collector struct {
@@ -174,18 +203,19 @@ func (c *collector) collect(drop droppedImage) {
 	}()
 }
 
-// saveDropped saves a dropped picture into the collection folder and
-// records where it came from.
+// saveDropped saves a dropped picture into the folder picked in the panel
+// and records where it came from.
 func saveDropped(ctx context.Context, drop droppedImage) (string, collectSource, error) {
-	dir, err := collectionDir()
-	if err != nil {
-		return "", collectSource{}, err
+	dir := collectTarget()
+	if dir == "" {
+		return "", collectSource{}, errNoTarget
 	}
 	imageURL, linkURL := dropAddresses(drop)
 	imageURL, linkURL = resolveAgainst(drop.SourceURL, imageURL), resolveAgainst(drop.SourceURL, linkURL)
 	source := collectSource{DroppedURL: imageURL, PageURL: pageURL(drop.SourceURL, linkURL, imageURL)}
 
 	var data []byte
+	var err error
 	var name string
 	switch {
 	case drop.File != "":

@@ -6,7 +6,6 @@ import { languageStateAtom } from '~/atoms/settings'
 import { TooltipProvider } from '~/components/Tooltip'
 import { SizeProvider } from '~/context/size'
 import { initI18n } from '~/i18n'
-import { setCollectionPath } from '~/lib/collection'
 import { CollectPanel } from '~/modules/collect/CollectPanel'
 import { App as GoApp } from '~/mygo'
 import App from './App'
@@ -21,10 +20,9 @@ if (isCollectPanel) {
 }
 
 // The first render is already in the app's language.
-void Promise.all([GoApp.getLanguage(), GoApp.collectionPath()]).then(([languageState, collectionPath]) => {
+void GoApp.getLanguage().then((languageState) => {
   initI18n(languageState.language)
   getDefaultStore().set(languageStateAtom, languageState)
-  setCollectionPath(collectionPath)
 
   ReactDOM.createRoot(document.querySelector('#root')!).render(
     <React.StrictMode>

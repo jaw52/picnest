@@ -110,15 +110,18 @@ export const App = {
     return call("App.CancelThumbnail", requestID);
   },
   /**
+   * CollectTarget returns the folder the panel saves into, or "" when none is
+   * picked or it is gone.
+   */
+  collectTarget(): Promise<string> {
+    return call("App.CollectTarget");
+  },
+  /**
    * CollectedItems returns the pictures dropped since the app started,
    * newest first.
    */
   collectedItems(): Promise<CollectItem[]> {
     return call("App.CollectedItems");
-  },
-  /** CollectionPath returns the folder collected pictures are saved in. */
-  collectionPath(): Promise<string> {
-    return call("App.CollectionPath");
   },
   deleteFolder(folderPath: string): Promise<void> {
     return call("App.DeleteFolder", folderPath);
@@ -213,6 +216,10 @@ export const App = {
   },
   scanFolderPage(folderPath: string, offset: number, limit: number): Promise<PhotoPage> {
     return call("App.ScanFolderPage", folderPath, offset, limit);
+  },
+  /** SetCollectTarget makes the panel save into dir; "" picks none. */
+  setCollectTarget(dir: string): Promise<void> {
+    return call("App.SetCollectTarget", dir);
   },
   /**
    * SetLanguage picks the app's language, translating the menu bar and every

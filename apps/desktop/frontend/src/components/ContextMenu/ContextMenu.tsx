@@ -14,6 +14,8 @@ import { styles } from './style'
 
 export interface ContextMenuItem {
   label: string
+  /** Tells rows apart when labels can repeat, as two folders' names can. */
+  id?: string
   icon?: IconComponent
   /** Tints the row red, for actions that remove files. */
   destructive?: boolean
@@ -129,7 +131,7 @@ function MenuPopup({ items }: MenuPopupProps) {
         >
           <FluidHoverHighlight hover={hover} />
           {items.map((item, index) => (
-            <MenuRow key={item.label} index={index} {...item} />
+            <MenuRow key={item.id ?? item.label} index={index} {...item} />
           ))}
         </BaseContextMenu.Popup>
       </MenuHoverContext>

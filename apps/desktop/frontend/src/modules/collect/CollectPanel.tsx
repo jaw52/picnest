@@ -1,12 +1,19 @@
 import type { CollectItem } from '~/mygo'
 import * as stylex from '@stylexjs/stylex'
+import { useAtomValue } from 'jotai'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CheckCircleRegular from '~icons/mingcute/check-circle-line'
+import CheckRegular from '~icons/mingcute/check-line'
 import CloseCircleRegular from '~icons/mingcute/close-circle-line'
+import DownRegular from '~icons/mingcute/down-small-line'
 import DownloadRegular from '~icons/mingcute/download-2-line'
+import FolderRegular from '~icons/mingcute/folder-line'
 import FolderOpenRegular from '~icons/mingcute/folder-open-line'
 import LoadingRegular from '~icons/mingcute/loading-3-line'
+import { recentFoldersAtom } from '~/atoms/recentFolders'
+import { DropdownMenu } from '~/components/ContextMenu'
+import { IconButton } from '~/components/IconButton'
 import { convertPreviewSrc, openPath } from '~/lib/native'
 import { events, App as GoApp } from '~/mygo'
 import { colors } from '~/theme/colors.stylex'
@@ -95,15 +102,27 @@ const styles = stylex.create({
   footer: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    padding: 0,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    color: { 'default': colors['--ps-muted-foreground'], ':hover': colors['--ps-foreground'] },
+    gap: 4,
+    flexShrink: 0,
+    minWidth: 0,
   },
-  footerIcon: { width: 14, height: 14 },
+  target: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
+    flexGrow: 1,
+    height: 28,
+    paddingInline: 6,
+    marginLeft: -6,
+    borderWidth: 0,
+    borderRadius: radius.item,
+    backgroundColor: { 'default': 'transparent', ':hover:enabled': colors['--ps-muted'] },
+    cursor: { 'default': 'pointer', ':disabled': 'default' },
+    color: colors['--ps-foreground'],
+  },
+  targetLabel: { flexShrink: 0, color: colors['--ps-muted-foreground'] },
+  footerIcon: { flexShrink: 0, width: 14, height: 14 },
 })
 
 function fileName(path: string) {
@@ -151,6 +170,70 @@ function Item({ item }: { item: CollectItem }) {
 }
 
 /**
+ * Where dropped pictures go: one of the folders added on the new-tab page.
+ * The Go side keeps the pick (see collect.go); while none is picked, or the
+ * picked one is no longer listed, the first listed folder is.
+ */
+function SaveTarget() {
+  const { t } = useTranslation()
+  const folders = useAtomValue(recentFoldersAtom)
+  // undefined until the Go side says; "" for none.
+  const [target, setTarget] = useState<string>()
+
+  useEffect(() => {
+    void GoApp.collectTarget().then(setTarget)
+  }, [])
+
+  const pick = (dir: string) => {
+    setTarget(dir)
+    void GoApp.setCollectTarget(dir)
+  }
+
+  const current = target === undefined
+    ? undefined
+    : folders.find(folder => folder.path === target) ?? folders[0]
+  // Tells the Go side when the pick falls to the first folder.
+  useEffect(() => {
+    if (target !== undefined && current?.path !== target)
+      void GoApp.setCollectTarget(current?.path ?? '')
+  }, [target, current])
+
+  return (
+    <div {...stylex.props(styles.footer)}>
+      <DropdownMenu
+        items={folders.map(folder => ({
+          id: folder.path,
+          label: folder.name,
+          icon: folder.path === current?.path ? CheckRegular : FolderRegular,
+          onSelect: () => pick(folder.path),
+        }))}
+        trigger={(
+          <button
+            type="button"
+            disabled={folders.length === 0}
+            title={current?.path}
+            {...stylex.props(styles.target, text.caption)}
+          >
+            <span {...stylex.props(styles.targetLabel)}>{t('collect.saveTo')}</span>
+            <FolderRegular {...stylex.props(styles.footerIcon)} />
+            <span {...stylex.props(utility.truncate, weight.semibold)}>
+              {current?.name ?? (folders.length === 0 ? t('collect.noFolders') : t('collect.pickFolder'))}
+            </span>
+            <DownRegular {...stylex.props(styles.footerIcon, styles.muted)} />
+          </button>
+        )}
+      />
+      <IconButton
+        label={t('collect.openFolder')}
+        icon={FolderOpenRegular}
+        disabled={!current}
+        onClick={() => current && void openPath(current.path)}
+      />
+    </div>
+  )
+}
+
+/**
  * The panel under the menu bar icon: where a picture dragged from a web page
  * is dropped to be collected, and the pictures dropped so far. The Go side
  * takes the drop itself (see collect_darwin.go) and says when one is over.
@@ -181,14 +264,7 @@ export function CollectPanel() {
       <div {...stylex.props(styles.list)}>
         {items.map(item => <Item key={item.id} item={item} />)}
       </div>
-      <button
-        type="button"
-        onClick={() => void GoApp.collectionPath().then(openPath)}
-        {...stylex.props(styles.footer, text.caption)}
-      >
-        <FolderOpenRegular {...stylex.props(styles.footerIcon)} />
-        {t('collect.openFolder')}
-      </button>
+      <SaveTarget />
     </div>
   )
 }

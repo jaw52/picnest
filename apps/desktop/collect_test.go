@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -190,6 +191,9 @@ func TestSaveDroppedFallsBackToShownPicture(t *testing.T) {
 	if err != nil {
 		t.Skip("no PNG at hand:", err)
 	}
+	if err := (&App{}).SetCollectTarget(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
 	// An address that serves no picture: what the page showed is kept.
 	saved, source, err := saveDropped(t.Context(), droppedImage{
 		URL:      "http://127.0.0.1:1/missing.png",
@@ -216,5 +220,25 @@ func TestSaveDroppedFallsBackToShownPicture(t *testing.T) {
 	}
 	if dropped != source.DroppedURL {
 		t.Errorf("recorded %q", dropped)
+	}
+}
+
+func TestCollectTarget(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	a := &App{}
+	picked := t.TempDir()
+	if err := a.SetCollectTarget(picked); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.CollectTarget(); got != picked {
+		t.Errorf("target = %s, want %s", got, picked)
+	}
+	// A picked folder gone from disk is no target.
+	os.Remove(picked)
+	if got := a.CollectTarget(); got != "" {
+		t.Errorf("target = %s for a folder gone", got)
+	}
+	if _, _, err := saveDropped(t.Context(), droppedImage{URL: "http://127.0.0.1:1/x.png"}); !errors.Is(err, errNoTarget) {
+		t.Errorf("err = %v, want errNoTarget", err)
 	}
 }
