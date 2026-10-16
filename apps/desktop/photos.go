@@ -209,11 +209,16 @@ func thumbnailTarget(folder, filePath string, maxEdge int) (thumbPath string, ca
 		return "", false, err
 	}
 	waitForPrune(folder)
+	return thumbSlot(folder, thumbKey(filePath, info.ModTime().Unix(), info.Size(), isCloudPlaceholder(info)), maxEdge)
+}
+
+// thumbSlot is where the thumbnail with key, at maxEdge px, goes in folder's
+// sidecar, and whether it or a larger one to reuse is there already.
+func thumbSlot(folder, key string, maxEdge int) (thumbPath string, cached bool, err error) {
 	thumbsDir := filepath.Join(sidecarDir(folder), "thumbs")
 	if err := os.MkdirAll(thumbsDir, 0o755); err != nil {
 		return "", false, err
 	}
-	key := thumbKey(filePath, info.ModTime().Unix(), info.Size(), isCloudPlaceholder(info))
 	thumbPath = filepath.Join(thumbsDir, thumbFileName(key, maxEdge))
 	if _, statErr := os.Stat(thumbPath); statErr == nil {
 		return thumbPath, true, nil

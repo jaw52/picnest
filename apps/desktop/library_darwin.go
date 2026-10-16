@@ -396,19 +396,7 @@ func libraryThumbnailTarget(path string, maxEdge int) (thumbPath string, cached 
 	if err != nil {
 		return "", false, err
 	}
-	thumbsDir := filepath.Join(sidecarDir(libraryRoot), "thumbs")
-	if err := os.MkdirAll(thumbsDir, 0o755); err != nil {
-		return "", false, err
-	}
-	key := thumbKey(path, stamp, 0, false)
-	thumbPath = filepath.Join(thumbsDir, thumbFileName(key, maxEdge))
-	if _, statErr := os.Stat(thumbPath); statErr == nil {
-		return thumbPath, true, nil
-	}
-	if reuse, ok := findReusableThumb(thumbsDir, key, maxEdge); ok {
-		return reuse, true, nil
-	}
-	return thumbPath, false, nil
+	return thumbSlot(libraryRoot, thumbKey(path, stamp, 0, false), maxEdge)
 }
 
 // writeLibraryThumbnail writes the photo at path, at most maxEdge px, to dst
