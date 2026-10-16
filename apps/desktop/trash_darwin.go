@@ -63,6 +63,24 @@ func loadObjC() error {
 	return objcErr
 }
 
+// pushPool pins the goroutine to its OS thread and pushes an autorelease
+// pool there, since a pool belongs to the thread it was pushed on. Defer the
+// returned func to pop it on that thread.
+func pushPool() (pop func()) {
+	runtime.LockOSThread()
+	pool := objc.PoolPush()
+	return func() {
+		objc.PoolPop(pool)
+		runtime.UnlockOSThread()
+	}
+}
+
+// fileURL makes the file NSURL for path.
+func fileURL(path string) objcID {
+	nsPath := objc.SendStr(objc.GetClass("NSString"), objc.RegisterSel("stringWithUTF8String:"), path)
+	return objc.SendID(objc.GetClass("NSURL"), objc.RegisterSel("fileURLWithPath:"), nsPath)
+}
+
 // goString copies a NUL-terminated C string.
 func goString(c uintptr) string {
 	if c == 0 {
@@ -90,16 +108,10 @@ func trashItem(path string) (string, error) {
 	if err := loadObjC(); err != nil {
 		return "", err
 	}
-	// An autorelease pool belongs to a thread: pop it on the one it was
-	// pushed on.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	pool := objc.PoolPush()
-	defer objc.PoolPop(pool)
+	defer pushPool()()
 
 	sel := objc.RegisterSel
-	nsPath := objc.SendStr(objc.GetClass("NSString"), sel("stringWithUTF8String:"), path)
-	url := objc.SendID(objc.GetClass("NSURL"), sel("fileURLWithPath:"), nsPath)
+	url := fileURL(path)
 	fm := objc.Send(objc.GetClass("NSFileManager"), sel("defaultManager"))
 	var result, nserr objcID
 	if !objc.SendTrash(fm, sel("trashItemAtURL:resultingItemURL:error:"), url, &result, &nserr) {

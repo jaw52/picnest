@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -133,10 +132,7 @@ func withPool(fn func() error) error {
 	if err := loadPhotoKit(); err != nil {
 		return err
 	}
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	pool := objc.PoolPush()
-	defer objc.PoolPop(pool)
+	defer pushPool()()
 	return fn()
 }
 

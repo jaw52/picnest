@@ -1,7 +1,6 @@
 package main
 
 import (
-	"runtime"
 	"sync"
 	"unsafe"
 
@@ -52,16 +51,10 @@ func isICloudItem(path string) bool {
 	if loadUbiquity() != nil {
 		return false
 	}
-	// An autorelease pool belongs to a thread: pop it on the one it was
-	// pushed on.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	pool := objc.PoolPush()
-	defer objc.PoolPop(pool)
+	defer pushPool()()
 
 	sel := objc.RegisterSel
-	nsPath := objc.SendStr(objc.GetClass("NSString"), sel("stringWithUTF8String:"), path)
-	url := objc.SendID(objc.GetClass("NSURL"), sel("fileURLWithPath:"), nsPath)
+	url := fileURL(path)
 	var value, nserr objcID
 	if !ubiquity.SendGetResource(url, sel("getResourceValue:forKey:error:"), &value, ubiquity.isUbiquitousKey, &nserr) || value == 0 {
 		return false

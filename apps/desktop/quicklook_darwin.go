@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -62,14 +61,10 @@ func withQuickLookThumbnail(path string, maxEdge int, use func(img cfRef) error)
 	if err := loadQuickLook(); err != nil {
 		return err
 	}
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	pool := objc.PoolPush()
-	defer objc.PoolPop(pool)
+	defer pushPool()()
 
 	sel := objc.RegisterSel
-	nsPath := objc.SendStr(objc.GetClass("NSString"), sel("stringWithUTF8String:"), path)
-	url := objc.SendID(objc.GetClass("NSURL"), sel("fileURLWithPath:"), nsPath)
+	url := fileURL(path)
 	req := objc.Send(objc.GetClass("QLThumbnailGenerationRequest"), sel("alloc"))
 	edge := float64(maxEdge)
 	req = ql.SendInit(req, sel("initWithFileAtURL:size:scale:representationTypes:"), url, edge, edge, 1, qlRepresentationThumbnail)
