@@ -352,7 +352,11 @@ const scenarios: Record<string, () => Promise<Samples>> = {
     const out: number[] = []
     for (let i = 0; i < 20; i++) {
       const start = performance.now()
-      click(tilesOnScreen()[i % 5].querySelector('.thumb'))
+      // Tall photos in a short window can leave fewer than five tiles fully on
+      // screen; clicking a mounted one just off it works the same.
+      const onScreen = tilesOnScreen()
+      const tiles = onScreen.length >= 5 ? onScreen : [...gallery().querySelectorAll<HTMLElement>('.tile')]
+      click(tiles[i % 5].querySelector('.thumb'))
       await nextPaint()
       for (let j = 0; j < 10; j++) {
         key('ArrowRight')
@@ -409,3 +413,28 @@ const bench = {
 }
 
 window.bench = bench
+
+// ?auto=1: a native shell (mygo, Wails) loads the page and nothing drives it,
+// so it runs the scenarios itself and reports each one's start and end to the
+// server, where scripts/shells.ts samples CPU and memory around them.
+if (params.get('auto') === '1') {
+  const mark = (name: string) => fetch(`/mark?name=${name}&t=${Date.now()}`, { cache: 'no-store' })
+  void (async () => {
+    while (!bench.ready)
+      await new Promise(r => setTimeout(r, 50))
+    await mark('ready')
+    for (const name of (params.get('scenarios') ?? 'load,scroll,resize,filter,rate,select,toggle,open,switch,burst,delete,stream,tabs,churn').split(',')) {
+      await mark(`start-${name}`)
+      try {
+        await bench.run(name)
+      }
+      catch (e) {
+        const box = scroller().getBoundingClientRect()
+        const first = gallery().querySelector('.tile')?.getBoundingClientRect()
+        await mark(`error-${name}-${encodeURIComponent(`${e} | vp ${innerWidth}x${innerHeight} scroller ${box.top},${box.height} tiles ${gallery().querySelectorAll('.tile').length} first ${first?.top},${first?.height} dpr ${devicePixelRatio}`)}`)
+      }
+      await mark(`end-${name}`)
+    }
+    await mark('done')
+  })()
+}

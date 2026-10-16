@@ -27,8 +27,17 @@ function resolve(pathname: string) {
   }
 }
 
+export const marks: { name: string, t: number }[] = []
+
 export function serve(port = 0): Promise<{ url: string, close: () => void }> {
   const server = createServer((req, res) => {
+    // A shell's page reporting where it is in a run (see ?auto=1 in harness.ts).
+    if (req.url?.startsWith('/mark')) {
+      const name = new URL(req.url, 'http://x').searchParams.get('name') ?? ''
+      marks.push({ name, t: Date.now() })
+      res.writeHead(200, { 'Access-Control-Allow-Origin': '*' }).end('ok')
+      return
+    }
     const file = resolve(new URL(req.url ?? '/', 'http://x').pathname)
     if (!file) {
       res.writeHead(404).end()

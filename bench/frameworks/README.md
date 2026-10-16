@@ -103,6 +103,20 @@ bun run serve                                     # 手动打开 http://127.0.0.
 
 结果写到 `results/`：`raw-*.json` 是原始样本，`report*.md` 是汇总表。
 
+## 原生外壳：mygo 与 Wails v3
+
+`shells/` 下各有一个最小的 Go 程序，用 mygo 或 Wails v3 开一个窗口加载 Solid 变体（同一个页面，只比外壳）。页面带 `?auto=1` 时自己依次跑场景，每个场景开始和结束时请求一次 `/mark`；`scripts/shells.ts` 每 0.5 秒用 `ps` 统计外壳进程和它启动后新出现的 WebKit 进程的 CPU 时间与 RSS，每 3 秒取一次 `footprint`。两个外壳都没有关 WebKit 的 60fps 限制。
+
+```sh
+(cd shells/mygo && go build -o ../../.build/shell-mygo .)
+(cd shells/wails && go build -o ../../.build/shell-wails .)
+bun run build
+caffeinate -dis node scripts/shells.ts --runs 2 --src real --n 1000
+caffeinate -dis node scripts/shells.ts --runs 5 --scenarios load,churn,open,switch
+```
+
+跑的时候屏幕不能锁：锁屏后 rAF 几乎停止，场景会一直等到超时，所以用 `caffeinate -dis` 保持亮屏。CPU 按 0.5 秒采样，单个场景低于约 0.5 秒的数字没有意义。结果见 `results/report-shells.md`。
+
 ## 刷新率
 
 WebKit 默认把页面渲染更新限制在 60fps 附近（`PreferPageRenderingUpdatesNear60FPSEnabled`），即使在 120Hz 的 ProMotion 屏上也是如此；无头的 Playwright 浏览器也都是 60Hz。用 wkdriver 实测系统 WKWebView：保持默认是 60fps，像 Picnest 那样关掉之后是 120fps。
