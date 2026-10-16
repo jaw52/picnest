@@ -10,10 +10,8 @@ import CloseRegular from '~icons/mingcute/close-line'
 import CloseSquareRegular from '~icons/mingcute/close-square-line'
 import CloudFilled from '~icons/mingcute/cloud-fill'
 import CloudRegular from '~icons/mingcute/cloud-line'
-import CopyRegular from '~icons/mingcute/copy-line'
 import FolderFilled from '~icons/mingcute/folder-fill'
 import FolderRegular from '~icons/mingcute/folder-line'
-import FolderOpenRegular from '~icons/mingcute/folder-open-line'
 import LayoutGridFilled from '~icons/mingcute/layout-grid-fill'
 import LayoutGridRegular from '~icons/mingcute/layout-grid-line'
 import PicFilled from '~icons/mingcute/pic-fill'
@@ -27,12 +25,12 @@ import { useFluidHover } from '~/hooks/use-fluid-hover'
 import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
 import { useTabs } from '~/hooks/useTabs'
 import { isLibraryPath } from '~/lib/library'
-import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
 import { control, radius } from '~/theme/layout.stylex'
 import { text, utility, weight } from '~/theme/text'
 import { tabMarker } from './markers.stylex'
+import { pathMenuItems } from './pathMenuItems'
 
 /**
  * How far a hovered tab keeps from the bar's bottom edge and from the active
@@ -255,17 +253,7 @@ function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemPr
         { label: t('tabs.closeOthers'), icon: CloseSquareRegular, disabled: isOnly, onSelect: () => closeOtherTabs(tab.id) },
         { label: t('tabs.closeToRight'), icon: AlignArrowRightRegular, disabled: isLast, onSelect: () => closeTabsToRight(tab.id) },
         // The Photos library has no path in Finder.
-        ...(path && !isLibraryPath(path)
-          ? [
-              { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(path) },
-              {
-                label: t('common.revealInFinder'),
-                icon: FolderOpenRegular,
-                onSelect: () =>
-                  void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
-              },
-            ]
-          : []),
+        ...(path && !isLibraryPath(path) ? pathMenuItems(t, path) : []),
       ]}
     >
       {item}

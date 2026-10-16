@@ -5,16 +5,13 @@ import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import CloseRegular from '~icons/mingcute/close-line'
-import CopyRegular from '~icons/mingcute/copy-line'
 import ExternalLinkRegular from '~icons/mingcute/external-link-line'
 import FolderDeleteRegular from '~icons/mingcute/folder-delete-line'
-import FolderOpenRegular from '~icons/mingcute/folder-open-line'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
 import { useOpenOnHover } from '~/hooks/useOpenOnHover'
 import { useThumbnail } from '~/hooks/useThumbnail'
 import { listSubfolders, scanFolderPage } from '~/lib/backend'
-import { openPath, writeText } from '~/lib/native'
 import { spring } from '~/lib/springs'
 import { colors } from '~/theme/colors.stylex'
 import { motion as motionTokens } from '~/theme/layout.stylex'
@@ -22,6 +19,7 @@ import { text, utility } from '~/theme/text'
 
 import { card } from './card'
 import { cardMarker } from './markers.stylex'
+import { pathMenuItems } from './pathMenuItems'
 
 /**
  * Candidates read for the cover photo: the first few, in case the first ones
@@ -401,13 +399,7 @@ function folderMenuItems(
 ): ContextMenuItem[] {
   return [
     ...(onOpenInNewTab ? [{ label: t('tabs.openInNewTab'), icon: ExternalLinkRegular, onSelect: onOpenInNewTab }] : []),
-    { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(path) },
-    {
-      label: t('common.revealInFinder'),
-      icon: FolderOpenRegular,
-      onSelect: () =>
-        void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
-    },
+    ...pathMenuItems(t, path),
     ...(onRemove ? [{ label: t('tabs.removeFromList'), icon: CloseRegular, onSelect: onRemove }] : []),
     ...(onDelete ? [{ label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete }] : []),
   ]
