@@ -38,8 +38,7 @@ export default antfu(
     react: true,
     antislop: true,
     // antislop 的通用规则会匹配所有文件，ESLint 无法解析 html/css
-    // bench/ 里有 Solid、Vue 的 TSX，不适用 React 规则
-    ignores: ['**/frontend/src/mygo.ts', '**/*.html', '**/*.css', 'bench/**', ...vendoredFluid],
+    ignores: ['**/frontend/src/mygo.ts', '**/*.html', '**/*.css', ...vendoredFluid],
   },
   {
     rules: {

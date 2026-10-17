@@ -14,5 +14,5 @@ export default defineConfig({
   env: {
     builtin: true,
   },
-  ignorePatterns: ['**/frontend/src/mygo.ts', 'bench/**', ...vendoredFluid],
+  ignorePatterns: ['**/frontend/src/mygo.ts', ...vendoredFluid],
 })
