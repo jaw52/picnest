@@ -9,7 +9,7 @@ import { stylexOptions } from './config/stylex.ts'
 
 export default defineConfig({
   clearScreen: false,
-  plugins: [stylex.vite(stylexOptions), react(), icons(iconsOptions)],
+  plugins: [stylex.vite(stylexOptions), react({ compiler: true }), icons(iconsOptions)],
   resolve: {
     alias: {
       '~': path.resolve(import.meta.dirname, './src'),

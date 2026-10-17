@@ -172,7 +172,8 @@ export function MasonryView() {
       setViewport(prev => (prev.top === top && prev.height === height ? prev : { top, height }))
     }
     function schedule() {
-      frame ||= requestAnimationFrame(update)
+      if (!frame)
+        frame = requestAnimationFrame(update)
     }
     schedule()
     scroller.addEventListener('scroll', schedule, { passive: true })

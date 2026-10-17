@@ -59,7 +59,7 @@ export function useBottomPull(enabled: boolean, scroller: HTMLElement | null) {
           settle()
         return
       }
-      retrying ||= sincePrevious > RETRY_GAP_MS
+      retrying = retrying || sincePrevious > RETRY_GAP_MS
       if (!retrying)
         return
       if (settling) {

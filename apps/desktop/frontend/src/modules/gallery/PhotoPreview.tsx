@@ -375,20 +375,22 @@ export function PhotoPreview() {
   function onWheel(e: WheelEvent<HTMLDivElement>) {
     if (e.ctrlKey)
       return
-    pagerRef.current ??= createSwipePager({
-      distance: () => Math.min(PAGE_TURN_DISTANCE, window.innerWidth / 5),
-      canPage: (direction) => {
-        const { index, photos } = swipeRef.current
-        return index !== -1 && photos[index + direction] !== undefined
-      },
-      follow: (offset) => {
-        slideRef.current?.stop()
-        slide.set(offset)
-      },
-      commit: direction => swipeRef.current.turnPage(direction),
-      turning: () => turningRef.current,
-      release: () => void slideTo(0),
-    })
+    if (!pagerRef.current) {
+      pagerRef.current = createSwipePager({
+        distance: () => Math.min(PAGE_TURN_DISTANCE, window.innerWidth / 5),
+        canPage: (direction) => {
+          const { index, photos } = swipeRef.current
+          return index !== -1 && photos[index + direction] !== undefined
+        },
+        follow: (offset) => {
+          slideRef.current?.stop()
+          slide.set(offset)
+        },
+        commit: direction => swipeRef.current.turnPage(direction),
+        turning: () => turningRef.current,
+        release: () => void slideTo(0),
+      })
+    }
     pagerRef.current.push(e.nativeEvent)
   }
 

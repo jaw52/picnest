@@ -15,7 +15,7 @@ const stylexPlugins = [stylex.vite(stylexOptions)]
   .map(plugin => ({ ...plugin, configureServer: undefined }))
 
 export default defineConfig({
-  plugins: [...stylexPlugins, react(), icons(iconsOptions)],
+  plugins: [...stylexPlugins, react({ compiler: true }), icons(iconsOptions)],
   resolve: {
     alias: {
       '~': path.resolve(import.meta.dirname, './src'),
