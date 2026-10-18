@@ -1,7 +1,7 @@
 {
   "name": "Picnest",
   "identifier": "design.jaw.picnest",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "copyright": "© 2026, jaw",
   "devUrl": "http://127.0.0.1:9245",
   "devCommand": "bun run --cwd frontend dev",
