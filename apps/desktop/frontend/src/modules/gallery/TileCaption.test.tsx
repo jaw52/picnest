@@ -12,6 +12,7 @@ const photo: Photo = {
   height: 200,
   rating: 3,
   modified: 0,
+  taken: 0,
   isCloudPlaceholder: false,
   aspectRatio: 1.5,
 }

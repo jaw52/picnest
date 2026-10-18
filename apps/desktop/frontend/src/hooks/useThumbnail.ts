@@ -29,6 +29,12 @@ export function cacheThumbnail(folderPath: string | null, filePath: string, maxE
     largestThumbnails.set(photoKey, { edge: maxEdge, url })
 }
 
+/** Forgets every resolved thumbnail, once their files are deleted. */
+export function clearThumbnailCache() {
+  thumbnailCache.clear()
+  largestThumbnails.clear()
+}
+
 /**
  * The largest thumbnail of a photo already resolved at any size, to stand in
  * for the photo while it loads; undefined if none is.

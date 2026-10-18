@@ -1,3 +1,4 @@
+import type { PhotoGrouping } from '~/lib/photo'
 import { i18n } from '~/i18n'
 
 export function formatFileSize(bytes: number): string {
@@ -20,4 +21,15 @@ export function formatUnixSeconds(seconds: number): string {
 export function fileExtension(fileName: string): string {
   const dot = fileName.lastIndexOf('.')
   return dot === -1 ? '' : fileName.slice(dot + 1).toUpperCase()
+}
+
+const PERIOD_FORMATS: Record<NonNullable<PhotoGrouping>, Intl.DateTimeFormatOptions> = {
+  year: { year: 'numeric' },
+  month: { year: 'numeric', month: 'long' },
+  day: { year: 'numeric', month: 'long', day: 'numeric' },
+}
+
+/** Names the year, month or day starting at `start` (milliseconds since the epoch). */
+export function formatPeriod(start: number, grouping: NonNullable<PhotoGrouping>): string {
+  return new Date(start).toLocaleDateString(i18n.language, PERIOD_FORMATS[grouping])
 }

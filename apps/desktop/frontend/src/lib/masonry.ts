@@ -62,6 +62,76 @@ export function layoutMasonry(
   return { columnWidth: width, cells, height: Math.max(Math.max(...columnTops) - gutter, 0) }
 }
 
+export interface MasonrySection {
+  /** Room above the section's items, for its header; 0 for none. */
+  headerHeight: number
+  aspectRatios: readonly number[]
+}
+
+export interface SectionedMasonryLayout extends MasonryLayout {
+  /** Where each section's header starts. */
+  headerTops: number[]
+}
+
+/**
+ * Lays out each section as its own masonry (see layoutMasonry), one under
+ * another, a gutter apart. The cells run on through the sections, as do
+ * `pinned`'s indices.
+ */
+export function layoutMasonrySections(
+  sections: readonly MasonrySection[],
+  containerWidth: number,
+  minColumnWidth: number,
+  gutter: number,
+  pinned: readonly (number | undefined)[] = [],
+): SectionedMasonryLayout {
+  const cells: MasonryCell[] = []
+  const headerTops: number[] = []
+  let top = 0
+  for (const { headerHeight, aspectRatios } of sections) {
+    const section = layoutMasonry(
+      aspectRatios,
+      containerWidth,
+      minColumnWidth,
+      gutter,
+      pinned.slice(cells.length, cells.length + aspectRatios.length),
+    )
+    headerTops.push(top)
+    const itemsTop = top + headerHeight
+    for (const cell of section.cells)
+      cells.push({ ...cell, top: cell.top + itemsTop })
+    top = itemsTop + section.height + gutter
+  }
+  return {
+    columnWidth: masonryColumns(containerWidth, minColumnWidth, gutter).width,
+    cells,
+    headerTops,
+    height: Math.max(top - gutter, 0),
+  }
+}
+
+/**
+ * Whether `next` is `previous` with some items left out and new ones added
+ * only after all the rest - the changes `pinned` columns hold up under. An
+ * item in `previous` but not in `next` may come back where it was.
+ */
+export function onlyRemovedOrAppended(previous: readonly string[], next: readonly string[]): boolean {
+  const rank = new Map(previous.map((item, i) => [item, i]))
+  let last = -1
+  let appending = false
+  for (const item of next) {
+    const r = rank.get(item)
+    if (r === undefined) {
+      appending = true
+      continue
+    }
+    if (appending || r < last)
+      return false
+    last = r
+  }
+  return true
+}
+
 export type GridDirection = 'up' | 'down' | 'left' | 'right'
 
 /**

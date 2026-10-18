@@ -274,26 +274,34 @@ func cfToGo(v cfRef) (any, bool) {
 	return nil, false
 }
 
-// imageDimensions reads the photo's dimensions as shown, turned upright by its
-// EXIF orientation, from the file header without decoding pixels.
-func imageDimensions(path string) (int, int, error) {
+// imageHeader is what a scan reads of a photo, from the file header without
+// decoding pixels.
+type imageHeader struct {
+	// Width and Height are as shown, turned upright by the EXIF orientation.
+	Width, Height int
+	// Taken is when the photo was taken (EXIF DateTimeOriginal), in Unix
+	// seconds; 0 if it doesn't say.
+	Taken int64
+}
+
+func readImageHeader(path string) (imageHeader, error) {
 	if err := loadFrameworks(); err != nil {
-		return 0, 0, err
+		return imageHeader{}, err
 	}
 	src := openSource(path)
 	if src == 0 {
-		return 0, 0, errors.New("unsupported image")
+		return imageHeader{}, errors.New("unsupported image")
 	}
 	defer cf.Release(src)
 	props := imgio.SourceCopyProperties(src, 0, 0)
 	if props == 0 {
-		return 0, 0, errors.New("failed to read image dimensions")
+		return imageHeader{}, errors.New("failed to read image dimensions")
 	}
 	defer cf.Release(props)
 	w, okW := cfNumberToInt(cf.DictionaryGetValue(props, kPixelWidth))
 	h, okH := cfNumberToInt(cf.DictionaryGetValue(props, kPixelHeight))
 	if !okW || !okH {
-		return 0, 0, errors.New("failed to read image dimensions")
+		return imageHeader{}, errors.New("failed to read image dimensions")
 	}
 	// Orientations 5–8 are stored turned a quarter.
 	if o := cf.DictionaryGetValue(props, kOrientation); o != 0 {
@@ -301,7 +309,21 @@ func imageDimensions(path string) (int, int, error) {
 			w, h = h, w
 		}
 	}
-	return w, h, nil
+	header := imageHeader{Width: w, Height: h}
+	if exif := cf.DictionaryGetValue(props, kExifDict); exif != 0 {
+		if date, ok := cfToGo(cf.DictionaryGetValue(exif, kExifDate)); ok {
+			if date, ok := date.(string); ok {
+				header.Taken = exifTime(date)
+			}
+		}
+	}
+	return header, nil
+}
+
+// imageDimensions reads the photo's dimensions as shown (see readImageHeader).
+func imageDimensions(path string) (int, int, error) {
+	header, err := readImageHeader(path)
+	return header.Width, header.Height, err
 }
 
 // imageKind reports whether an image has an alpha channel, and whether it

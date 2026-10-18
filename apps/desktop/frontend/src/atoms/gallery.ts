@@ -1,11 +1,11 @@
-import type { RatingFilter } from '~/lib/photo'
+import type { PhotoGrouping, RatingFilter } from '~/lib/photo'
 import type { TrashedPhoto } from '~/mygo'
 import type { FolderEntry } from '~/types/folder'
 import type { Photo } from '~/types/photo'
 
 import { atom } from 'jotai'
 import { atomWithStorage, selectAtom } from 'jotai/utils'
-import { filterPhotosByRating, matchesRatingFilter, successorOf } from '~/lib/photo'
+import { filterPhotosByRating, matchesRatingFilter, sortByTaken, successorOf } from '~/lib/photo'
 
 export const currentFolderAtom = atom<string | null>(null)
 export const photosAtom = atom<Photo[]>([])
@@ -36,6 +36,8 @@ export const thumbnailProgressAtom = atom<{ total: number, done: number }>({
  */
 export const bulkDeleteBlockedAtom = atom(get => get(thumbnailProgressAtom).total > 0)
 export const ratingFilterAtom = atom<RatingFilter>(null)
+/** Whether, and by which period, the grid groups photos by when they were taken. */
+export const photoGroupingAtom = atomWithStorage<PhotoGrouping>('picnest.photoGrouping', null)
 /** The latest scan of the tab's folder; an older one's pages are dropped. */
 export const scanIdAtom = atom(0)
 /**
@@ -133,10 +135,10 @@ export interface DeleteConfirmRequest {
  */
 export const deleteConfirmRequestAtom = atom<DeleteConfirmRequest | null>(null)
 
+/** The photos in the grid, in its order: the newest first while grouped by when they were taken. */
 export const filteredPhotosAtom = atom((get) => {
-  const photos = get(photosAtom)
-  const filter = get(ratingFilterAtom)
-  return filterPhotosByRating(photos, filter)
+  const photos = filterPhotosByRating(get(photosAtom), get(ratingFilterAtom))
+  return get(photoGroupingAtom) === null ? photos : sortByTaken(photos)
 })
 
 /**

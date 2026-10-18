@@ -46,6 +46,7 @@ it.each(['Delete', 'Backspace'])(
       height: 100,
       rating: 0,
       modified: 0,
+      taken: 0,
       isCloudPlaceholder: false,
       aspectRatio: 1,
     }
@@ -84,6 +85,7 @@ it('rates the grid selection, then only the previewed photo, with the 0-5 keys',
     height: 100,
     rating: 0,
     modified: 0,
+    taken: 0,
     isCloudPlaceholder: false,
     aspectRatio: 1,
   }
@@ -150,6 +152,7 @@ function twoPhotos() {
     height: 100,
     rating: 0,
     modified: 0,
+    taken: 0,
     isCloudPlaceholder: false,
     aspectRatio: 1,
   }

@@ -16,6 +16,7 @@ function photo(path: string, fileName = ''): Photo {
     height: 3,
     rating: 0,
     modified: 0,
+    taken: 0,
     isCloudPlaceholder: false,
     aspectRatio: 4 / 3,
   }

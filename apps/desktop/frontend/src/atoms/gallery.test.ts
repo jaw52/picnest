@@ -23,6 +23,7 @@ function photo(id: string, rating = 0): Photo {
     height: 100,
     rating,
     modified: 0,
+    taken: 0,
     isCloudPlaceholder: false,
     aspectRatio: 1,
   }

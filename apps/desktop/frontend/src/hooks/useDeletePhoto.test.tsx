@@ -52,6 +52,7 @@ function makePhoto(id: string): Photo {
     height: 100,
     rating: 0,
     modified: 0,
+    taken: 0,
     isCloudPlaceholder: false,
     aspectRatio: 1,
   }

@@ -14,6 +14,7 @@ const photos: Photo[] = Array.from({ length: 200 }, (_, i) => ({
   height: 2,
   rating: 0,
   modified: 0,
+  taken: 0,
   isCloudPlaceholder: false,
   aspectRatio: 1.5,
 }))

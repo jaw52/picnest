@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { cellsInRange, layoutMasonry, masonryColumns, neighborCell } from './masonry'
+import { cellsInRange, layoutMasonry, layoutMasonrySections, masonryColumns, neighborCell, onlyRemovedOrAppended } from './masonry'
 
 describe('masonryColumns', () => {
   it('fits as many minimum-width columns as possible and stretches them', () => {
@@ -39,6 +39,49 @@ describe('layoutMasonry', () => {
 
   it('is empty for no items', () => {
     expect(layoutMasonry([], 500, 100, 8)).toEqual({ columnWidth: 119, cells: [], height: 0 })
+  })
+})
+
+describe('layoutMasonrySections', () => {
+  it('stacks each section under its header, a gutter apart', () => {
+    const layout = layoutMasonrySections(
+      [{ headerHeight: 0, aspectRatios: [1, 0.5] }, { headerHeight: 30, aspectRatios: [1] }],
+      208,
+      100,
+      8,
+    )
+    expect(layout.headerTops).toEqual([0, 208])
+    expect(layout.cells).toEqual([
+      { top: 0, left: 0, height: 100, column: 0 },
+      { top: 0, left: 108, height: 200, column: 1 },
+      { top: 238, left: 0, height: 100, column: 0 },
+    ])
+    expect(layout.height).toBe(338)
+  })
+
+  it('pins by index across sections', () => {
+    const layout = layoutMasonrySections(
+      [{ headerHeight: 0, aspectRatios: [1] }, { headerHeight: 0, aspectRatios: [1] }],
+      208,
+      100,
+      8,
+      [undefined, 1],
+    )
+    expect(layout.cells.map(c => c.column)).toEqual([0, 1])
+  })
+})
+
+describe('onlyRemovedOrAppended', () => {
+  it('holds for items left out, put back where they were, or added at the end', () => {
+    expect(onlyRemovedOrAppended(['a', 'b', 'c'], ['a', 'c'])).toBe(true)
+    expect(onlyRemovedOrAppended(['a', 'b', 'c'], ['a', 'b', 'c', 'd'])).toBe(true)
+    expect(onlyRemovedOrAppended(['a', 'b', 'c'], ['b', 'c', 'd', 'e'])).toBe(true)
+  })
+
+  it('fails for items added among the others or moved', () => {
+    expect(onlyRemovedOrAppended(['a', 'b'], ['a', 'x', 'b'])).toBe(false)
+    expect(onlyRemovedOrAppended(['a', 'b'], ['x', 'a', 'b'])).toBe(false)
+    expect(onlyRemovedOrAppended(['a', 'b'], ['b', 'a'])).toBe(false)
   })
 })
 

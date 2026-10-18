@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/egoist/mygo"
 )
@@ -23,6 +25,9 @@ var (
 	languageChanged = mygo.NewEvent[LanguageState]("language-changed")
 	// openSettings asks the page to open Settings, chosen from the menu bar.
 	openSettings = mygo.NewEvent[struct{}]("open-settings")
+	// cacheClearProgress tells the page clearing the photo cache how far it
+	// has got.
+	cacheClearProgress = mygo.NewEvent[CacheClearProgress]("cache-clear-progress")
 )
 
 // configFile returns a path inside the app config dir.
@@ -67,6 +72,28 @@ func (a *App) ScanFolderPage(folderPath string, offset, limit int) (PhotoPage, e
 		return scanLibraryPage(offset, limit)
 	}
 	return scanFolderPage(folderPath, offset, limit)
+}
+
+// PhotoCacheSize is how many bytes the thumbnails and what scans read of the
+// photos in folders and their subfolders, the library and the collect
+// folder take.
+func (a *App) PhotoCacheSize(folders []string) int64 {
+	return photoCacheSize(folders)
+}
+
+// ClearPhotoCache deletes the cache PhotoCacheSize measures, to be made again
+// as the photos are shown, sending the calling page cacheClearProgress as it
+// goes. Ratings are kept.
+func (a *App) ClearPhotoCache(ctx context.Context, folders []string) error {
+	win := mygo.CallerWindow(ctx)
+	// At most one update a frame or so, and always the last one.
+	var sent time.Time
+	return clearPhotoCache(folders, func(p CacheClearProgress) {
+		if win != nil && (p.Done == p.Total || time.Since(sent) >= 16*time.Millisecond) {
+			sent = time.Now()
+			_ = cacheClearProgress.Emit(win, p)
+		}
+	})
 }
 
 // LibraryFileNames returns the names photos in the Photos library had when

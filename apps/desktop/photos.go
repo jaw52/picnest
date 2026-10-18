@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 )
 
 var imageExtensions = map[string]bool{
@@ -32,14 +33,36 @@ func isCloudPlaceholder(info os.FileInfo) bool {
 	return ok && info.Size() > 0 && st.Blocks == 0
 }
 
+// birthTime is when the file was created, in Unix seconds; 0 if unknown.
+func birthTime(info os.FileInfo) int64 {
+	if st, ok := info.Sys().(*syscall.Stat_t); ok {
+		return st.Birthtimespec.Sec
+	}
+	return 0
+}
+
+// exifTime reads an EXIF date ("2006:01:02 15:04:05", in the camera's local
+// time) as Unix seconds; 0 if it isn't one.
+func exifTime(date string) int64 {
+	t, err := time.ParseInLocation("2006:01:02 15:04:05", strings.TrimSpace(date), time.Local)
+	if err != nil {
+		return 0
+	}
+	return t.Unix()
+}
+
 type PhotoMeta struct {
-	Path               string `json:"path"`
-	FileName           string `json:"fileName"`
-	Width              int    `json:"width"`
-	Height             int    `json:"height"`
-	Rating             int    `json:"rating"`
-	Modified           int64  `json:"modified"`
-	IsCloudPlaceholder bool   `json:"isCloudPlaceholder"`
+	Path     string `json:"path"`
+	FileName string `json:"fileName"`
+	Width    int    `json:"width"`
+	Height   int    `json:"height"`
+	Rating   int    `json:"rating"`
+	Modified int64  `json:"modified"`
+	// Taken is when the photo was taken, in Unix seconds: by its EXIF, else
+	// when its file was created (a library photo's creation date). What the
+	// grid groups photos by.
+	Taken              int64 `json:"taken"`
+	IsCloudPlaceholder bool  `json:"isCloudPlaceholder"`
 }
 
 type PhotoPage struct {
@@ -48,9 +71,9 @@ type PhotoPage struct {
 }
 
 type fileStat struct {
-	path, name    string
-	size, modTime int64
-	placeholder   bool
+	path, name             string
+	size, modTime, created int64
+	placeholder            bool
 }
 
 // listFiles stats every image directly inside folder, sorted by name. The
@@ -75,6 +98,7 @@ func listFiles(folder string) ([]fileStat, error) {
 			name:        e.Name(),
 			size:        info.Size(),
 			modTime:     info.ModTime().Unix(),
+			created:     birthTime(info),
 			placeholder: isCloudPlaceholder(info),
 		})
 	}
@@ -150,7 +174,7 @@ func scanFolderPage(folder string, offset, limit int) (PhotoPage, error) {
 			defer func() { <-sem; wg.Done() }()
 			meta := PhotoMeta{
 				Path: f.path, FileName: f.name, Rating: ratings[f.name],
-				Modified: f.modTime, IsCloudPlaceholder: f.placeholder,
+				Modified: f.modTime, Taken: f.created, IsCloudPlaceholder: f.placeholder,
 			}
 			switch c, ok := cached[f.name]; {
 			case f.placeholder:
@@ -163,14 +187,20 @@ func scanFolderPage(folder string, offset, limit int) (PhotoPage, error) {
 				}
 			case ok && c.Size == f.size && c.Mtime == f.modTime:
 				meta.Width, meta.Height = c.Width, c.Height
+				if c.Taken != 0 {
+					meta.Taken = c.Taken
+				}
 			default:
-				w, h, err := imageDimensions(f.path)
+				header, err := readImageHeader(f.path)
 				if err != nil {
 					return
 				}
-				meta.Width, meta.Height = w, h
+				meta.Width, meta.Height = header.Width, header.Height
+				if header.Taken != 0 {
+					meta.Taken = header.Taken
+				}
 				mu.Lock()
-				updates = append(updates, photoMetaUpdate{f.name, cachedPhotoMeta{w, h, f.size, f.modTime}})
+				updates = append(updates, photoMetaUpdate{f.name, cachedPhotoMeta{header.Width, header.Height, header.Taken, f.size, f.modTime}})
 				mu.Unlock()
 			}
 			results[i] = &meta
@@ -369,8 +399,7 @@ func readPhotoDetails(path string) (PhotoDetails, error) {
 		return PhotoDetails{}, fmt.Errorf("failed to stat file: %w", err)
 	}
 	details := PhotoDetails{FileSize: info.Size()}
-	if st, ok := info.Sys().(*syscall.Stat_t); ok {
-		created := st.Birthtimespec.Sec
+	if created := birthTime(info); created != 0 {
 		details.Created = &created
 	}
 	details.Exif = readExif(path)

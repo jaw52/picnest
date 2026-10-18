@@ -304,6 +304,7 @@ func scanLibraryPage(offset, limit int) (PhotoPage, error) {
 				Height:   pk.SendInt(asset, sel("pixelHeight")),
 				Rating:   ratings[id],
 				Modified: assetStamp(asset),
+				Taken:    unixSeconds(objc.Send(asset, sel("creationDate"))),
 			})
 			objc.PoolPop(pool)
 		}

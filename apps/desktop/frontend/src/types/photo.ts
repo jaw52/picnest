@@ -5,6 +5,7 @@ export interface PhotoMeta {
   height: number
   rating: number
   modified: number
+  taken: number
   isCloudPlaceholder: boolean
 }
 

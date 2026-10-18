@@ -45,3 +45,42 @@ export function successorOf<T extends { id: string }>(
   return photos.slice(last + 1).find(p => !removed.has(p.id))
     ?? photos.slice(0, last).findLast(p => !removed.has(p.id))
 }
+
+/** What the grid groups photos by when they were taken; `null` for not at all. */
+export type PhotoGrouping = 'year' | 'month' | 'day' | null
+
+/** A run of photos taken in the same year, month or day. */
+export interface PhotoGroup {
+  /** When the period starts, in local time, as milliseconds since the epoch. */
+  start: number
+  photos: Photo[]
+}
+
+/** The newest first; photos taken at the same time keep their order. */
+export function sortByTaken(photos: readonly Photo[]): Photo[] {
+  return photos.toSorted((a, b) => b.taken - a.taken)
+}
+
+/** The start of the period `taken` (Unix seconds) falls in, in local time. */
+function periodStart(taken: number, grouping: NonNullable<PhotoGrouping>): number {
+  const date = new Date(taken * 1000)
+  return new Date(
+    date.getFullYear(),
+    grouping === 'year' ? 0 : date.getMonth(),
+    grouping === 'day' ? date.getDate() : 1,
+  ).getTime()
+}
+
+/** Splits `photos`, in their order, into runs taken in the same period. */
+export function groupPhotos(photos: readonly Photo[], grouping: NonNullable<PhotoGrouping>): PhotoGroup[] {
+  const groups: PhotoGroup[] = []
+  for (const photo of photos) {
+    const start = periodStart(photo.taken, grouping)
+    const last = groups.at(-1)
+    if (last?.start === start)
+      last.photos.push(photo)
+    else
+      groups.push({ start, photos: [photo] })
+  }
+  return groups
+}

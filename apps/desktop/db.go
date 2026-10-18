@@ -2,9 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -15,7 +18,7 @@ import (
 // ratings database and the thumbnail cache, and never touches originals.
 const sidecarDirName = ".picnest"
 
-var recordTables = []string{"ratings", "photo_size", "sources"}
+var recordTables = []string{"ratings", "photo_meta", "sources"}
 
 func sidecarDir(folder string) string {
 	if isLibraryPath(folder) {
@@ -46,10 +49,11 @@ func openRatingsDB(folder string) (*sql.DB, error) {
 			rating     INTEGER NOT NULL CHECK(rating BETWEEN 0 AND 5),
 			updated_at INTEGER NOT NULL
 		);
-		CREATE TABLE IF NOT EXISTS photo_size (
+		CREATE TABLE IF NOT EXISTS photo_meta (
 			file_name TEXT PRIMARY KEY,
 			width     INTEGER NOT NULL,
 			height    INTEGER NOT NULL,
+			taken     INTEGER NOT NULL,
 			size      INTEGER NOT NULL,
 			mtime     INTEGER NOT NULL
 		);
@@ -67,15 +71,16 @@ func openRatingsDB(folder string) (*sql.DB, error) {
 	return db, nil
 }
 
-// cachedPhotoMeta holds dimensions from a previous scan. It is only valid
-// while size and mtime still match the file on disk.
+// cachedPhotoMeta holds what a previous scan read of a photo's header (see
+// imageHeader). It is only valid while size and mtime still match the file
+// on disk.
 type cachedPhotoMeta struct {
 	Width, Height int
+	Taken         int64
 	Size, Mtime   int64
 }
 
-// getPhotoMeta returns the cached dimensions of the named files that have
-// any.
+// getPhotoMeta returns what is cached of the named files that have any.
 func getPhotoMeta(db *sql.DB, names []string) (map[string]cachedPhotoMeta, error) {
 	out := map[string]cachedPhotoMeta{}
 	if len(names) == 0 {
@@ -85,7 +90,7 @@ func getPhotoMeta(db *sql.DB, names []string) (map[string]cachedPhotoMeta, error
 	for i, name := range names {
 		args[i] = name
 	}
-	rows, err := db.Query("SELECT file_name, width, height, size, mtime FROM photo_size WHERE file_name IN (?"+
+	rows, err := db.Query("SELECT file_name, width, height, taken, size, mtime FROM photo_meta WHERE file_name IN (?"+
 		strings.Repeat(", ?", len(names)-1)+")", args...)
 	if err != nil {
 		return nil, err
@@ -94,7 +99,7 @@ func getPhotoMeta(db *sql.DB, names []string) (map[string]cachedPhotoMeta, error
 	for rows.Next() {
 		var name string
 		var m cachedPhotoMeta
-		if err := rows.Scan(&name, &m.Width, &m.Height, &m.Size, &m.Mtime); err != nil {
+		if err := rows.Scan(&name, &m.Width, &m.Height, &m.Taken, &m.Size, &m.Mtime); err != nil {
 			return nil, err
 		}
 		out[name] = m
@@ -117,10 +122,10 @@ func upsertPhotoMetaBatch(db *sql.DB, entries []photoMetaUpdate) error {
 	}
 	defer tx.Rollback()
 	for _, e := range entries {
-		_, err := tx.Exec(`INSERT INTO photo_size (file_name, width, height, size, mtime) VALUES (?, ?, ?, ?, ?)
+		_, err := tx.Exec(`INSERT INTO photo_meta (file_name, width, height, taken, size, mtime) VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT(file_name) DO UPDATE SET width = excluded.width, height = excluded.height,
-				size = excluded.size, mtime = excluded.mtime`,
-			e.FileName, e.Width, e.Height, e.Size, e.Mtime)
+				taken = excluded.taken, size = excluded.size, mtime = excluded.mtime`,
+			e.FileName, e.Width, e.Height, e.Taken, e.Size, e.Mtime)
 		if err != nil {
 			return err
 		}
@@ -194,4 +199,121 @@ func moveFileRecords(db *sql.DB, destDB, fileName string) (err error) {
 		}
 	}
 	return nil
+}
+
+// photoCacheSidecars lists the sidecars in and under folders, plus the
+// library's and the collect folder's, that exist.
+func photoCacheSidecars(folders []string) []string {
+	dirs := []string{sidecarDir(libraryRoot)}
+	if dir := collectTarget(); dir != "" {
+		folders = append(folders, dir)
+	}
+	for _, folder := range folders {
+		// Unreadable folders, or ones gone since, have nothing cached.
+		_ = filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || !d.IsDir() || path == folder {
+				return nil
+			}
+			if name := d.Name(); strings.HasPrefix(name, ".") {
+				if name == sidecarDirName {
+					dirs = append(dirs, path)
+				}
+				return filepath.SkipDir
+			}
+			return nil
+		})
+	}
+	return slices.DeleteFunc(dirs, func(dir string) bool {
+		_, err := os.Stat(dir)
+		return err != nil
+	})
+}
+
+// openExistingDB opens a sidecar's ratings database, or nil if it has none,
+// rather than creating one as openRatingsDB does.
+func openExistingDB(sidecar string) *sql.DB {
+	path := filepath.Join(sidecar, "ratings.db")
+	if _, err := os.Stat(path); err != nil {
+		return nil
+	}
+	db, err := sql.Open("sqlite", "file:"+path+"?_pragma=busy_timeout(5000)")
+	if err != nil {
+		return nil
+	}
+	return db
+}
+
+// photoCacheSize is how many bytes the photo cache (see clearPhotoCache)
+// takes in folders.
+func photoCacheSize(folders []string) int64 {
+	var total int64
+	for _, sidecar := range photoCacheSidecars(folders) {
+		_ = filepath.WalkDir(filepath.Join(sidecar, "thumbs"), func(_ string, d fs.DirEntry, err error) error {
+			if err == nil && !d.IsDir() {
+				if info, err := d.Info(); err == nil {
+					total += info.Size()
+				}
+			}
+			return nil
+		})
+		if db := openExistingDB(sidecar); db != nil {
+			var size int64
+			if db.QueryRow("SELECT coalesce(sum(pgsize), 0) FROM dbstat WHERE name = 'photo_meta'").Scan(&size) == nil {
+				total += size
+			}
+			db.Close()
+		}
+	}
+	return total
+}
+
+// CacheClearProgress is how far clearing the photo cache has got: files and
+// tables deleted out of all of them.
+type CacheClearProgress struct {
+	Done  int `json:"done"`
+	Total int `json:"total"`
+}
+
+// clearPhotoCache deletes what scans and thumbnails cached of the photos in
+// and under folders, the library and the collect folder - their thumbnails
+// and what was read of their headers (photo_meta) - to be made again as
+// they're shown. Ratings and sources are kept. progress is called as it goes.
+func clearPhotoCache(folders []string, progress func(CacheClearProgress)) error {
+	type sidecarCache struct {
+		dir    string
+		thumbs []string
+	}
+	var caches []sidecarCache
+	total := 0
+	for _, sidecar := range photoCacheSidecars(folders) {
+		thumbs, _ := filepath.Glob(filepath.Join(sidecar, "thumbs", "*"))
+		caches = append(caches, sidecarCache{sidecar, thumbs})
+		total += len(thumbs) + 1 // the table
+	}
+	done := 0
+	step := func() {
+		done++
+		progress(CacheClearProgress{done, total})
+	}
+	var errs []error
+	for _, c := range caches {
+		for _, thumb := range c.thumbs {
+			if err := os.Remove(thumb); err != nil && !os.IsNotExist(err) {
+				errs = append(errs, err)
+			}
+			step()
+		}
+		// Anything left, such as a thumbnail written meanwhile.
+		if err := os.RemoveAll(filepath.Join(c.dir, "thumbs")); err != nil {
+			errs = append(errs, err)
+		}
+		if db := openExistingDB(c.dir); db != nil {
+			if _, err := db.Exec("DROP TABLE IF EXISTS photo_meta"); err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", c.dir, err))
+			}
+			db.Close()
+		}
+		step()
+	}
+	return errors.Join(errs...)
 }

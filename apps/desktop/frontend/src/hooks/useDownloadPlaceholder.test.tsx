@@ -21,6 +21,7 @@ const placeholder: Photo = {
   height: 1,
   rating: 0,
   modified: 0,
+  taken: 0,
   isCloudPlaceholder: true,
   aspectRatio: 1,
 }

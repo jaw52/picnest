@@ -1,4 +1,5 @@
-import type { GridDirection, MasonryLayout } from '~/lib/masonry'
+import type { GridDirection, MasonryCell, MasonrySection, SectionedMasonryLayout } from '~/lib/masonry'
+import type { PhotoGroup, PhotoGrouping } from '~/lib/photo'
 import type { FolderEntry } from '~/types/folder'
 import type { Photo } from '~/types/photo'
 import * as stylex from '@stylexjs/stylex'
@@ -9,6 +10,7 @@ import {
   currentFolderAtom,
   filteredPhotosAtom,
   isScanningAtom,
+  photoGroupingAtom,
   photosTotalAtom,
   previewPhotoIdAtom,
   ratingFilterAtom,
@@ -25,10 +27,12 @@ import { useTabs } from '~/hooks/useTabs'
 import { thumbnailCache, thumbnailCacheKey, thumbnailEdgeFor } from '~/hooks/useThumbnail'
 import { useThumbnailPinch } from '~/hooks/useThumbnailPinch'
 import { useThumbnailPrefetch } from '~/hooks/useThumbnailPrefetch'
-import { cellsInRange, layoutMasonry, masonryColumns, neighborCell } from '~/lib/masonry'
+import { formatPeriod } from '~/lib/format'
+import { cellsInRange, layoutMasonrySections, masonryColumns, neighborCell, onlyRemovedOrAppended } from '~/lib/masonry'
+import { groupPhotos } from '~/lib/photo'
 import { FolderTile } from '~/modules/tabs/FolderCard'
 import { colors } from '~/theme/colors.stylex'
-import { text } from '~/theme/text'
+import { text, weight } from '~/theme/text'
 
 import { MasonryPhotoItem } from './MasonryPhotoItem'
 import { OverscrollArc } from './OverscrollArc'
@@ -42,6 +46,8 @@ const SCROLL_STEP = 100
 const FOLDER_TILE_ASPECT_RATIO = 4 / 3
 /** Room kept between a revealed photo and the edges of the visible grid. */
 const REVEAL_MARGIN = 12
+/** Room above a group of photos for the period they were taken in. */
+const GROUP_HEADER_HEIGHT = 36
 
 type GridInputs = readonly [
   subfolders: FolderEntry[],
@@ -50,25 +56,47 @@ type GridInputs = readonly [
   columnWidth: number,
   folderPath: string | null,
   ratingFilter: number | null,
+  grouping: PhotoGrouping,
 ]
 
 interface GridLayout {
   inputs: GridInputs
-  layout: MasonryLayout
+  layout: SectionedMasonryLayout
+  /** The photos' groups, whose headers are the layout's sections' after the subfolders'. */
+  groups: PhotoGroup[]
+  /** The subfolders' tiles, then the photos', in the order of the layout's cells. */
+  tiles: string[]
   /** What the tiles' columns were laid out for; a change of it starts afresh. */
   key: string
   columnByTile: Map<string, number>
+  /** The layout this one took over from for the same key, which is still on screen until it renders. */
+  replaced: { tiles: string[], cells: MasonryCell[] } | null
 }
 
-/** Lays out the subfolders, then the photos, keeping tiles in the columns `previous` gave them. */
+/**
+ * Lays out the subfolders, then the photos - each group of them under its
+ * header, when grouped - keeping tiles in the columns `previous` gave them.
+ */
 function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout {
-  const [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter] = inputs
+  const [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter, grouping] = inputs
   const tiles = [...subfolders.map(f => `folder:${f.path}`), ...photos.map(p => p.id)]
   const { count } = masonryColumns(containerWidth, columnWidth, COLUMN_GUTTER)
-  const key = `${folderPath}|${ratingFilter}|${count}`
-  const kept = previous?.key === key ? previous.columnByTile : new Map<string, number>()
-  const layout = layoutMasonry(
-    [...subfolders.map(() => FOLDER_TILE_ASPECT_RATIO), ...photos.map(p => p.aspectRatio)],
+  const key = `${folderPath}|${ratingFilter}|${grouping}|${count}`
+  // Photos that came in among the others (a page of them sorted in by when
+  // they were taken) start afresh too: kept columns would crowd them.
+  const kept = previous?.key === key && onlyRemovedOrAppended([...previous.columnByTile.keys()], tiles)
+    ? previous.columnByTile
+    : new Map<string, number>()
+  const folderRatios = subfolders.map(() => FOLDER_TILE_ASPECT_RATIO)
+  const groups = grouping === null ? [] : groupPhotos(photos, grouping)
+  const sections: MasonrySection[] = grouping === null
+    ? [{ headerHeight: 0, aspectRatios: [...folderRatios, ...photos.map(p => p.aspectRatio)] }]
+    : [
+        ...(subfolders.length > 0 ? [{ headerHeight: 0, aspectRatios: folderRatios }] : []),
+        ...groups.map(g => ({ headerHeight: GROUP_HEADER_HEIGHT, aspectRatios: g.photos.map(p => p.aspectRatio) })),
+      ]
+  const layout = layoutMasonrySections(
+    sections,
     containerWidth,
     columnWidth,
     COLUMN_GUTTER,
@@ -78,7 +106,25 @@ function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout
   // undone) puts the photo back where it was.
   const columnByTile = new Map(kept)
   tiles.forEach((tile, i) => columnByTile.set(tile, layout.cells[i].column))
-  return { inputs, layout, key, columnByTile }
+  const replaced = previous?.key === key ? { tiles: previous.tiles, cells: previous.layout.cells } : null
+  return { inputs, layout, groups, tiles, key, columnByTile, replaced }
+}
+
+/**
+ * How far the tile at the top of the scroller (`shown` down the grid) moved
+ * when `grid` took over from the layout it replaced; 0 if it didn't or left.
+ */
+function anchorShift(grid: GridLayout, shown: number) {
+  const previous = grid.replaced
+  if (!previous)
+    return 0
+  let anchor = -1
+  for (const [i, cell] of previous.cells.entries()) {
+    if (cell.top + cell.height > shown && (anchor === -1 || cell.top < previous.cells[anchor].top))
+      anchor = i
+  }
+  const to = anchor === -1 ? -1 : grid.tiles.indexOf(previous.tiles[anchor])
+  return to === -1 ? 0 : grid.layout.cells[to].top - previous.cells[anchor].top
 }
 
 /**
@@ -98,9 +144,19 @@ const styles = stylex.create({
     color: colors['--ps-muted-foreground'],
   },
   grid: { position: 'relative' },
+  groupHeader: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    display: 'flex',
+    alignItems: 'center',
+    height: GROUP_HEADER_HEIGHT - COLUMN_GUTTER,
+    color: colors['--ps-foreground'],
+  },
   gridHeight: (height: number) => ({ height }),
   cell: { position: 'absolute' },
   cellPosition: (top: number, left: number) => ({ top, left }),
+  headerPosition: (top: number) => ({ top }),
 })
 
 /**
@@ -116,6 +172,7 @@ export function MasonryView() {
   const isScanning = useAtomValue(isScanningAtom)
   const photosTotal = useAtomValue(photosTotalAtom)
   const ratingFilter = useAtomValue(ratingFilterAtom)
+  const grouping = useAtomValue(photoGroupingAtom)
   const previewId = useAtomValue(previewPhotoIdAtom)
   const { openFromClick } = useTabs()
   const { refreshFolder } = useOpenFolder()
@@ -139,17 +196,32 @@ export function MasonryView() {
   // Laid out again during render whenever an input changes, keeping each
   // tile in its column (see layOutGrid): a photo rated out of the filter or
   // deleted only closes up its own column, not the whole grid.
-  const inputs = [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter] as const
+  const inputs = [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter, grouping] as const
   const [grid, setGrid] = useState<GridLayout | null>(null)
-  let layout: MasonryLayout
+  let current: GridLayout
   if (grid && inputs.every((input, i) => input === grid.inputs[i])) {
-    layout = grid.layout
+    current = grid
   }
   else {
-    const next = layOutGrid(inputs, grid)
-    setGrid(next)
-    layout = next.layout
+    current = layOutGrid(inputs, grid)
+    setGrid(current)
   }
+  const { layout, groups } = current
+
+  // Keeps the tile at the top of the scroller where it was when the grid is
+  // laid out again around it, so what's on screen doesn't jump away. `grid`
+  // holds the layout from render by the time this runs.
+  useLayoutEffect(() => {
+    const el = containerRef.current
+    if (!grid || !el || !scroller)
+      return
+    // In grid coordinates; at the very top, new photos show up above.
+    const shown = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top
+    const shift = shown > 0 ? anchorShift(grid, shown) : 0
+    if (shift !== 0)
+      scroller.scrollBy({ top: shift })
+  }, [grid, scroller])
+
   const thumbnailEdge = thumbnailEdgeFor(layout.columnWidth)
   useThumbnailPrefetch(folderPath, containerWidth > 0 ? thumbnailEdge : 0)
 
@@ -282,6 +354,20 @@ export function MasonryView() {
         aria-multiselectable
         {...stylex.props(styles.grid, styles.gridHeight(layout.height))}
       >
+        {containerWidth > 0 && grouping !== null && groups.map((group, g) => {
+          // The groups' sections come after the subfolders', if there are any.
+          const top = layout.headerTops[g + layout.headerTops.length - groups.length]
+          if (top < viewport.top - viewport.height || top > viewport.top + SCROLL_STEP + viewport.height * 2)
+            return null
+          return (
+            <h2
+              key={group.start}
+              {...stylex.props(styles.groupHeader, styles.headerPosition(top), text.body, weight.semibold)}
+            >
+              {formatPeriod(group.start, grouping)}
+            </h2>
+          )
+        })}
         {containerWidth > 0 && visible.map((i) => {
           const cell = layout.cells[i]
           const position = stylex.props(styles.cell, styles.cellPosition(cell.top, cell.left))

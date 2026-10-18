@@ -2,7 +2,7 @@ import type { Photo, PhotoMeta } from '~/types/photo'
 
 import { describe, expect, it } from 'vitest'
 
-import { filterPhotosByRating, matchesRatingFilter, ratingCounts, successorOf, toPhoto } from './photo'
+import { filterPhotosByRating, groupPhotos, matchesRatingFilter, ratingCounts, sortByTaken, successorOf, toPhoto } from './photo'
 
 function photo(overrides: Partial<Photo> = {}): Photo {
   return {
@@ -12,6 +12,7 @@ function photo(overrides: Partial<Photo> = {}): Photo {
     id: '/a.jpg',
     isCloudPlaceholder: false,
     modified: 0,
+    taken: 0,
     path: '/a.jpg',
     rating: 0,
     width: 100,
@@ -26,6 +27,7 @@ describe('toPhoto', () => {
       height: 400,
       isCloudPlaceholder: false,
       modified: 123,
+      taken: 0,
       path: '/x/y.jpg',
       rating: 3,
       width: 800,
@@ -42,6 +44,7 @@ describe('toPhoto', () => {
       height: 0,
       isCloudPlaceholder: false,
       modified: 0,
+      taken: 0,
       path: '/x/broken.jpg',
       rating: 0,
       width: 800,
@@ -130,5 +133,34 @@ describe('successorOf', () => {
   it('is undefined when nothing is left or nothing was removed', () => {
     expect(successorOf(photos, ids('a', 'b', 'c', 'd', 'e'))).toBeUndefined()
     expect(successorOf(photos, ids('z'))).toBeUndefined()
+  })
+})
+
+describe('sortByTaken', () => {
+  it('puts the newest first, keeping the order of ties', () => {
+    const photos = [
+      photo({ id: 'a', taken: 1 }),
+      photo({ id: 'b', taken: 3 }),
+      photo({ id: 'c', taken: 1 }),
+    ]
+    expect(sortByTaken(photos).map(p => p.id)).toEqual(['b', 'a', 'c'])
+  })
+})
+
+describe('groupPhotos', () => {
+  const at = (id: string, ...date: [number, number, number]) =>
+    photo({ id, taken: new Date(...date).getTime() / 1000 })
+  const photos = [at('a', 2025, 4, 2), at('b', 2025, 4, 1), at('c', 2025, 3, 30), at('d', 2024, 11, 31)]
+
+  it('splits the photos into runs from the same period', () => {
+    const ids = (grouping: 'year' | 'month' | 'day') =>
+      groupPhotos(photos, grouping).map(g => g.photos.map(p => p.id))
+    expect(ids('year')).toEqual([['a', 'b', 'c'], ['d']])
+    expect(ids('month')).toEqual([['a', 'b'], ['c'], ['d']])
+    expect(ids('day')).toEqual([['a'], ['b'], ['c'], ['d']])
+  })
+
+  it('starts each group at its period\'s start', () => {
+    expect(groupPhotos(photos, 'month')[0].start).toBe(new Date(2025, 4, 1).getTime())
   })
 })

@@ -4,6 +4,15 @@ import { call, event } from "mygo-runtime";
 
 // ---- Types ----
 
+/**
+ * CacheClearProgress is how far clearing the photo cache has got: files and
+ * tables deleted out of all of them.
+ */
+export interface CacheClearProgress {
+  done: number;
+  total: number;
+}
+
 /** CollectItem is a picture dropped to be collected. */
 export interface CollectItem {
   id: number;
@@ -80,6 +89,12 @@ export interface PhotoMeta {
   height: number;
   rating: number;
   modified: number;
+  /**
+   * Taken is when the photo was taken, in Unix seconds: by its EXIF, else
+   * when its file was created (a library photo's creation date). What the
+   * grid groups photos by.
+   */
+  taken: number;
   isCloudPlaceholder: boolean;
 }
 
@@ -108,6 +123,14 @@ export const App = {
    */
   cancelThumbnail(requestID: string): Promise<void> {
     return call("App.CancelThumbnail", requestID);
+  },
+  /**
+   * ClearPhotoCache deletes the cache PhotoCacheSize measures, to be made again
+   * as the photos are shown, sending the calling page cacheClearProgress as it
+   * goes. Ratings are kept.
+   */
+  clearPhotoCache(folders: string[]): Promise<void> {
+    return call("App.ClearPhotoCache", folders);
   },
   /**
    * CollectTarget returns the folder the panel saves into, or "" when none is
@@ -195,6 +218,14 @@ export const App = {
    */
   openLibraryPrivacySettings(): Promise<void> {
     return call("App.OpenLibraryPrivacySettings");
+  },
+  /**
+   * PhotoCacheSize is how many bytes the thumbnails and what scans read of the
+   * photos in folders and their subfolders, the library and the collect
+   * folder take.
+   */
+  photoCacheSize(folders: string[]): Promise<number> {
+    return call("App.PhotoCacheSize", folders);
   },
   renamePhoto(folderPath: string, oldName: string, newName: string): Promise<void> {
     return call("App.RenamePhoto", folderPath, oldName, newName);
@@ -292,4 +323,9 @@ export const events = {
   languageChanged: event<LanguageState>("language-changed"),
   /** openSettings asks the page to open Settings, chosen from the menu bar. */
   openSettings: event<{}>("open-settings"),
+  /**
+   * cacheClearProgress tells the page clearing the photo cache how far it
+   * has got.
+   */
+  cacheClearProgress: event<CacheClearProgress>("cache-clear-progress"),
 } as const;

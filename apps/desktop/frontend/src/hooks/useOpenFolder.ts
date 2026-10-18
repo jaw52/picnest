@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import {
   currentFolderAtom,
   isScanningAtom,
+  photoGroupingAtom,
   photosAtom,
   photosTotalAtom,
   previewPhotoIdAtom,
@@ -101,9 +102,24 @@ export function useOpenFolder() {
         setPhotosTotal(first.total)
         setCurrentFolder(folder)
 
-        await loadRemainingPages(folder, photos, first.total, isLatest, (more) => {
-          setPhotos(prev => [...prev, ...more])
+        // While grouped by when they were taken, the later pages are held
+        // back and shown all at once when the scan is done: each would sort
+        // photos in among the ones on screen and lay the grid out afresh.
+        const held: Photo[] = []
+        const showHeld = () => {
+          const more = held.splice(0)
+          if (more.length > 0)
+            setPhotos(prev => [...prev, ...more])
+        }
+        // A copy: the pages are appended to the atom's photos, and pushing
+        // them onto the array it holds too would add them twice.
+        const done = await loadRemainingPages(folder, [...photos], first.total, isLatest, (more) => {
+          held.push(...more)
+          if (store.get(photoGroupingAtom) === null)
+            showHeld()
         })
+        if (done)
+          showHeld()
         return true
       }
       catch (error) {
@@ -116,6 +132,7 @@ export function useOpenFolder() {
       }
     },
     [
+      store,
       startScan,
       setCurrentFolder,
       setPhotos,

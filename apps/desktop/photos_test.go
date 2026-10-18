@@ -1,12 +1,14 @@
 package main
 
 import (
+	"database/sql"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func writePNG(t *testing.T, path string, w, h int) {
@@ -156,5 +158,78 @@ func TestListSubfoldersHidesImagelessAndHiddenFolders(t *testing.T) {
 	}
 	if len(entries) != 1 || entries[0].Name != "nested" {
 		t.Fatalf("unexpected entries: %+v", entries)
+	}
+}
+
+func TestExifTime(t *testing.T) {
+	want := time.Date(2024, 5, 1, 12, 34, 56, 0, time.Local).Unix()
+	if got := exifTime("2024:05:01 12:34:56"); got != want {
+		t.Errorf("exifTime = %d, want %d", got, want)
+	}
+	for _, date := range []string{"", "0000:00:00 00:00:00", "2024-05-01"} {
+		if got := exifTime(date); got != 0 {
+			t.Errorf("exifTime(%q) = %d, want 0", date, got)
+		}
+	}
+}
+
+func TestClearPhotoCacheKeepsRatings(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // keeps the library's and collect folder's sidecars out of it
+	root := t.TempDir()
+	sub := filepath.Join(root, "sub")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	db, err := openRatingsDB(sub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := setRating(db, "a.jpg", 3); err != nil {
+		t.Fatal(err)
+	}
+	if err := upsertPhotoMetaBatch(db, []photoMetaUpdate{{"a.jpg", cachedPhotoMeta{1, 1, 0, 1, 1}}}); err != nil {
+		t.Fatal(err)
+	}
+	db.Close()
+	thumbs := filepath.Join(sidecarDir(sub), "thumbs")
+	if err := os.MkdirAll(thumbs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(thumbs, "k_256.jpg"), make([]byte, 1000), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if size := photoCacheSize([]string{root}); size <= 1000 {
+		t.Errorf("photoCacheSize = %d, want the thumbnail and photo_meta", size)
+	}
+	var last CacheClearProgress
+	if err := clearPhotoCache([]string{root}, func(p CacheClearProgress) { last = p }); err != nil {
+		t.Fatal(err)
+	}
+	if last != (CacheClearProgress{2, 2}) { // the thumbnail, then the table
+		t.Errorf("last progress = %+v, want 2 of 2", last)
+	}
+	if size := photoCacheSize([]string{root}); size != 0 {
+		t.Errorf("photoCacheSize after clearing = %d, want 0", size)
+	}
+	if _, err := os.Stat(thumbs); !os.IsNotExist(err) {
+		t.Errorf("thumbnails still there")
+	}
+
+	if _, err := os.Stat(filepath.Join(root, sidecarDirName)); !os.IsNotExist(err) {
+		t.Errorf("created a sidecar in %s", root)
+	}
+	db, err = sql.Open("sqlite", "file:"+ratingsDBPath(sub))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var tables int
+	if err := db.QueryRow("SELECT count(*) FROM sqlite_master WHERE name = 'photo_meta'").Scan(&tables); err != nil || tables != 0 {
+		t.Errorf("photo_meta still there (%d, %v)", tables, err)
+	}
+	ratings, err := getAllRatings(db)
+	if err != nil || ratings["a.jpg"] != 3 {
+		t.Errorf("ratings = %v, %v; want a.jpg rated 3", ratings, err)
 	}
 }
