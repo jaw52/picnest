@@ -38,7 +38,8 @@ export default antfu(
     react: true,
     antislop: true,
     // antislop 的通用规则会匹配所有文件，ESLint 无法解析 html/css
-    ignores: ['**/frontend/src/mygo.ts', '**/*.html', '**/*.css', ...vendoredFluid],
+    // apps/desktop/bin 是构建产物（含带更新说明的 update-*.json），antfu 只读根目录的 .gitignore
+    ignores: ['**/frontend/src/mygo.ts', '**/*.html', '**/*.css', 'apps/desktop/bin/**', ...vendoredFluid],
   },
   {
     rules: {

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 )
 
 // localFileScheme serves files from disk to the webview (thumbnails and
@@ -124,6 +125,9 @@ func main() {
 	}
 
 	loadLanguage()
+	// The update window keeps the language the app started in; the menu
+	// item follows a change in Settings.
+	mygo.Use(updater.New(updater.Options{Language: string(languageState().Language)}))
 	mygo.App.SetMenu(appMenu())
 
 	mygo.App.WhenReady(func() {

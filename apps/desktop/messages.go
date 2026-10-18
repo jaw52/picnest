@@ -4,18 +4,20 @@ import (
 	"fmt"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 )
 
 // messages is the text the Go side shows, in one language: the menu bar,
 // native dialogs' buttons, and errors the page shows as they are.
 // Formats take the file name first.
 type messages struct {
-	about, settings, services, hide, hideOthers, showAll, quit string
-	file, closeWindow                                          string
-	edit, undo, redo, cut, copy, paste, pasteAndMatchStyle     string
-	delete, selectAll, speech, startSpeaking, stopSpeaking     string
-	view, reload, forceReload, devTools, fullScreen            string
-	window, minimize, zoom, bringAllToFront                    string
+	about, checkForUpdates, settings, services, hide       string
+	hideOthers, showAll, quit                              string
+	file, closeWindow                                      string
+	edit, undo, redo, cut, copy, paste, pasteAndMatchStyle string
+	delete, selectAll, speech, startSpeaking, stopSpeaking string
+	view, reload, forceReload, devTools, fullScreen        string
+	window, minimize, zoom, bringAllToFront                string
 
 	ok, cancel string
 
@@ -31,6 +33,7 @@ type messages struct {
 var catalogs = map[Language]*messages{
 	LanguageChinese: {
 		about:              "关于 %s",
+		checkForUpdates:    "检查更新…",
 		settings:           "设置…",
 		services:           "服务",
 		hide:               "隐藏 %s",
@@ -84,6 +87,7 @@ var catalogs = map[Language]*messages{
 	},
 	LanguageEnglish: {
 		about:              "About %s",
+		checkForUpdates:    "Check for Updates…",
 		settings:           "Settings…",
 		services:           "Services",
 		hide:               "Hide %s",
@@ -143,14 +147,15 @@ func text() *messages {
 }
 
 // appMenu builds the menu bar in the app's language: the default one, plus
-// Settings, less View's page zoom (⌘= / ⌘- / ⌘0 resize the grid's
-// thumbnails instead).
+// Check for Updates and Settings, less View's page zoom (⌘= / ⌘- / ⌘0
+// resize the grid's thumbnails instead).
 func appMenu() *mygo.Menu {
 	m := text()
 	name := mygo.App.Name()
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu, Submenu: []*mygo.MenuItem{
 			{Role: mygo.RoleAbout, Label: fmt.Sprintf(m.about, name)},
+			{Label: m.checkForUpdates, Click: func(*mygo.MenuItem, *mygo.Window) { updater.CheckForUpdates() }},
 			mygo.Separator(),
 			{Label: m.settings, Accelerator: "Cmd+,", Click: func(_ *mygo.MenuItem, win *mygo.Window) { showSettings(win) }},
 			mygo.Separator(),

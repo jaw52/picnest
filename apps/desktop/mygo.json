@@ -9,6 +9,11 @@
   "frontendDist": "frontend/dist",
   "bindings": "frontend/src/mygo.ts",
   "out": "bin",
+  "updates": {
+    "publicKey": "cMQtTTCPJyY/Kp8gPvsuQQHe7qlIYQfYvpyTB941unw=",
+    "github": "jaw52/picnest",
+    "privateKey": "~/Library/Application Support/mygo/update-keys/mygo-update.key"
+  },
   "macos": {
     "infoPlist": {
       "NSPhotoLibraryUsageDescription": "Picnest shows the photos in your Photos library so you can browse and rate them. 让 Picnest 浏览和评分照片图库中的照片。"
