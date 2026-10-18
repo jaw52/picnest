@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0
+
+### What's new / 新功能
+
+- **Delete from the Photos library** — delete one or many photos in the Photos library, as in a folder. After you confirm them in Picnest, macOS asks once more, and the photos go to Recently Deleted in Photos, where they can be recovered for 30 days. Renaming and moving library photos are still left to Photos.
+  **从照片图库删除**：在照片图库里也能像在文件夹里一样删除一张或多张照片。在 Picnest 里确认后，macOS 会再确认一次，照片会进入“照片”的“最近删除”，30 天内可以恢复。图库照片仍不能在这里重命名或移动。
+
 ## 0.5.0
 
 ### What's new / 新功能
