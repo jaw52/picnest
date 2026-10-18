@@ -18,7 +18,8 @@ import (
 
 // The Photos library, read through PhotoKit. It is shown like a folder: its
 // path is libraryRoot, and each photo's path is libraryRoot followed by the
-// asset's local identifier. Nothing here writes to the library.
+// asset's local identifier. The one write is deleteLibraryPhotos, which
+// macOS has the user confirm.
 
 const libraryRoot = "photos:"
 
@@ -52,6 +53,7 @@ const (
 	phAuthorizationDenied         = 2
 	phAuthorizationAuthorized     = 3
 	phAuthorizationLimited        = 4
+	phPhotosErrorUserCancelled    = 3072
 	libraryPreviewEdge            = 4096
 	libraryAuthorizationWaitLimit = 10 * time.Minute
 )
@@ -89,6 +91,7 @@ var (
 		SendID2      func(obj, sel, a, b objcID) objcID
 		SendID3      func(obj, sel, a, b, c objcID) objcID
 		RequestImage func(obj, sel, asset objcID, width, height float64, mode int, opts, handler objcID) int32
+		SendChanges  func(obj, sel, changes objcID, nserr *objcID) bool
 	}
 	pkOnce sync.Once
 	pkErr  error
@@ -122,6 +125,7 @@ func loadPhotoKit() error {
 		purego.RegisterLibFunc(&pk.SendID2, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&pk.SendID3, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&pk.RequestImage, lib, "objc_msgSend")
+		purego.RegisterLibFunc(&pk.SendChanges, lib, "objc_msgSend")
 	})
 	return pkErr
 }
@@ -313,6 +317,16 @@ func scanLibraryPage(offset, limit int) (PhotoPage, error) {
 	return page, err
 }
 
+// fetchLibraryAssets fetches the assets of the photos at paths that are
+// still in the library.
+func fetchLibraryAssets(paths []string) objcID {
+	ids := objc.Send(objc.GetClass("NSMutableArray"), sel("array"))
+	for _, path := range paths {
+		objc.SendID(ids, sel("addObject:"), nsString(libraryAssetID(path)))
+	}
+	return pk.SendID2(objc.GetClass("PHAsset"), sel("fetchAssetsWithLocalIdentifiers:options:"), ids, 0)
+}
+
 // libraryFileNames returns the names the photos at paths had when imported,
 // by path, leaving out photos no longer in the library.
 func libraryFileNames(paths []string) (map[string]string, error) {
@@ -321,11 +335,7 @@ func libraryFileNames(paths []string) (map[string]string, error) {
 		if err := requireLibraryAccess(); err != nil {
 			return err
 		}
-		ids := objc.Send(objc.GetClass("NSMutableArray"), sel("array"))
-		for _, path := range paths {
-			objc.SendID(ids, sel("addObject:"), nsString(libraryAssetID(path)))
-		}
-		result := pk.SendID2(objc.GetClass("PHAsset"), sel("fetchAssetsWithLocalIdentifiers:options:"), ids, 0)
+		result := fetchLibraryAssets(paths)
 		for i := range int(objc.SendCount(result, sel("count"))) {
 			pool := objc.PoolPush()
 			asset := objc.SendIndex(result, sel("objectAtIndex:"), uint(i))
@@ -335,6 +345,48 @@ func libraryFileNames(paths []string) (map[string]string, error) {
 		return nil
 	})
 	return names, err
+}
+
+// deleteLibraryPhotos deletes the photos at paths from the Photos library,
+// once macOS has asked the user to allow it, into its Recently Deleted
+// album. It returns the paths deleted: all of those still in the library,
+// or none if the user said no. Photos already gone are left out.
+func deleteLibraryPhotos(paths []string) ([]string, error) {
+	deleted := []string{}
+	err := withPool(func() error {
+		if err := requireLibraryAccess(); err != nil {
+			return err
+		}
+		assets := fetchLibraryAssets(paths)
+		count := int(objc.SendCount(assets, sel("count")))
+		if count == 0 {
+			return nil
+		}
+		found := make([]string, 0, count)
+		for i := range count {
+			asset := objc.SendIndex(assets, sel("objectAtIndex:"), uint(i))
+			found = append(found, libraryRoot+nsStringValue(objc.Send(asset, sel("localIdentifier"))))
+		}
+		changes := pobjc.NewBlock(func(_ pobjc.Block) {
+			objc.SendID(objc.GetClass("PHAssetChangeRequest"), sel("deleteAssets:"), assets)
+		})
+		// PhotoKit copies the block; this reference is ours alone.
+		defer changes.Release()
+		library := objc.Send(objc.GetClass("PHPhotoLibrary"), sel("sharedPhotoLibrary"))
+		var nserr objcID
+		if !pk.SendChanges(library, sel("performChangesAndWait:error:"), objcID(changes), &nserr) {
+			if nserr == 0 {
+				return errors.New(text().libraryNotDeleted)
+			}
+			if pk.SendInt(nserr, sel("code")) == phPhotosErrorUserCancelled {
+				return nil
+			}
+			return errors.New(nsStringValue(objc.Send(nserr, sel("localizedDescription"))))
+		}
+		deleted = found
+		return nil
+	})
+	return deleted, err
 }
 
 func newImageRequestOptions() objcID {

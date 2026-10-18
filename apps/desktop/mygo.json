@@ -16,7 +16,7 @@
   },
   "macos": {
     "infoPlist": {
-      "NSPhotoLibraryUsageDescription": "Picnest shows the photos in your Photos library so you can browse and rate them. 让 Picnest 浏览和评分照片图库中的照片。"
+      "NSPhotoLibraryUsageDescription": "Picnest shows the photos in your Photos library so you can browse, rate and delete them. 让 Picnest 浏览、评分和删除照片图库中的照片。"
     }
   }
 }

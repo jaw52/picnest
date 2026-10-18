@@ -3,6 +3,7 @@ import { atom } from 'jotai'
 
 import { i18n } from '~/i18n'
 import { movePhotos, pickFolder } from '~/lib/backend'
+import { isLibraryPath } from '~/lib/library'
 
 import { usePhotoOperation } from './usePhotoOperation'
 
@@ -10,6 +11,9 @@ import { usePhotoOperation } from './usePhotoOperation'
 const movePendingAtom = atom(false)
 
 const move: PhotoOperation = async (_store, folderPath, photos) => {
+  // The Photos library's photos aren't files to move.
+  if (isLibraryPath(folderPath))
+    return null
   const title
     = photos.length === 1
       ? i18n.t('dialogs.movePhotoTo', { name: photos[0].fileName })

@@ -40,7 +40,7 @@ vi.mock('~/lib/backend', () => ({
 
 /** The backend trashing every photo it is given. */
 async function trashAll(_folder: string, paths: string[]) {
-  return { trashed: paths.map(path => ({ path, trashPath: `/.Trash${path}`, rating: 0 })), failures: [] }
+  return { trashed: paths.map(path => ({ path, trashPath: `/.Trash${path}`, rating: 0 })), deleted: [], failures: [] }
 }
 
 function makePhoto(id: string): Photo {
@@ -56,6 +56,11 @@ function makePhoto(id: string): Photo {
     isCloudPlaceholder: false,
     aspectRatio: 1,
   }
+}
+
+/** A photo in the Photos library, its path the asset's identifier. */
+function libraryPhoto(id: string): Photo {
+  return { ...makePhoto(id), id: `photos:${id}`, path: `photos:${id}` }
 }
 
 /** Answers the bulk-delete dialog once the hook has opened it. */
@@ -78,11 +83,11 @@ async function deleteConfirmed(
   await pending
 }
 
-function renderWithStore(store: ReturnType<typeof createStore>) {
-  store.set(currentFolderAtom, '/folder')
+function renderWithStore(store: ReturnType<typeof createStore>, folder = '/folder') {
+  store.set(currentFolderAtom, folder)
   return renderHook(
     () => ({
-      deletePhoto: useDeletePhoto('/folder'),
+      deletePhoto: useDeletePhoto(folder),
       undo: useUndoDeletion(),
       photos: useAtomValue(photosAtom),
       selectedIds: useAtomValue(selectedPhotoIdsAtom),
@@ -179,8 +184,27 @@ describe('useDeletePhoto', () => {
     expect(store.get(undoableDeletionAtom)).toBeNull()
   })
 
+  it('deletes from the Photos library without offering undo', async () => {
+    deletePhotos.mockImplementationOnce(async (_folder: string, paths: string[]) => ({ trashed: [], deleted: paths, failures: [] }))
+    const store = createStore()
+    const [a, b] = ['A', 'B'].map(libraryPhoto)
+    store.set(photosAtom, [a, b])
+    store.set(selectedPhotoIdsAtom, new Set([a.id]))
+    scanFolderPage.mockResolvedValueOnce({ photos: [b], total: 1 })
+    const { result } = renderWithStore(store, 'photos:')
+
+    await act(async () => {
+      await deleteConfirmed(store, result.current.deletePhoto, [a])
+    })
+
+    expect(deletePhotos).toHaveBeenCalledWith('photos:', [a.path])
+    expect(result.current.photos).toEqual([b])
+    expect(result.current.selectedIds).toEqual(new Set([b.id]))
+    expect(store.get(undoableDeletionAtom)).toBeNull()
+  })
+
   it('reports the photos the backend could not trash', async () => {
-    deletePhotos.mockResolvedValueOnce({ trashed: [], failures: ['a.jpg: locked'] })
+    deletePhotos.mockResolvedValueOnce({ trashed: [], deleted: [], failures: ['a.jpg: locked'] })
     const store = createStore()
     const a = makePhoto('a')
     store.set(photosAtom, [a])

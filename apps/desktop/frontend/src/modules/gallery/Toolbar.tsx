@@ -17,7 +17,6 @@ import { IconButton } from '~/components/IconButton'
 import { Slider } from '~/components/Slider'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
-import { isLibraryPath } from '~/lib/library'
 import { TabStrip } from '~/modules/tabs/TabStrip'
 import { colors } from '~/theme/colors.stylex'
 
@@ -101,15 +100,12 @@ export function FolderControls() {
           showValue={false}
         />
       </div>
-      {/* The Photos library is read-only here. */}
-      {!isLibraryPath(currentFolder) && (
-        <IconButton
-          label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
-          icon={Delete2Regular}
-          disabled={selectedIds.size === 0 || bulkDeleteBlocked}
-          onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
-        />
-      )}
+      <IconButton
+        label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
+        icon={Delete2Regular}
+        disabled={selectedIds.size === 0 || bulkDeleteBlocked}
+        onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
+      />
       <IconButton
         label={t('gallery.rescan')}
         icon={Refresh2Regular}

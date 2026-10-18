@@ -466,18 +466,18 @@ export function PhotoPreview() {
                       placeholder={isDecoded(srcOf(photo)) ? undefined : placeholderFor(folderPath, photo)}
                       alt={fileName}
                       fadeIn={photo.id === openedId}
-                      menuItems={isLibraryPath(folderPath)
-                        // Not a file of its own to point at or delete.
-                        ? [{ label: t('photoInfo.copyFileName'), icon: CopyRegular, onSelect: () => void writeText(fileName) }]
-                        : [
-                            { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
-                            {
-                              label: t('common.delete'),
-                              icon: Delete2Regular,
-                              destructive: true,
-                              onSelect: () => void deletePhoto([photo]),
-                            },
-                          ]}
+                      menuItems={[
+                        isLibraryPath(folderPath)
+                          // Not a file of its own to point at.
+                          ? { label: t('photoInfo.copyFileName'), icon: CopyRegular, onSelect: () => void writeText(fileName) }
+                          : { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
+                        {
+                          label: t('common.delete'),
+                          icon: Delete2Regular,
+                          destructive: true,
+                          onSelect: () => void deletePhoto([photo]),
+                        },
+                      ]}
                     />
                   )}
             </div>

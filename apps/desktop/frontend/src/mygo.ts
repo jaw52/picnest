@@ -32,6 +32,11 @@ export type CollectStatus = "saving" | "saved" | "failed";
 export interface DeleteResult {
   /** Trashed are the photos now in the trash, which RestorePhotos can put back. */
   trashed: TrashedPhoto[];
+  /**
+   * Deleted are photos deleted from the Photos library, to its Recently
+   * Deleted album, which can't be put back from here.
+   */
+  deleted: string[];
   failures: string[];
 }
 

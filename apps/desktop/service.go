@@ -121,8 +121,8 @@ func (a *App) OpenLibraryPrivacySettings() error {
 	return mygo.Shell.OpenExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")
 }
 
-// errIfLibrary refuses changes to photos in the Photos library, which is
-// read-only here.
+// errIfLibrary refuses changes to photos in the Photos library, which can
+// only be rated and deleted here.
 func errIfLibrary(folderPath string) error {
 	if isLibraryPath(folderPath) {
 		return errors.New(text().libraryReadOnly)
@@ -221,13 +221,16 @@ type TrashedPhoto struct {
 // DeleteResult reports a batch delete that may have partially succeeded.
 type DeleteResult struct {
 	// Trashed are the photos now in the trash, which RestorePhotos can put back.
-	Trashed  []TrashedPhoto `json:"trashed"`
-	Failures []string       `json:"failures"`
+	Trashed []TrashedPhoto `json:"trashed"`
+	// Deleted are photos deleted from the Photos library, to its Recently
+	// Deleted album, which can't be put back from here.
+	Deleted  []string `json:"deleted"`
+	Failures []string `json:"failures"`
 }
 
 func (a *App) DeletePhotos(folderPath string, filePaths []string) (DeleteResult, error) {
-	if err := errIfLibrary(folderPath); err != nil {
-		return DeleteResult{}, err
+	if isLibraryPath(folderPath) {
+		return deleteFromLibrary(filePaths)
 	}
 	db, err := openRatingsDB(folderPath)
 	if err != nil {
@@ -238,7 +241,7 @@ func (a *App) DeletePhotos(folderPath string, filePaths []string) (DeleteResult,
 	if err != nil {
 		return DeleteResult{}, err
 	}
-	result := DeleteResult{Trashed: []TrashedPhoto{}, Failures: []string{}}
+	result := DeleteResult{Trashed: []TrashedPhoto{}, Deleted: []string{}, Failures: []string{}}
 	for _, path := range filePaths {
 		trashPath, err := trashItem(path)
 		if err != nil {
@@ -253,6 +256,31 @@ func (a *App) DeletePhotos(folderPath string, filePaths []string) (DeleteResult,
 		// The rating goes with the file: a new file taking its name later
 		// mustn't inherit it. Undo puts it back (see RestorePhotos).
 		if err := setRating(db, filepath.Base(path), 0); err != nil {
+			result.Failures = append(result.Failures, err.Error())
+		}
+	}
+	return result, nil
+}
+
+// deleteFromLibrary is DeletePhotos for photos in the Photos library, which
+// macOS has the user confirm. Their ratings go with them.
+func deleteFromLibrary(filePaths []string) (DeleteResult, error) {
+	deleted, err := deleteLibraryPhotos(filePaths)
+	if err != nil {
+		return DeleteResult{}, err
+	}
+	result := DeleteResult{Trashed: []TrashedPhoto{}, Deleted: deleted, Failures: []string{}}
+	if len(deleted) == 0 {
+		return result, nil
+	}
+	db, err := openRatingsDB(libraryRoot)
+	if err != nil {
+		result.Failures = append(result.Failures, err.Error())
+		return result, nil
+	}
+	defer db.Close()
+	for _, path := range deleted {
+		if err := setRating(db, libraryAssetID(path), 0); err != nil {
 			result.Failures = append(result.Failures, err.Error())
 		}
 	}

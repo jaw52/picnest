@@ -72,11 +72,13 @@ const trash: PhotoOperation = async (store, folderPath, photos) => {
       folderPath,
       targets.map(p => p.path),
     )
-    if (result.trashed.length > 0) {
+    // The Photos library's deletions go to its Recently Deleted album,
+    // which can't be undone from here.
+    if (result.trashed.length > 0)
       store.set(undoableDeletionAtom, { folderPath, trashed: result.trashed })
-      if (store.get(currentFolderAtom) === folderPath)
-        moveOnFrom(store, new Set(result.trashed.map(t => t.path)), gridBefore, previewBefore)
-    }
+    const removed = new Set([...result.trashed.map(t => t.path), ...result.deleted])
+    if (removed.size > 0 && store.get(currentFolderAtom) === folderPath)
+      moveOnFrom(store, removed, gridBefore, previewBefore)
     return result.failures.map(failure => i18n.t('dialogs.deleteFailed', { error: failure }))
   }
   catch (error) {

@@ -268,8 +268,8 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
     openInfo()
   }
 
-  // Photos in the Photos library aren't files of their own to rename, move
-  // or delete.
+  // Photos in the Photos library aren't files of their own to rename or
+  // move.
   const isFile = !isLibraryPath(folderPath)
   const menuItems: ContextMenuItem[] = [
     ...(selectedCount === 1 ? [{ label: t('gallery.info'), icon: InformationRegular, onSelect: openInfo }] : []),
@@ -280,21 +280,19 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
         ]
       : []),
     ...(isFile
-      ? [
-          {
-            label: selectedCount > 1 ? t('common.movePhotosTo', { count: selectedCount }) : t('gallery.moveTo'),
-            icon: MoveRegular,
-            onSelect: handleMove,
-          },
-          {
-            label: deleteLabel(t, selectedCount, bulkDeleteBlocked),
-            icon: Delete2Regular,
-            destructive: true,
-            disabled: selectedCount > 1 && bulkDeleteBlocked,
-            onSelect: handleDelete,
-          },
-        ]
+      ? [{
+          label: selectedCount > 1 ? t('common.movePhotosTo', { count: selectedCount }) : t('gallery.moveTo'),
+          icon: MoveRegular,
+          onSelect: handleMove,
+        }]
       : []),
+    {
+      label: deleteLabel(t, selectedCount, bulkDeleteBlocked),
+      icon: Delete2Regular,
+      destructive: true,
+      disabled: selectedCount > 1 && bulkDeleteBlocked,
+      onSelect: handleDelete,
+    },
   ]
 
   return (

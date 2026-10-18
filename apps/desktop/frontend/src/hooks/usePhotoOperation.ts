@@ -6,7 +6,6 @@ import { useCallback } from 'react'
 
 import { currentFolderAtom } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
-import { isLibraryPath } from '~/lib/library'
 import { message } from '~/lib/native'
 
 import { useOpenFolder } from './useOpenFolder'
@@ -22,7 +21,7 @@ export type PhotoOperation = (
 ) => Promise<string[] | null>
 
 /**
- * Runs `operation` on photos in a folder the app may change, one run at a
+ * Runs `operation` on photos in a folder, one run at a
  * time per `pendingAtom`. Once it is done the folder is rescanned and any
  * errors are shown under the `errorTitle` translation.
  */
@@ -37,8 +36,7 @@ export function usePhotoOperation(
 
   return useCallback(
     async (photos: Photo[]) => {
-      // The Photos library is read-only here.
-      if (!folderPath || isLibraryPath(folderPath) || photos.length === 0 || store.get(pendingAtom))
+      if (!folderPath || photos.length === 0 || store.get(pendingAtom))
         return
 
       store.set(pendingAtom, true)
