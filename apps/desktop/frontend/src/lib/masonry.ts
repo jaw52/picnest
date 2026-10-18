@@ -31,28 +31,20 @@ export function masonryColumns(containerWidth: number, minColumnWidth: number, g
  * Places each item, in order, at the bottom of the currently shortest column
  * (leftmost on ties). Heights come from aspect ratios, so no measuring is
  * needed and the result depends only on the inputs.
- *
- * `pinned[i]`, when set and in range, keeps item i in that column instead:
- * items that stay put when others leave the grid then only slide up within
- * their own column, rather than the whole grid reshuffling.
  */
 export function layoutMasonry(
   aspectRatios: readonly number[],
   containerWidth: number,
   minColumnWidth: number,
   gutter: number,
-  pinned: readonly (number | undefined)[] = [],
 ): MasonryLayout {
   const { count, width } = masonryColumns(containerWidth, minColumnWidth, gutter)
   const columnTops = Array.from<number>({ length: count }).fill(0)
-  const cells = aspectRatios.map((ratio, index) => {
-    let column = pinned[index] ?? -1
-    if (column < 0 || column >= count) {
-      column = 0
-      for (let i = 1; i < count; i++) {
-        if (columnTops[i] < columnTops[column])
-          column = i
-      }
+  const cells = aspectRatios.map((ratio) => {
+    let column = 0
+    for (let i = 1; i < count; i++) {
+      if (columnTops[i] < columnTops[column])
+        column = i
     }
     const top = columnTops[column]
     const height = width / ratio
@@ -75,27 +67,19 @@ export interface SectionedMasonryLayout extends MasonryLayout {
 
 /**
  * Lays out each section as its own masonry (see layoutMasonry), one under
- * another, a gutter apart. The cells run on through the sections, as do
- * `pinned`'s indices.
+ * another, a gutter apart. The cells run on through the sections.
  */
 export function layoutMasonrySections(
   sections: readonly MasonrySection[],
   containerWidth: number,
   minColumnWidth: number,
   gutter: number,
-  pinned: readonly (number | undefined)[] = [],
 ): SectionedMasonryLayout {
   const cells: MasonryCell[] = []
   const headerTops: number[] = []
   let top = 0
   for (const { headerHeight, aspectRatios } of sections) {
-    const section = layoutMasonry(
-      aspectRatios,
-      containerWidth,
-      minColumnWidth,
-      gutter,
-      pinned.slice(cells.length, cells.length + aspectRatios.length),
-    )
+    const section = layoutMasonry(aspectRatios, containerWidth, minColumnWidth, gutter)
     headerTops.push(top)
     const itemsTop = top + headerHeight
     for (const cell of section.cells)
@@ -108,28 +92,6 @@ export function layoutMasonrySections(
     headerTops,
     height: Math.max(top - gutter, 0),
   }
-}
-
-/**
- * Whether `next` is `previous` with some items left out and new ones added
- * only after all the rest - the changes `pinned` columns hold up under. An
- * item in `previous` but not in `next` may come back where it was.
- */
-export function onlyRemovedOrAppended(previous: readonly string[], next: readonly string[]): boolean {
-  const rank = new Map(previous.map((item, i) => [item, i]))
-  let last = -1
-  let appending = false
-  for (const item of next) {
-    const r = rank.get(item)
-    if (r === undefined) {
-      appending = true
-      continue
-    }
-    if (appending || r < last)
-      return false
-    last = r
-  }
-  return true
 }
 
 export type GridDirection = 'up' | 'down' | 'left' | 'right'

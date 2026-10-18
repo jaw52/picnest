@@ -3,6 +3,7 @@ import type { PhotoGroup, PhotoGrouping } from '~/lib/photo'
 import type { FolderEntry } from '~/types/folder'
 import type { Photo } from '~/types/photo'
 import * as stylex from '@stylexjs/stylex'
+import { animate } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -28,7 +29,7 @@ import { thumbnailCache, thumbnailCacheKey, thumbnailEdgeFor } from '~/hooks/use
 import { useThumbnailPinch } from '~/hooks/useThumbnailPinch'
 import { useThumbnailPrefetch } from '~/hooks/useThumbnailPrefetch'
 import { formatPeriod } from '~/lib/format'
-import { cellsInRange, layoutMasonrySections, masonryColumns, neighborCell, onlyRemovedOrAppended } from '~/lib/masonry'
+import { cellsInRange, layoutMasonrySections, masonryColumns, neighborCell } from '~/lib/masonry'
 import { groupPhotos } from '~/lib/photo'
 import { FolderTile } from '~/modules/tabs/FolderCard'
 import { colors } from '~/theme/colors.stylex'
@@ -48,6 +49,8 @@ const FOLDER_TILE_ASPECT_RATIO = 4 / 3
 const REVEAL_MARGIN = 12
 /** Room above a group of photos for the period they were taken in. */
 const GROUP_HEADER_HEIGHT = 36
+/** How tiles move to their new places when photos come or go. */
+const SLIDE = { type: 'spring' as const, duration: 0.32, bounce: 0 }
 
 type GridInputs = readonly [
   subfolders: FolderEntry[],
@@ -66,27 +69,23 @@ interface GridLayout {
   groups: PhotoGroup[]
   /** The subfolders' tiles, then the photos', in the order of the layout's cells. */
   tiles: string[]
-  /** What the tiles' columns were laid out for; a change of it starts afresh. */
+  /** What the tiles were laid out for; layouts for the same key follow on from each other. */
   key: string
-  columnByTile: Map<string, number>
   /** The layout this one took over from for the same key, which is still on screen until it renders. */
   replaced: { tiles: string[], cells: MasonryCell[] } | null
+  /** Whether the tiles slide over from their places in `replaced`: only photos came or went, at the same size. */
+  slide: boolean
 }
 
 /**
  * Lays out the subfolders, then the photos - each group of them under its
- * header, when grouped - keeping tiles in the columns `previous` gave them.
+ * header, when grouped.
  */
 function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout {
   const [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter, grouping] = inputs
   const tiles = [...subfolders.map(f => `folder:${f.path}`), ...photos.map(p => p.id)]
   const { count } = masonryColumns(containerWidth, columnWidth, COLUMN_GUTTER)
   const key = `${folderPath}|${ratingFilter}|${grouping}|${count}`
-  // Photos that came in among the others (a page of them sorted in by when
-  // they were taken) start afresh too: kept columns would crowd them.
-  const kept = previous?.key === key && onlyRemovedOrAppended([...previous.columnByTile.keys()], tiles)
-    ? previous.columnByTile
-    : new Map<string, number>()
   const folderRatios = subfolders.map(() => FOLDER_TILE_ASPECT_RATIO)
   const groups = grouping === null ? [] : groupPhotos(photos, grouping)
   const sections: MasonrySection[] = grouping === null
@@ -95,19 +94,34 @@ function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout
         ...(subfolders.length > 0 ? [{ headerHeight: 0, aspectRatios: folderRatios }] : []),
         ...groups.map(g => ({ headerHeight: GROUP_HEADER_HEIGHT, aspectRatios: g.photos.map(p => p.aspectRatio) })),
       ]
-  const layout = layoutMasonrySections(
-    sections,
-    containerWidth,
-    columnWidth,
-    COLUMN_GUTTER,
-    tiles.map(tile => kept.get(tile)),
-  )
-  // Tiles that left keep their column too, so an undone delete (or a rating
-  // undone) puts the photo back where it was.
-  const columnByTile = new Map(kept)
-  tiles.forEach((tile, i) => columnByTile.set(tile, layout.cells[i].column))
-  const replaced = previous?.key === key ? { tiles: previous.tiles, cells: previous.layout.cells } : null
-  return { inputs, layout, groups, tiles, key, columnByTile, replaced }
+  const layout = layoutMasonrySections(sections, containerWidth, columnWidth, COLUMN_GUTTER)
+  const follows = previous?.key === key
+  const replaced = follows ? { tiles: previous.tiles, cells: previous.layout.cells } : null
+  const slide = follows && previous.inputs[2] === containerWidth && previous.inputs[3] === columnWidth
+  return { inputs, layout, groups, tiles, key, replaced, slide }
+}
+
+/**
+ * Slides the tiles in `container` from where `grid`'s replaced layout had
+ * them to their places in `grid`, the scroller having moved `shift` since.
+ */
+function slideTiles(container: HTMLElement, grid: GridLayout, shift: number) {
+  const { replaced } = grid
+  if (!replaced || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
+    return
+  const before = new Map(replaced.tiles.map((tile, i) => [tile, replaced.cells[i]]))
+  const after = new Map(grid.tiles.map((tile, i) => [tile, grid.layout.cells[i]]))
+  for (const el of container.querySelectorAll<HTMLElement>('[data-tile]')) {
+    const tile = el.dataset.tile ?? ''
+    const from = before.get(tile)
+    const to = after.get(tile)
+    if (!from || !to)
+      continue
+    const x = from.left - to.left
+    const y = from.top - to.top + shift
+    if (x !== 0 || y !== 0)
+      void animate(el, { x: [x, 0], y: [y, 0] }, SLIDE)
+  }
 }
 
 /**
@@ -193,9 +207,8 @@ export function MasonryView() {
     return () => observer.disconnect()
   }, [hasItems])
 
-  // Laid out again during render whenever an input changes, keeping each
-  // tile in its column (see layOutGrid): a photo rated out of the filter or
-  // deleted only closes up its own column, not the whole grid.
+  // Laid out again during render whenever an input changes. A photo rated
+  // out of the filter or deleted reflows the grid, the tiles sliding over.
   const inputs = [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter, grouping] as const
   const [grid, setGrid] = useState<GridLayout | null>(null)
   let current: GridLayout
@@ -206,11 +219,12 @@ export function MasonryView() {
     current = layOutGrid(inputs, grid)
     setGrid(current)
   }
-  const { layout, groups } = current
+  const { layout, groups, tiles } = current
 
   // Keeps the tile at the top of the scroller where it was when the grid is
-  // laid out again around it, so what's on screen doesn't jump away. `grid`
-  // holds the layout from render by the time this runs.
+  // laid out again around it, so what's on screen doesn't jump away, and
+  // slides the tiles that moved. `grid` holds the layout from render by the
+  // time this runs.
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!grid || !el || !scroller)
@@ -220,6 +234,8 @@ export function MasonryView() {
     const shift = shown > 0 ? anchorShift(grid, shown) : 0
     if (shift !== 0)
       scroller.scrollBy({ top: shift })
+    if (grid.slide)
+      slideTiles(el, grid, shift)
   }, [grid, scroller])
 
   const thumbnailEdge = thumbnailEdgeFor(layout.columnWidth)
@@ -374,7 +390,7 @@ export function MasonryView() {
           if (i < subfolders.length) {
             const folder = subfolders[i]
             return (
-              <div key={folder.path} {...position}>
+              <div key={folder.path} data-tile={tiles[i]} {...position}>
                 <FolderTile
                   path={folder.path}
                   name={folder.name}
@@ -399,7 +415,7 @@ export function MasonryView() {
           const background = !onScreen
             && !thumbnailCache.has(thumbnailCacheKey(folderPath, photo.path, thumbnailEdge, photo.isCloudPlaceholder))
           return (
-            <div key={photo.id} {...position}>
+            <div key={photo.id} data-tile={photo.id} {...position}>
               <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} background={background} />
             </div>
           )
