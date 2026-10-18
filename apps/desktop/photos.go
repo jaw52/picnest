@@ -336,7 +336,7 @@ func containsImageRecursively(dir string) bool {
 		}
 		return nil
 	})
-	return err == errFound
+	return errors.Is(err, errFound)
 }
 
 // visibleSubdirs lists the immediate non-hidden subfolders of dir.

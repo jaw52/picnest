@@ -107,7 +107,7 @@ func setupCollector() {
 	})
 
 	mygo.RunOnMain(func() {
-		if err := installDropTargets(tray, panel); err != nil {
+		if err := installDropTargets(panel); err != nil {
 			log.Printf("collecting by drag off: %v", err)
 		}
 	})
@@ -115,7 +115,7 @@ func setupCollector() {
 
 // installDropTargets makes the icon's button, and an overlay on the panel,
 // take dragged pictures. Main thread only.
-func installDropTargets(tray *mygo.Tray, panel *mygo.Window) error {
+func installDropTargets(panel *mygo.Window) error {
 	lib, err := purego.Dlopen("/usr/lib/libobjc.A.dylib", purego.RTLD_NOW|purego.RTLD_GLOBAL)
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ func installDropTargets(tray *mygo.Tray, panel *mygo.Window) error {
 	}
 	sel := pobjc.RegisterName
 
-	button := statusButton(tray)
+	button := statusButton()
 	if button == 0 {
 		return errNoStatusButton
 	}
@@ -398,9 +398,9 @@ func pasteboardTypes(pb pobjc.ID) []string {
 	return out
 }
 
-// statusButton finds the button of tray's icon: the content of the status
-// bar window at the icon's place. Main thread only.
-func statusButton(tray *mygo.Tray) pobjc.ID {
+// statusButton finds the button of the app's tray icon: the content of its
+// status bar window. Main thread only.
+func statusButton() pobjc.ID {
 	sel := pobjc.RegisterName
 	app := pobjc.ID(pobjc.GetClass("NSApplication")).Send(sel("sharedApplication"))
 	windows := app.Send(sel("windows"))

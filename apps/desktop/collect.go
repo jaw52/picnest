@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -259,10 +260,9 @@ func saveDropped(ctx context.Context, drop droppedImage) (string, collectSource,
 }
 
 var (
-	imgSrcPattern  = regexp.MustCompile(`(?is)<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']`)
-	linkPattern    = regexp.MustCompile(`(?is)<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["']`)
-	srcsetPattern  = regexp.MustCompile(`(?is)<img\b[^>]*?\bsrcset\s*=\s*["']([^"']+)["']`)
-	imageExtension = regexp.MustCompile(`(?i)\.(jpe?g|png|gif|webp|avif|heic|bmp|tiff?)$`)
+	imgSrcPattern = regexp.MustCompile(`(?is)<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["']`)
+	linkPattern   = regexp.MustCompile(`(?is)<a\b[^>]*?\bhref\s*=\s*["']([^"']+)["']`)
+	srcsetPattern = regexp.MustCompile(`(?is)<img\b[^>]*?\bsrcset\s*=\s*["']([^"']+)["']`)
 )
 
 // dropAddresses picks the picture's address out of a drop, and the link
@@ -533,7 +533,7 @@ func download(ctx context.Context, raw string) ([]byte, error) {
 // isAVIFOrHEIC reports an ISO media file, which DetectContentType doesn't
 // know as a picture.
 func isAVIFOrHEIC(data []byte) bool {
-	return len(data) >= 12 && string(data[4:8]) == "ftyp" && strings.Contains("avif avis heic heix mif1", string(data[8:12]))
+	return len(data) >= 12 && string(data[4:8]) == "ftyp" && slices.Contains([]string{"avif", "avis", "heic", "heix", "mif1"}, string(data[8:12]))
 }
 
 func decodeDataURL(raw string) ([]byte, string, error) {

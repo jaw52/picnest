@@ -1,0 +1,31 @@
+version: '2'
+
+linters:
+  # govet, staticcheck, errcheck, ineffassign, unused
+  default: standard
+  enable:
+    - revive
+    - gocritic
+    - errorlint
+    - modernize
+  settings:
+    errcheck:
+      exclude-functions:
+        # Deferred after Begin: a no-op once committed.
+        - (*database/sql.Tx).Rollback
+  exclusions:
+    presets:
+      # Unchecked Close, Remove and the like, where there is nothing to do
+      # about a failure.
+      - std-error-handling
+      # Package and exported-name doc comments, in a single package main.
+      - comments
+    rules:
+      # Test setup that fails shows up in the assertions after it.
+      - path: _test\.go
+        linters: [errcheck]
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports

@@ -106,7 +106,7 @@ func (a *App) GetLanguage() LanguageState {
 
 // SetLanguage picks the app's language, translating the menu bar and every
 // window's page.
-func (a *App) SetLanguage(ctx context.Context, preference LanguagePreference) (LanguageState, error) {
+func (a *App) SetLanguage(_ context.Context, preference LanguagePreference) (LanguageState, error) {
 	if !validPreference(preference) {
 		return LanguageState{}, errors.New("unknown language: " + string(preference))
 	}

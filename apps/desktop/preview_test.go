@@ -42,10 +42,10 @@ func previewOf(t *testing.T, path string, edge string) (contentType string, body
 func TestPreviewScalesLargePNGsKeepingTransparency(t *testing.T) {
 	dir := t.TempDir()
 	opaque := filepath.Join(dir, "opaque.png")
-	clear := filepath.Join(dir, "clear.png")
+	clearPNG := filepath.Join(dir, "clear.png")
 	small := filepath.Join(dir, "small.png")
 	writeFilledPNG(t, opaque, 400, 200, color.NRGBA{200, 10, 10, 255})
-	writeFilledPNG(t, clear, 400, 200, color.NRGBA{10, 10, 200, 0})
+	writeFilledPNG(t, clearPNG, 400, 200, color.NRGBA{10, 10, 200, 0})
 	writeFilledPNG(t, small, 80, 40, color.NRGBA{10, 200, 10, 255})
 
 	typ, body := previewOf(t, opaque, "100")
@@ -54,7 +54,7 @@ func TestPreviewScalesLargePNGsKeepingTransparency(t *testing.T) {
 		t.Fatalf("opaque: %s %s %+v %v, want a 100×50 JPEG", typ, format, cfg, err)
 	}
 
-	typ, body = previewOf(t, clear, "100")
+	typ, body = previewOf(t, clearPNG, "100")
 	img, format, err := image.Decode(bytes.NewReader(body))
 	if err != nil || typ != "image/png" || format != "png" || img.Bounds().Dx() != 100 {
 		t.Fatalf("transparent: %s %s %v, want a 100 px wide PNG", typ, format, err)

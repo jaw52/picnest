@@ -40,8 +40,8 @@ const thumbGrace = time.Minute
 func thumbKey(path string, modTime, size int64, cloud bool) string {
 	h := sha256.New()
 	h.Write([]byte(path))
-	binary.Write(h, binary.LittleEndian, modTime)
-	binary.Write(h, binary.LittleEndian, uint64(size))
+	h.Write(binary.LittleEndian.AppendUint64(nil, uint64(modTime)))
+	h.Write(binary.LittleEndian.AppendUint64(nil, uint64(size)))
 	h.Write([]byte("upright")) // drops thumbnails cached before they were turned upright
 	if cloud {
 		h.Write([]byte("cloud"))

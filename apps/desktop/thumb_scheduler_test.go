@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
@@ -58,7 +59,7 @@ func TestSchedulerCancelDropsWaitingRequest(t *testing.T) {
 	}
 
 	s.cancel("drop")
-	if err := <-results; err != errThumbCancelled {
+	if err := <-results; !errors.Is(err, errThumbCancelled) {
 		t.Fatalf("cancelled request returned %v, want errThumbCancelled", err)
 	}
 	s.cancel("unknown") // ignored

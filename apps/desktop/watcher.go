@@ -62,7 +62,7 @@ func isRelevantPath(root, path string) bool {
 	if err != nil {
 		return true
 	}
-	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+	for part := range strings.SplitSeq(rel, string(filepath.Separator)) {
 		if strings.HasPrefix(part, ".") && part != "." && part != ".." {
 			return false
 		}

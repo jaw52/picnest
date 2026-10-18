@@ -14,8 +14,8 @@
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test && cd apps/desktop && go test ./...",
     "lint": "oxlint && eslint . && bun run lint:go && bun run lint:dup",
-    "lint:fix": "oxlint --fix && eslint . --fix && gofmt -w apps/desktop/*.go",
-    "lint:go": "cd apps/desktop && test -z \"$(gofmt -l .)\" && go vet ./...",
+    "lint:fix": "oxlint --fix && eslint . --fix && go -C apps/desktop tool golangci-lint fmt && go -C apps/desktop tool golangci-lint run --fix",
+    "lint:go": "go -C apps/desktop tool golangci-lint fmt --diff && go -C apps/desktop tool golangci-lint run",
     "lint:dup": "jscpd",
     "prepare": "simple-git-hooks"
   },
@@ -37,12 +37,6 @@
   },
   "simple-git-hooks": {
     "pre-commit": "bunx lint-staged && bunx jscpd --silent"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs}": [
-      "oxlint --fix",
-      "eslint --fix"
-    ]
   },
   "trustedDependencies": [
     "esbuild",

@@ -445,7 +445,7 @@ func (a *App) WatchFolder(folderPath string) error {
 	if isLibraryPath(folderPath) {
 		return nil
 	}
-	return a.folderWatcher.watch(folderPath, func() { folderChanged.Broadcast(folderPath) })
+	return a.folderWatcher.watch(folderPath, func() { _ = folderChanged.Broadcast(folderPath) })
 }
 
 // UnwatchFolder undoes a WatchFolder of the folder.
