@@ -46,7 +46,7 @@ function requestName(path: string) {
     return
   asked.add(path)
   queued.add(path)
-  flushTimer ??= setTimeout(() => void flush())
+  flushTimer ??= setTimeout(() => void flush(), 0)
 }
 
 function needsName(photo: Photo | null): boolean {

@@ -111,7 +111,7 @@ export function FolderControls() {
         icon={Refresh2Regular}
         iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
         disabled={!currentFolder || isScanning}
-        onClick={() => currentFolder && navigateToFolder(currentFolder)}
+        onClick={() => currentFolder && void navigateToFolder(currentFolder)}
       />
     </div>
   )

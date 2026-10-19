@@ -78,7 +78,7 @@ export function withTabsToRightClosed(state: TabsState, id: string): TabsState {
 }
 
 export function withTabActivated(state: TabsState, id: string): TabsState {
-  if (state.activeId === id || !state.tabs.some(t => t.id === id))
+  if (state.activeId === id || state.tabs.every(t => t.id !== id))
     return state
   return { ...state, activeId: id }
 }
@@ -188,7 +188,10 @@ export function withFolderClosed(state: TabsState, folder: string): TabsState {
       forward: prune(t.forward, t.path),
     })),
   }
-  return pruned.tabs
-    .filter(t => isGone(t.path))
-    .reduce((next, tab) => withTabClosed(next, tab.id), pruned)
+  let next = pruned
+  for (const tab of pruned.tabs) {
+    if (isGone(tab.path))
+      next = withTabClosed(next, tab.id)
+  }
+  return next
 }

@@ -40,7 +40,7 @@ export function useBottomPull(enabled: boolean, scroller: HTMLElement | null) {
     let settling: ReturnType<typeof animate> | null = null
     // Whether this run of wheeling at the bottom began after a pause there.
     let retrying = false
-    let lastWheel = Number.NEGATIVE_INFINITY
+    let lastWheel = -Infinity
 
     function settle() {
       window.clearTimeout(release)
@@ -59,7 +59,7 @@ export function useBottomPull(enabled: boolean, scroller: HTMLElement | null) {
           settle()
         return
       }
-      retrying = retrying || sincePrevious > RETRY_GAP_MS
+      retrying ||= sincePrevious > RETRY_GAP_MS
       if (!retrying)
         return
       if (settling) {

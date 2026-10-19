@@ -41,7 +41,7 @@ async function loadRemainingPages(
       return false
     if (page.photos.length === 0)
       break // Shrunk on disk mid-scan; avoid looping forever.
-    const more = page.photos.map(toPhoto)
+    const more = page.photos.map(p => toPhoto(p))
     photos.push(...more)
     onPage?.(more)
   }
@@ -93,7 +93,7 @@ export function useOpenFolder() {
         ])
         if (!isLatest())
           return true
-        const photos = first.photos.map(toPhoto)
+        const photos = first.photos.map(p => toPhoto(p))
 
         // The previous folder stays on screen until now, then everything
         // the grid shows changes in one render.
@@ -160,12 +160,12 @@ export function useOpenFolder() {
           scanFolderPage(folder, 0, PAGE_SIZE),
           subfoldersOf(folder),
         ])
-        const photos = first.photos.map(toPhoto)
+        const photos = first.photos.map(p => toPhoto(p))
         while (photos.length < first.total) {
           const page = await scanFolderPage(folder, photos.length, PAGE_SIZE)
           if (page.photos.length === 0)
             break // Shrunk on disk mid-scan.
-          photos.push(...page.photos.map(toPhoto))
+          photos.push(...page.photos.map(p => toPhoto(p)))
         }
         if (!isLatest() || store.get(currentFolderAtom) !== folder)
           return true

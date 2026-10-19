@@ -167,13 +167,20 @@ const TAB_ICONS = {
   library: [PicRegular, PicFilled],
 } as const
 
+function tabKind(path: string | null, library: boolean, iCloud: boolean | undefined): keyof typeof TAB_ICONS {
+  if (path === null)
+    return 'newTab'
+  if (library)
+    return 'library'
+  return iCloud ? 'iCloud' : 'local'
+}
+
 function TabIcon({ path, active }: { path: string | null, active: boolean }) {
   const iCloud = useIsICloudFolder(path)
   const library = isLibraryPath(path)
   if (path !== null && !library && iCloud === undefined)
     return <span {...stylex.props(styles.icon, styles.iconSpace)} />
-  const kind = path === null ? 'newTab' : library ? 'library' : iCloud ? 'iCloud' : 'local'
-  const Icon = TAB_ICONS[kind][active ? 1 : 0]
+  const Icon = TAB_ICONS[tabKind(path, library, iCloud)][active ? 1 : 0]
   return <Icon width={14} height={14} {...stylex.props(styles.icon)} />
 }
 
@@ -191,7 +198,7 @@ function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemPr
   const { activateTab, closeTab, closeOtherTabs, closeTabsToRight } = useTabs()
   const title = tab.path === null
     ? t('common.newTab')
-    : isLibraryPath(tab.path) ? t('library.name') : folderNameFromPath(tab.path)
+    : (isLibraryPath(tab.path) ? t('library.name') : folderNameFromPath(tab.path))
 
   // A closed tab leaves its slot as it starts fading out, in the same commit
   // the tabs after it move down a slot, so it never clears its successor's.

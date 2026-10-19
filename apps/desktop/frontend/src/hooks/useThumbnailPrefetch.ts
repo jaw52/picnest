@@ -40,7 +40,7 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
     async function worker() {
       while (!controller.signal.aborted && next < queue.length) {
         const path = queue[next++]
-        const key = thumbnailCacheKey(folderPath!, path, maxEdge)
+        const key = thumbnailCacheKey(folderPath, path, maxEdge)
         try {
           if (!thumbnailCache.has(key))
             cacheThumbnail(folderPath, path, maxEdge, false, await ensureThumbnailUrl(folderPath!, path, maxEdge, { background: true, signal: controller.signal }))

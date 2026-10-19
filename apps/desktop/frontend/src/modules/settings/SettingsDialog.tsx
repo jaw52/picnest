@@ -114,7 +114,7 @@ function PhotoCacheRow() {
                 %
               </span>
             )
-          : state === 'cleared' ? t('settings.cacheCleared') : t('settings.clearCache')}
+          : (state === 'cleared' ? t('settings.cacheCleared') : t('settings.clearCache'))}
       </Button>
     </div>
   )

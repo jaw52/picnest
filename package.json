@@ -24,6 +24,8 @@
     "@eslint-react/eslint-plugin": "^5.22.1",
     "@stylexjs/eslint-plugin": "0.19.1",
     "eslint": "^10.11.0",
+    "eslint-plugin-format": "^2.0.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-oxlint": "^1.86.0",
     "eslint-plugin-react-refresh": "^0.5.7",
     "eslint-plugin-slop": "^0.1.3",

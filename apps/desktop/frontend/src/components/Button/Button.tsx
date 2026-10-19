@@ -72,16 +72,16 @@ function ButtonContent({
   children,
 }: ButtonContentProps) {
   const iconSize = compact ? 14 : 16
-  const showLeading = !iconOnly && !!LeadingIcon
-  const showTrailing = !iconOnly && !!TrailingIcon
+  const Leading = iconOnly ? undefined : LeadingIcon
+  const Trailing = iconOnly ? undefined : TrailingIcon
 
   if (loading) {
     return (
       <>
         <span {...stylex.props(styles.hiddenWhileLoading)}>
-          {showLeading && LeadingIcon && <LeadingIcon width={iconSize} height={iconSize} />}
+          {Leading && <Leading width={iconSize} height={iconSize} />}
           {children}
-          {showTrailing && TrailingIcon && <TrailingIcon width={iconSize} height={iconSize} />}
+          {Trailing && <Trailing width={iconSize} height={iconSize} />}
         </span>
         <span {...stylex.props(styles.spinnerWrap)}>
           <svg
@@ -108,9 +108,9 @@ function ButtonContent({
 
   return (
     <>
-      {showLeading && LeadingIcon && <LeadingIcon width={iconSize} height={iconSize} />}
+      {Leading && <Leading width={iconSize} height={iconSize} />}
       <span {...stylex.props(trim.capAlphabetic)}>{children}</span>
-      {showTrailing && TrailingIcon && <TrailingIcon width={iconSize} height={iconSize} />}
+      {Trailing && <Trailing width={iconSize} height={iconSize} />}
     </>
   )
 }

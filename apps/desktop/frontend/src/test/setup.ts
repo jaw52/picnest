@@ -9,7 +9,7 @@ class ResizeObserverStub {
   disconnect() {}
 }
 // Stub only implements the methods the grid uses.
-globalThis.ResizeObserver = ResizeObserverStub as any
+globalThis.ResizeObserver = ResizeObserverStub
 
 // jsdom doesn't implement matchMedia; framer-motion and the Fluid
 // Functionalism components query it (reduced motion, pointer type).

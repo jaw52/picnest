@@ -155,17 +155,19 @@ function TileImage({ photo, fileName, thumbnailUrl, folderPath }: { photo: Photo
   }
   const downloadLabel = downloading ? t('gallery.downloading') : t('gallery.download')
 
-  const image = thumbnailUrl && (
-    <img
-      src={thumbnailUrl}
-      alt={fileName}
-      decoding="async"
-      {...stylex.props(styles.fill, styles.cover)}
-      draggable={false}
-    />
-  )
+  const image = thumbnailUrl
+    ? (
+        <img
+          src={thumbnailUrl}
+          alt={fileName}
+          decoding="async"
+          {...stylex.props(styles.fill, styles.cover)}
+          draggable={false}
+        />
+      )
+    : null
   if (!photo.isCloudPlaceholder)
-    return image || <div {...stylex.props(styles.fill, styles.loading)} />
+    return image ?? <div {...stylex.props(styles.fill, styles.loading)} />
   if (image) {
     return (
       <>
@@ -261,7 +263,7 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
 
   // After the menu has closed and handed focus back, so the card's name
   // field keeps it.
-  const openInfo = () => setTimeout(() => setInfoId(data.id))
+  const openInfo = () => setTimeout(setInfoId, 0, data.id)
   // Renaming happens in the info card.
   const handleRename = () => {
     setRenamingId(data.id)
@@ -299,10 +301,12 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
     <ContextMenu
       items={menuItems}
       onOpenChange={(open) => {
-        if (open && !selectedIds.has(data.id)) {
-          setSelectedIds(new Set([data.id]))
-          setAnchorId(data.id)
+        if (!open || selectedIds.has(data.id)) {
+          return
         }
+
+        setSelectedIds(new Set([data.id]))
+        setAnchorId(data.id)
       }}
     >
       <div

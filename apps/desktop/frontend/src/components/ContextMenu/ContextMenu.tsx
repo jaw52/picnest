@@ -47,7 +47,7 @@ function MenuRow({ index, label, icon: Icon, destructive, disabled, shortcut, on
   }, [hover, index])
 
   const lit = hover?.activeIndex === index
-  const tone = destructive ? styles.destructive : lit ? styles.lit : styles.dim
+  const tone = destructive ? styles.destructive : (lit ? styles.lit : styles.dim)
 
   return (
     <BaseMenu.Item
@@ -113,8 +113,9 @@ function MenuPopup({ items }: MenuPopupProps) {
             if (!isOwnEvent(e))
               return
             const indexAttr = (e.target as HTMLElement)
-              .closest('[data-fluid-hover-index]')
-              ?.getAttribute('data-fluid-hover-index')
+              .closest<HTMLElement>('[data-fluid-hover-index]')
+              ?.dataset
+              .fluidHoverIndex
             // Keyboard navigation moves the hover background only; in a menu
             // the highlighted row is the focus indicator.
             if (indexAttr != null)
@@ -123,7 +124,7 @@ function MenuPopup({ items }: MenuPopupProps) {
           onBlur={(e) => {
             if (!isOwnEvent(e))
               return
-            if (e.currentTarget.contains(e.relatedTarget as Node))
+            if (e.currentTarget.contains(e.relatedTarget))
               return
             setActiveIndex(null)
           }}

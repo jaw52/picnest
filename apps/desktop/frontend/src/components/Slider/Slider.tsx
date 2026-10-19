@@ -68,7 +68,7 @@ export function Slider({
     const snappedX = THUMB_SIZE / 2 + ((snapped - min) / span) * usable
     const thumbX = THUMB_SIZE / 2 + fraction * usable
     // Extend to the track edges at the extremes so there's no gap.
-    const edgeX = snapped === min ? 0 : snapped === max ? rect.width : snappedX
+    const edgeX = snapped === min ? 0 : (snapped === max ? rect.width : snappedX)
     setPreview({
       left: Math.min(thumbX, edgeX),
       width: Math.abs(edgeX - thumbX),

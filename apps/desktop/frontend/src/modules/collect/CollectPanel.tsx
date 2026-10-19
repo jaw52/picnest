@@ -142,9 +142,9 @@ function Item({ item }: { item: CollectItem }) {
   const { t } = useTranslation()
   const detail = item.status === 'saving'
     ? t('collect.saving')
-    : item.status === 'failed'
-      ? t('collect.failed')
-      : host(item.pageUrl) || t('collect.saved')
+    : (item.status === 'failed'
+        ? t('collect.failed')
+        : host(item.pageUrl) || t('collect.saved'))
   return (
     <div {...stylex.props(styles.item)} title={item.error || item.pageUrl}>
       {item.path

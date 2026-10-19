@@ -32,8 +32,12 @@ function replay(
   const pager = createSwipePager({
     distance: () => 200,
     canPage,
-    follow: offset => follows.push(offset),
-    commit: direction => commits.push(direction),
+    follow: (offset) => {
+      follows.push(offset)
+    },
+    commit: (direction) => {
+      commits.push(direction)
+    },
     release: () => releases++,
     turning,
   })

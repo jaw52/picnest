@@ -285,8 +285,8 @@ export function PhotoPreview() {
     if (index === -1)
       return
     const srcs = [photos[index - 1], photos[index], photos[index + 1]]
-      .filter(p => p && !p.isCloudPlaceholder)
-      .map(p => srcOf(p!))
+      .filter(p => p !== undefined && !p.isCloudPlaceholder)
+      .map(p => srcOf(p))
     retain(srcs)
     for (const src of srcs)
       void decode(src)
@@ -338,7 +338,7 @@ export function PhotoPreview() {
   const goTo = useCallback(
     (delta: number) => {
       const next = index === -1 ? undefined : photos[index + delta]
-      if (!next)
+      if (next === undefined)
         return
       const token = ++switchRef.current
       void ready(next).then(() => {
@@ -351,11 +351,11 @@ export function PhotoPreview() {
   // A swipe's page turn: the neighbour finishes sliding in, then lands.
   const turnPage = (direction: PageDirection) => {
     const next = photos[index + direction]
-    if (!next)
+    if (next === undefined)
       return
     const token = ++switchRef.current
     turningRef.current = true
-    const slid = slideTo(-direction * (window.innerWidth + PAGE_GAP))
+    const slid = slideTo(-direction * (window.innerWidth + PAGE_GAP)).finished
     void Promise.all([ready(next), slid]).then(() => {
       if (switchRef.current === token)
         setPreviewId(next.id)
@@ -400,26 +400,38 @@ export function PhotoPreview() {
     const current = photo
     function onKeyDown(e: KeyboardEvent) {
       // Space closes it too, as Quick Look does in Finder.
-      if (e.key === 'Escape' || e.key === ' ') {
-        e.preventDefault()
-        if (!e.repeat)
-          close()
-      }
-      else if (e.key === 'ArrowLeft') {
-        goTo(-1)
-      }
-      else if (e.key === 'ArrowRight') {
-        goTo(1)
-      }
-      else if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault()
-        if (!e.repeat)
-          void deletePhoto([current])
-      }
-      else {
-        const rating = ratingFromKey(e)
-        if (rating !== null)
-          rate([current], rating)
+      switch (e.key) {
+        case 'Escape':
+        case ' ': {
+          e.preventDefault()
+          if (!e.repeat)
+            close()
+
+          break
+        }
+        case 'ArrowLeft': {
+          goTo(-1)
+
+          break
+        }
+        case 'ArrowRight': {
+          goTo(1)
+
+          break
+        }
+        case 'Delete':
+        case 'Backspace': {
+          e.preventDefault()
+          if (!e.repeat)
+            void deletePhoto([current])
+
+          break
+        }
+        default: {
+          const rating = ratingFromKey(e)
+          if (rating !== null)
+            rate([current], rating)
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -515,7 +527,7 @@ export function PhotoPreview() {
               }}
             />
           )}
-          <div {...stylex.props(styles.caption, text.caption)} onClick={e => e.stopPropagation()}>
+          <div {...stylex.props(styles.caption, text.caption)} role="presentation" onClick={e => e.stopPropagation()}>
             <span {...stylex.props(styles.captionName)}>{fileName}</span>
             {index !== -1 && (
               <span {...stylex.props(styles.captionCount)}>{`${index + 1} / ${photos.length}`}</span>

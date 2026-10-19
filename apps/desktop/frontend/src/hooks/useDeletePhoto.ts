@@ -104,8 +104,8 @@ export function useUndoDeletion() {
     try {
       await restorePhotos(deletion.folderPath, deletion.trashed)
     }
-    catch (e) {
-      error = e
+    catch (error_) {
+      error = error_
     }
     if (store.get(currentFolderAtom) === deletion.folderPath) {
       await refreshFolder(deletion.folderPath)
@@ -123,7 +123,7 @@ export function useUndoDeletion() {
       }
     }
     if (error !== undefined)
-      await message(`${error}`, { title: i18n.t('dialogs.undoDeleteTitle'), kind: 'error' })
+      await message(String(error), { title: i18n.t('dialogs.undoDeleteTitle'), kind: 'error' })
   }, [store, refreshFolder])
 }
 

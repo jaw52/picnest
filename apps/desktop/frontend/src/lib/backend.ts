@@ -3,9 +3,7 @@ import type { FolderEntry } from '~/types/folder'
 import type { PhotoDetails, PhotoPage } from '~/types/photo'
 
 import { App } from '~/mygo'
-import { convertFileSrc, pickFolder } from './native'
-
-export { pickFolder }
+import { convertFileSrc } from './native'
 
 /**
  * Go errors reach JS as `CallError`s; callers format rejections with
@@ -25,7 +23,7 @@ export function scanFolderPage(
   offset: number,
   limit: number,
 ): Promise<PhotoPage> {
-  return call(App.scanFolderPage(folderPath, offset, limit)) as Promise<PhotoPage>
+  return call(App.scanFolderPage(folderPath, offset, limit))
 }
 
 /**
@@ -105,7 +103,7 @@ export function isICloudFolder(folderPath: string): Promise<boolean> {
 }
 
 export function getPhotoDetails(filePath: string): Promise<PhotoDetails> {
-  return call(App.getPhotoDetails(filePath)) as Promise<PhotoDetails>
+  return call(App.getPhotoDetails(filePath))
 }
 
 /** Asks iCloud Drive to fetch a not-yet-downloaded file; the download runs on in the background. */
@@ -144,3 +142,5 @@ export function movePhotos(
 ): Promise<void> {
   return call(App.movePhotos(folderPath, fileNames, destFolder))
 }
+
+export { pickFolder } from './native'

@@ -123,11 +123,13 @@ function FileNameRow({ photo, onRename }: { photo: Photo, onRename?: (newName: s
   }
 
   useEffect(() => {
-    if (isEditing) {
-      setRenamingId(null)
-      inputRef.current?.focus()
-      inputRef.current?.select()
+    if (!isEditing) {
+      return
     }
+
+    setRenamingId(null)
+    inputRef.current?.focus()
+    inputRef.current?.select()
   }, [isEditing, setRenamingId])
 
   function startEditing() {

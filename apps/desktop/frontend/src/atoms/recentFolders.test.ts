@@ -93,6 +93,6 @@ describe('pathSegments', () => {
   })
 
   it('keeps Windows separators', () => {
-    expect(pathSegments('C:\\pics\\a', ['C:\\pics'])).toEqual(['C:\\pics', 'C:\\pics\\a'])
+    expect(pathSegments(String.raw`C:\pics\a`, [String.raw`C:\pics`])).toEqual([String.raw`C:\pics`, String.raw`C:\pics\a`])
   })
 })

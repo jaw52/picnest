@@ -112,7 +112,7 @@ export function useThumbnail(
         console.warn(`thumbnail failed for ${filePath}:`, error)
       }
     }
-    load()
+    void load()
 
     return () => controller.abort()
   }, [folderPath, filePath, maxEdge, cacheKey, enabled, cloud, background])

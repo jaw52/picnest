@@ -83,6 +83,7 @@ function useStripWidth() {
   const [width, setWidth] = useState(window.innerWidth)
   useEffect(() => {
     const onResize = () => setWidth(window.innerWidth)
+    // eslint-disable-next-line unicorn/prefer-observer-apis -- the strip follows the window, which ResizeObserver can't watch
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -117,7 +118,7 @@ export function Filmstrip({ photos, index, folderPath, onSelect }: FilmstripProp
     if (!el)
       return
     const left = index * STEP
-    if (placedRef.current && el.scrollTo)
+    if (placedRef.current && typeof el.scrollTo === 'function')
       el.scrollTo({ left, behavior: 'smooth' })
     else
       el.scrollLeft = left
@@ -132,6 +133,7 @@ export function Filmstrip({ photos, index, folderPath, onSelect }: FilmstripProp
     <div
       ref={ref}
       {...stylex.props(styles.strip)}
+      role="presentation"
       onClick={e => e.stopPropagation()}
       onScroll={e => setScrollLeft(e.currentTarget.scrollLeft)}
       onWheel={(e: WheelEvent<HTMLDivElement>) => {

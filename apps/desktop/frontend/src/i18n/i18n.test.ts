@@ -6,15 +6,15 @@ const PLURAL = /_(?:zero|one|two|few|many|other)$/
 /** Every key path and the interpolations of its text, plural forms merged. */
 function shape(catalog: object, prefix = ''): Map<string, string[]> {
   const keys = new Map<string, string[]>()
-  for (const [key, value] of Object.entries(catalog)) {
+  for (const [key, value] of Object.entries(catalog as Record<string, unknown>)) {
     const path = prefix + key.replace(PLURAL, '')
-    if (typeof value === 'object') {
+    if (typeof value === 'object' && value !== null) {
       for (const [k, v] of shape(value, `${path}.`))
         keys.set(k, v)
     }
     else {
       const names = [...String(value).matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1])
-      keys.set(path, [...new Set([...(keys.get(path) ?? []), ...names])].sort())
+      keys.set(path, [...new Set([...(keys.get(path) ?? []), ...names])].toSorted((a, b) => a.localeCompare(b)))
     }
   }
   return keys

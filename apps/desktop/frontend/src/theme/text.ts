@@ -42,9 +42,7 @@ export type TextRole = 'display' | 'title' | 'subtitle' | 'body' | 'caption' | '
 
 /** The style for one role at one step of the size ladder. */
 export function textStyle(role: TextRole, compact = false) {
-  const key = (compact ? `${role}Compact` : role) as
-    | TextRole
-    | `${TextRole}Compact`
+  const key: TextRole | `${TextRole}Compact` = compact ? `${role}Compact` : role
   return text[key]
 }
 

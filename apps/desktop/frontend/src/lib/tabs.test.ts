@@ -57,8 +57,9 @@ describe('tabs', () => {
   })
 
   it('closes the tabs to the right, focusing the clicked one only if the active one went', () => {
-    expect(paths(withTabsToRightClosed(state(['/a', '/b', '/c'], 0), 't1'))).toEqual(['/a', '/b'])
-    expect(withTabsToRightClosed(state(['/a', '/b', '/c'], 0), 't1').activeId).toBe('t0')
+    const next = withTabsToRightClosed(state(['/a', '/b', '/c'], 0), 't1')
+    expect(paths(next)).toEqual(['/a', '/b'])
+    expect(next.activeId).toBe('t0')
     expect(withTabsToRightClosed(state(['/a', '/b', '/c'], 2), 't0').activeId).toBe('t0')
   })
 

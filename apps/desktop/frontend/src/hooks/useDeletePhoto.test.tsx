@@ -126,7 +126,7 @@ describe('useDeletePhoto', () => {
 
   it('selects the photo after a deleted one, ready for the next delete', async () => {
     const store = createStore()
-    const [a, b, c] = ['a', 'b', 'c'].map(makePhoto)
+    const [a, b, c] = ['a', 'b', 'c'].map(id => makePhoto(id))
     store.set(photosAtom, [a, b, c])
     store.set(selectedPhotoIdsAtom, new Set([b.id]))
     store.set(selectedPhotoIdAtom, b.id)
@@ -143,7 +143,7 @@ describe('useDeletePhoto', () => {
 
   it('keeps the viewer open on the next photo when deleting the one shown', async () => {
     const store = createStore()
-    const [a, b, c] = ['a', 'b', 'c'].map(makePhoto)
+    const [a, b, c] = ['a', 'b', 'c'].map(id => makePhoto(id))
     store.set(photosAtom, [a, b, c])
     store.set(previewPhotoIdAtom, c.id)
     scanFolderPage.mockResolvedValueOnce({ photos: [a, b], total: 2 })
@@ -159,7 +159,7 @@ describe('useDeletePhoto', () => {
 
   it('puts the deleted photos back on undo and selects them', async () => {
     const store = createStore()
-    const [a, b] = ['a', 'b'].map(makePhoto)
+    const [a, b] = ['a', 'b'].map(id => makePhoto(id))
     store.set(photosAtom, [a, b])
     scanFolderPage.mockResolvedValueOnce({ photos: [b], total: 1 })
     const { result } = renderWithStore(store)
@@ -187,7 +187,7 @@ describe('useDeletePhoto', () => {
   it('deletes from the Photos library without offering undo', async () => {
     deletePhotos.mockImplementationOnce(async (_folder: string, paths: string[]) => ({ trashed: [], deleted: paths, failures: [] }))
     const store = createStore()
-    const [a, b] = ['A', 'B'].map(libraryPhoto)
+    const [a, b] = ['A', 'B'].map(name => libraryPhoto(name))
     store.set(photosAtom, [a, b])
     store.set(selectedPhotoIdsAtom, new Set([a.id]))
     scanFolderPage.mockResolvedValueOnce({ photos: [b], total: 1 })
@@ -309,7 +309,7 @@ describe('useDeletePhoto', () => {
     const store = createStore()
     const first = renderWithStore(store)
     const second = renderWithStore(store)
-    const [a, b] = ['a', 'b'].map(makePhoto)
+    const [a, b] = ['a', 'b'].map(id => makePhoto(id))
 
     await act(async () => {
       const pending = first.result.current.deletePhoto([a, b])
@@ -329,7 +329,7 @@ describe('useDeletePhoto', () => {
   it('allows another attempt after cancellation', async () => {
     const store = createStore()
     const { result } = renderWithStore(store)
-    const [a, b] = ['a', 'b'].map(makePhoto)
+    const [a, b] = ['a', 'b'].map(id => makePhoto(id))
     await act(async () => {
       const cancelled = result.current.deletePhoto([a, b])
       await answerDialog(store, () => null)

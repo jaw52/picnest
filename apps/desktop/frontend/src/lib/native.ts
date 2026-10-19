@@ -8,6 +8,7 @@ import { Native } from '~/mygo'
  */
 export function convertFileSrc(path: string): string {
   const base = isMyGo() && runtime().platform === 'win32'
+    // eslint-disable-next-line unicorn/prefer-https -- WebView2 only serves custom schemes over http
     ? 'http://localfile.localhost/'
     : 'localfile://localhost/'
   return `${base}?path=${encodeURIComponent(path)}`
@@ -62,6 +63,12 @@ export function listen<T = unknown>(
 
 const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false
 
+// Without preventDefault on dragover the drop is refused.
+function acceptFileDrag(event: DragEvent) {
+  if (hasFiles(event))
+    event.preventDefault()
+}
+
 /**
  * Tracks files dragged onto the window. Hover state comes from the DOM drag
  * events (which don't expose paths); the dropped paths come from MyGo.
@@ -86,24 +93,19 @@ export function onFileDrop(handlers: {
       handlers.onHover(false)
     }
   }
-  // Without preventDefault on dragover the drop is refused.
-  const over = (event: DragEvent) => {
-    if (hasFiles(event))
-      event.preventDefault()
-  }
   const drop = () => {
     depth = 0
     handlers.onHover(false)
   }
   window.addEventListener('dragenter', enter)
   window.addEventListener('dragleave', leave)
-  window.addEventListener('dragover', over)
+  window.addEventListener('dragover', acceptFileDrag)
   window.addEventListener('drop', drop)
   const off = onNativeFileDrop(({ paths }) => handlers.onDrop(paths))
   return () => {
     window.removeEventListener('dragenter', enter)
     window.removeEventListener('dragleave', leave)
-    window.removeEventListener('dragover', over)
+    window.removeEventListener('dragover', acceptFileDrag)
     window.removeEventListener('drop', drop)
     off()
   }

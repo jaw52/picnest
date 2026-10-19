@@ -22,16 +22,18 @@ export function useDecodedImages() {
     return image.decode().then(() => {
       if (images.get(src) === image)
         decodedRef.current.add(src)
-    }, () => {})
+    }).catch(() => {})
   }, [])
 
   const retain = useCallback((srcs: string[]) => {
     const images = imagesRef.current
     for (const src of images.keys()) {
-      if (!srcs.includes(src)) {
-        images.delete(src)
-        decodedRef.current.delete(src)
+      if (srcs.includes(src)) {
+        continue
       }
+
+      images.delete(src)
+      decodedRef.current.delete(src)
     }
   }, [])
 

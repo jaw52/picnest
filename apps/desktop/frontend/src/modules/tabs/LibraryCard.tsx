@@ -142,7 +142,7 @@ function LibraryIcon({ coverUrls, open }: { coverUrls: string[], open: boolean }
 
   // Clips, gradients and filters are looked up by document-wide id, inside
   // url(#...) references - keep only characters that are safe there.
-  const id = `library${useId().replace(/[^\w-]/g, '')}`
+  const id = `library${useId().replaceAll(/[^\w-]/g, '')}`
   // The newest photo goes in front.
   const ordered = [coverUrls[2], coverUrls[1], coverUrls[0]]
 
@@ -179,7 +179,7 @@ function useLibrarySource() {
     const page = await scanFolderPage(LIBRARY_PATH, 0, FAN.length)
     setTotal(page.total)
     const urls = await Promise.all(
-      page.photos.map(p => ensureThumbnailUrl(LIBRARY_PATH, p.path, PREVIEW_EDGE).catch(() => undefined)),
+      page.photos.map(p => ensureThumbnailUrl(LIBRARY_PATH, p.path, PREVIEW_EDGE).catch(() => {})),
     )
     setCoverUrls(urls.filter(url => url !== undefined))
   }, [])
@@ -218,9 +218,13 @@ export function LibraryCard() {
     void refresh()
   }
 
-  const status = access === 'granted'
-    ? total === undefined ? '' : t('library.photos', { count: total })
-    : access === 'denied' ? t('library.denied') : access === undefined ? '' : t('library.allowAccess')
+  let status = ''
+  if (access === 'granted')
+    status = total === undefined ? '' : t('library.photos', { count: total })
+  else if (access === 'denied')
+    status = t('library.denied')
+  else if (access !== undefined)
+    status = t('library.allowAccess')
 
   return (
     <button

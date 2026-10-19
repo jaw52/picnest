@@ -114,15 +114,10 @@ const CLOUD_OUTLINE = (() => {
     const sy = slab(base.top, base.bottom, origin.y, dy)
     spans.push([Math.max(sx[0], sy[0]), Math.min(sx[1], sy[1])])
     let end = 0
-    for (let grew = true; grew;) {
-      grew = false
-      for (const [from, to] of spans) {
-        if (from <= end + 1e-6 && to > end + 1e-6) {
-          end = to
-          grew = true
-        }
-      }
-    }
+    // The span that carries the ray on past `end`, until none does.
+    const reaching = () => spans.find(([from, to]) => from <= end + 1e-6 && to > end + 1e-6)
+    for (let next = reaching(); next; next = reaching())
+      end = next[1]
     points.push({ x: origin.x + dx * end, y: origin.y + dy * end })
   }
   return points
@@ -296,7 +291,7 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
 
   // Gradients, clips and filters are looked up by document-wide id, inside
   // url(#...) references - keep only characters that are safe there.
-  const id = `folder${useId().replace(/[^\w-]/g, '')}`
+  const id = `folder${useId().replaceAll(/[^\w-]/g, '')}`
   const inner = {
     x: PHOTO.x + PHOTO.border,
     y: PHOTO.y + PHOTO.border,

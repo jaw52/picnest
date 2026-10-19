@@ -101,7 +101,7 @@ export const selectAfterRemovalAtom = atom(
   null,
   (get, set, removed: ReadonlySet<string>, before: readonly Photo[]) => {
     const selected = get(selectedPhotoIdsAtom)
-    if (![...selected].some(id => removed.has(id)))
+    if ([...selected].every(id => !removed.has(id)))
       return
     const kept = new Set([...selected].filter(id => !removed.has(id)))
     if (kept.size > 0) {

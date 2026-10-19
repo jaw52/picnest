@@ -296,7 +296,7 @@ export function MasonryView() {
         const shownFrom = gridHeaderBottom(scroller) - (containerRef.current?.getBoundingClientRect().top ?? 0)
         const onScreen = visible
           .filter(i => i >= offset && layout.cells[i].top >= shownFrom)
-          .sort((a, b) => layout.cells[a].top - layout.cells[b].top || a - b)[0]
+          .toSorted((a, b) => layout.cells[a].top - layout.cells[b].top || a - b)[0]
         return photos[(onScreen ?? offset) - offset]?.id
       }
       const candidates = photos.map((_, i) => offset + i)

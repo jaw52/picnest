@@ -15,7 +15,7 @@ export function useIsICloudFolder(path: string | null): boolean | undefined {
     if (path === null || iCloudFolders.has(path))
       return
     let live = true
-    isICloudFolder(path)
+    void isICloudFolder(path)
       .catch(() => false)
       .then((iCloud) => {
         iCloudFolders.set(path, iCloud)

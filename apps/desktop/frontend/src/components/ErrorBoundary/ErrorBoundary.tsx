@@ -21,8 +21,6 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, resetKey: this.props.resetKey }
-
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error }
   }
@@ -32,6 +30,8 @@ export class ErrorBoundary extends Component<Props, State> {
       return null
     return { error: null, resetKey: props.resetKey }
   }
+
+  state: State = { error: null, resetKey: this.props.resetKey }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Picnest crashed while rendering:', error, info.componentStack)

@@ -17,8 +17,8 @@ export function isDescendantPath(path: string, parent: string): boolean {
 export function folderRoots(folders: RecentFolder[]): RecentFolder[] {
   return folders.filter(
     folder =>
-      !folders.some(
-        other => other.path !== folder.path && isDescendantPath(folder.path, other.path),
+      folders.every(
+        other => other.path === folder.path || !isDescendantPath(folder.path, other.path),
       ),
   )
 }
@@ -71,8 +71,11 @@ export function pathSegments(path: string, roots: string[]): string[] {
   const separator = path[root.replace(TRAILING_SEPARATOR_RE, '').length]
   const segments = [root]
   let current = root.replace(TRAILING_SEPARATOR_RE, '')
-  for (const part of path.slice(current.length + 1).split(PATH_SEPARATOR_RE).filter(Boolean)) {
-    current = `${current}${separator}${part}`
+  const parts = path.slice(current.length + 1).split(PATH_SEPARATOR_RE)
+  for (const part of parts) {
+    if (!part)
+      continue
+    current += `${separator}${part}`
     segments.push(current)
   }
   return segments

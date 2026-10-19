@@ -148,8 +148,8 @@ describe('sortByTaken', () => {
 })
 
 describe('groupPhotos', () => {
-  const at = (id: string, ...date: [number, number, number]) =>
-    photo({ id, taken: new Date(...date).getTime() / 1000 })
+  const at = (id: string, year: number, month: number, day: number) =>
+    photo({ id, taken: new Date(year, month, day).getTime() / 1000 })
   const photos = [at('a', 2025, 4, 2), at('b', 2025, 4, 1), at('c', 2025, 3, 30), at('d', 2024, 11, 31)]
 
   it('splits the photos into runs from the same period', () => {

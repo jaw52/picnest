@@ -31,7 +31,7 @@ const move: PhotoOperation = async (_store, folderPath, photos) => {
     return []
   }
   catch (error) {
-    return [`${error}`]
+    return [String(error)]
   }
 }
 

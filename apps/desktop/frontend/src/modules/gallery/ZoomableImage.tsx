@@ -356,10 +356,12 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
         setDragging(false)
       }}
       onClickCapture={(e) => {
-        if (suppressClickRef.current) {
-          suppressClickRef.current = false
-          e.stopPropagation()
+        if (!suppressClickRef.current) {
+          return
         }
+
+        suppressClickRef.current = false
+        e.stopPropagation()
       }}
     >
       <ContextMenu items={menuItems}>
@@ -379,7 +381,7 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
               styles.image,
               placeholder && styles.over,
               placeholder && !loaded && styles.unloaded,
-              dragging ? styles.dragging : zoomed ? styles.zoomed : styles.fit,
+              dragging ? styles.dragging : (zoomed ? styles.zoomed : styles.fit),
             )}
             draggable={false}
             initial={fadeIn ? { opacity: 0, scale: 0.98 } : false}

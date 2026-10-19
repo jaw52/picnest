@@ -51,7 +51,7 @@ export function usePhotoDetails(path: string | null): {
           setLoading(false)
       }
     }
-    load()
+    void load()
 
     return () => {
       cancelled = true

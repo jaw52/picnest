@@ -126,7 +126,7 @@ export function neighborCell(
   candidates: readonly number[],
 ): number | undefined {
   const origin = cells[from]
-  if (!origin)
+  if (origin === undefined)
     return undefined
   let best: number | undefined
   let bestTravel = Infinity
@@ -143,9 +143,9 @@ export function neighborCell(
 /** Indices of the cells overlapping the vertical band [top, bottom]. */
 export function cellsInRange(cells: readonly MasonryCell[], top: number, bottom: number): number[] {
   const indices: number[] = []
-  cells.forEach((cell, i) => {
+  for (const [i, cell] of cells.entries()) {
     if (cell.top <= bottom && cell.top + cell.height >= top)
       indices.push(i)
-  })
+  }
   return indices
 }

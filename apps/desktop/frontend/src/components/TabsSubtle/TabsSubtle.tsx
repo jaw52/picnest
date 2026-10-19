@@ -99,8 +99,8 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
 
   const selectedRect = tabRects[selectedIndex]
-  const hoverRect = hoveredIndex !== null ? tabRects[hoveredIndex] : null
-  const focusRect = focusedIndex !== null ? tabRects[focusedIndex] : null
+  const hoverRect = hoveredIndex === null ? null : tabRects[hoveredIndex]
+  const focusRect = focusedIndex === null ? null : tabRects[focusedIndex]
   const isHoveringSelected = hoveredIndex === selectedIndex
   const isHovering = hoveredIndex !== null && !isHoveringSelected
 
@@ -117,8 +117,9 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
           onMouseLeave={handleMouseLeave}
           onFocus={(e: React.FocusEvent<HTMLDivElement>) => {
             const indexAttr = (e.target as HTMLElement)
-              .closest('[data-fluid-hover-index]')
-              ?.getAttribute('data-fluid-hover-index')
+              .closest<HTMLElement>('[data-fluid-hover-index]')
+              ?.dataset
+              .fluidHoverIndex
             if (indexAttr != null) {
               const idx = Number(indexAttr)
               setHoveredIndex(idx)
@@ -126,7 +127,7 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
             }
           }}
           onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
-            if (containerRef.current?.contains(e.relatedTarget as Node))
+            if (containerRef.current?.contains(e.relatedTarget))
               return
             setFocusedIndex(null)
             if (mouseInsideRef.current)
@@ -136,7 +137,7 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
           {...stylex.props(styles.list, xstyle)}
         >
           {/* Selected pill */}
-          {selectedRect && (
+          {selectedRect !== undefined && (
             <motion.div
               {...stylex.props(styles.pill)}
               initial={false}
@@ -153,7 +154,7 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
 
           {/* Hover pill */}
           <AnimatePresence>
-            {hoverRect && !isHoveringSelected && selectedRect && (
+            {hoverRect && !isHoveringSelected && selectedRect !== undefined && (
               <motion.div
                 {...stylex.props(styles.pill)}
                 initial={{
@@ -171,7 +172,7 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
                   opacity: 0.4,
                 }}
                 exit={
-                  !mouseInside && selectedRect
+                  !mouseInside && selectedRect !== undefined
                     ? {
                         left: selectedRect.left,
                         width: selectedRect.width,
