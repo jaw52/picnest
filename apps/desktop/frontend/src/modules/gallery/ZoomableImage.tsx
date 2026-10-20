@@ -498,10 +498,11 @@ function useLiveVideo(live: LiveVideo | undefined, zoomed: boolean) {
   }
 
   const video = live && (
+    // eslint-disable-next-line jsx-a11y/media-has-caption -- a Live Photo's sound is ambient, with nothing to caption
     <video
       ref={videoRef}
       src={live.src}
-      muted
+      muted={live.loop}
       playsInline
       loop={live.loop}
       preload="auto"
