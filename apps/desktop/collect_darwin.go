@@ -391,8 +391,9 @@ func nsDataBytes(data pobjc.ID) []byte {
 func pasteboardTypes(pb pobjc.ID) []string {
 	sel := pobjc.RegisterName
 	types := pb.Send(sel("types"))
-	var out []string
-	for i := range pobjc.Send[uint](types, sel("count")) {
+	count := pobjc.Send[uint](types, sel("count"))
+	out := make([]string, 0, count)
+	for i := range count {
 		out = append(out, goStringFromNS(types.Send(sel("objectAtIndex:"), i)))
 	}
 	return out

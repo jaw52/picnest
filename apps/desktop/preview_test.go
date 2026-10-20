@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -29,10 +30,10 @@ func writeFilledPNG(t *testing.T, path string, w, h int, c color.NRGBA) {
 	}
 }
 
-func previewOf(t *testing.T, path string, edge string) (contentType string, body []byte) {
+func previewOf(t *testing.T, path, edge string) (contentType string, body []byte) {
 	t.Helper()
 	rec := httptest.NewRecorder()
-	serveLocalFile(rec, httptest.NewRequest("GET", "/?path="+url.QueryEscape(path)+"&edge="+edge, nil))
+	serveLocalFile(rec, httptest.NewRequest(http.MethodGet, "/?path="+url.QueryEscape(path)+"&edge="+edge, http.NoBody))
 	if rec.Code != 200 {
 		t.Fatalf("status %d", rec.Code)
 	}

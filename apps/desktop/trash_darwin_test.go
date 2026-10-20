@@ -13,7 +13,7 @@ func TestTrashItemAndRestore(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	dir, err := os.MkdirTemp(home, ".picnest-trash-test-")
+	dir, err := os.MkdirTemp(home, ".picnest-trash-test-") //nolint:usetesting // must sit under home, see above
 	if err != nil {
 		t.Skip(err)
 	}

@@ -499,7 +499,7 @@ func downloadOriginal(ctx context.Context, raw string) ([]byte, string, error) {
 func download(ctx context.Context, raw string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, raw, http.NoBody)
 	if err != nil {
 		return nil, err
 	}

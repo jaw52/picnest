@@ -3,16 +3,66 @@ version: '2'
 linters:
   # govet, staticcheck, errcheck, ineffassign, unused
   default: standard
+  # Picked after the sets golangci-lint, Prometheus and Traefik lint
+  # themselves with; left out are gosec, goconst, noctx, forcetypeassert and
+  # exhaustive, which mostly flag the app's deliberate choices.
   enable:
-    - revive
-    - gocritic
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - contextcheck
+    - dupword
+    - durationcheck
+    - errchkjson
     - errorlint
+    - exptostd
+    - fatcontext
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocritic
+    - intrange
+    - makezero
+    - mirror
+    - misspell
     - modernize
+    - nakedret
+    - nilnesserr
+    - nilnil
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - sloglint
+    - sqlclosecheck
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - whitespace
   settings:
     errcheck:
       exclude-functions:
         # Deferred after Begin: a no-op once committed.
         - (*database/sql.Tx).Rollback
+    gocritic:
+      enabled-tags: [diagnostic, style, performance]
+      disabled-checks:
+        # Copying a struct of a hundred-odd bytes costs nothing here.
+        - hugeParam
+        - unnamedResult
+    nolintlint:
+      require-explanation: true
+      require-specific: true
   exclusions:
     presets:
       # Unchecked Close, Remove and the like, where there is nothing to do

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"image"
 	"image/png"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -53,7 +54,7 @@ func TestProcreateUsesEmbeddedPreview(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	serveLocalFile(rec, httptest.NewRequest("GET", "/?path="+url.QueryEscape(path), nil))
+	serveLocalFile(rec, httptest.NewRequest(http.MethodGet, "/?path="+url.QueryEscape(path), http.NoBody))
 	if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/png" {
 		t.Fatalf("serve: %d %q", rec.Code, rec.Header().Get("Content-Type"))
 	}

@@ -109,7 +109,8 @@ func (fw *folderWatcher) unwatch(folder string) {
 	if s == nil {
 		return
 	}
-	if s.users--; s.users == 0 {
+	s.users--
+	if s.users == 0 {
 		s.w.stop()
 		delete(fw.watches, folder)
 	}

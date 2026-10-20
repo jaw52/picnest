@@ -155,7 +155,7 @@ func getAllRatings(db *sql.DB) (map[string]int, error) {
 
 func setRating(db *sql.DB, fileName string, rating int) error {
 	if rating < 0 || rating > 5 {
-		return fmt.Errorf("rating must be between 0 and 5")
+		return errors.New("rating must be between 0 and 5")
 	}
 	if rating == 0 {
 		// 0 means "unrated": remove the row instead of storing a 0.
@@ -283,9 +283,10 @@ func clearPhotoCache(folders []string, progress func(CacheClearProgress)) error 
 		dir    string
 		thumbs []string
 	}
-	var caches []sidecarCache
+	sidecars := photoCacheSidecars(folders)
+	caches := make([]sidecarCache, 0, len(sidecars))
 	total := 0
-	for _, sidecar := range photoCacheSidecars(folders) {
+	for _, sidecar := range sidecars {
 		thumbs, _ := filepath.Glob(filepath.Join(sidecar, "thumbs", "*"))
 		caches = append(caches, sidecarCache{sidecar, thumbs})
 		total += len(thumbs) + 1 // the table
