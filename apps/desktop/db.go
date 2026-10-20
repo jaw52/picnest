@@ -304,9 +304,12 @@ func clearPhotoCache(folders []string, progress func(CacheClearProgress)) error 
 			}
 			step()
 		}
-		// Anything left, such as a thumbnail written meanwhile.
-		if err := os.RemoveAll(filepath.Join(c.dir, "thumbs")); err != nil {
-			errs = append(errs, err)
+		// Anything left, such as a thumbnail written meanwhile, and the
+		// library's Live Photo videos.
+		for _, dir := range []string{"thumbs", "live"} {
+			if err := os.RemoveAll(filepath.Join(c.dir, dir)); err != nil {
+				errs = append(errs, err)
+			}
 		}
 		if db := openExistingDB(c.dir); db != nil {
 			if _, err := db.Exec("DROP TABLE IF EXISTS photo_meta"); err != nil {

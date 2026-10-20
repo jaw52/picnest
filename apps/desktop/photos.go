@@ -63,7 +63,18 @@ type PhotoMeta struct {
 	// grid groups photos by.
 	Taken              int64 `json:"taken"`
 	IsCloudPlaceholder bool  `json:"isCloudPlaceholder"`
+	// Live is how a Live Photo in the library moves; empty for a still one.
+	Live LiveKind `json:"live,omitempty"`
 }
+
+// LiveKind is how a Live Photo plays its video: once through, or over and
+// over (a loop or a bounce).
+type LiveKind string
+
+const (
+	LiveKindLive LiveKind = "live"
+	LiveKindLoop LiveKind = "loop"
+)
 
 type PhotoPage struct {
 	Photos []PhotoMeta `json:"photos"`

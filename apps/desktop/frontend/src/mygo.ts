@@ -69,6 +69,12 @@ export interface LanguageState {
 /** LibraryAccess is what the app may do with the Photos library. */
 export type LibraryAccess = "undetermined" | "granted" | "denied";
 
+/**
+ * LiveKind is how a Live Photo plays its video: once through, or over and
+ * over (a loop or a bounce).
+ */
+export type LiveKind = "live" | "loop";
+
 export interface PhotoDetails {
   fileSize: number;
   created?: number;
@@ -101,6 +107,8 @@ export interface PhotoMeta {
    */
   taken: number;
   isCloudPlaceholder: boolean;
+  /** Live is how a Live Photo in the library moves; empty for a still one. */
+  live?: LiveKind;
 }
 
 export interface PhotoPage {

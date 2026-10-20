@@ -30,7 +30,7 @@ import { useFileName } from '~/hooks/useFileName'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { largestCachedThumbnail, useThumbnail } from '~/hooks/useThumbnail'
 import { isLibraryPath } from '~/lib/library'
-import { convertFileSrc, convertPreviewSrc, writeText } from '~/lib/native'
+import { convertFileSrc, convertLiveSrc, convertPreviewSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
 import { createSwipePager } from '~/lib/swipe-pager'
@@ -476,6 +476,7 @@ export function PhotoPreview() {
                       // A photo already decoded shows straight away, without
                       // its thumbnail and spinner blinking up first.
                       placeholder={isDecoded(srcOf(photo)) ? undefined : placeholderFor(folderPath, photo)}
+                      live={photo.live && { src: convertLiveSrc(photo.path, photo.modified), loop: photo.live === 'loop' }}
                       alt={fileName}
                       fadeIn={photo.id === openedId}
                       menuItems={[

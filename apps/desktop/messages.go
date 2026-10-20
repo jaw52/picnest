@@ -25,7 +25,7 @@ type messages struct {
 	fileFailed, existsNotRestored, ratingNotRestored    string
 	nameTaken, existsInDestination, recordsNotMoved     string
 
-	libraryNoAccess, libraryPhotoGone, libraryNoImage, libraryReadOnly, libraryNotDeleted string
+	libraryNoAccess, libraryPhotoGone, libraryNoImage, libraryNoLiveVideo, libraryReadOnly, libraryNotDeleted string
 
 	collectTip string
 }
@@ -67,11 +67,12 @@ var catalogs = map[Language]*messages{
 		ok:     "确定",
 		cancel: "取消",
 
-		libraryNoAccess:   "Picnest 没有访问照片图库的权限",
-		libraryPhotoGone:  "这张照片已不在照片图库中",
-		libraryNoImage:    "无法读取这张照片",
-		libraryReadOnly:   "照片图库中的照片不能重命名或移动",
-		libraryNotDeleted: "无法从照片图库删除这些照片",
+		libraryNoAccess:    "Picnest 没有访问照片图库的权限",
+		libraryPhotoGone:   "这张照片已不在照片图库中",
+		libraryNoImage:     "无法读取这张照片",
+		libraryNoLiveVideo: "这张实况照片没有视频",
+		libraryReadOnly:    "照片图库中的照片不能重命名或移动",
+		libraryNotDeleted:  "无法从照片图库删除这些照片",
 
 		collectTip: "把网页上的图片拖到这里收藏",
 
@@ -122,11 +123,12 @@ var catalogs = map[Language]*messages{
 		ok:     "OK",
 		cancel: "Cancel",
 
-		libraryNoAccess:   "Picnest doesn't have access to the Photos library",
-		libraryPhotoGone:  "This photo is no longer in the Photos library",
-		libraryNoImage:    "Couldn't read this photo",
-		libraryReadOnly:   "Photos in the Photos library can't be renamed or moved",
-		libraryNotDeleted: "Couldn't delete these photos from the Photos library",
+		libraryNoAccess:    "Picnest doesn't have access to the Photos library",
+		libraryPhotoGone:   "This photo is no longer in the Photos library",
+		libraryNoImage:     "Couldn't read this photo",
+		libraryNoLiveVideo: "This Live Photo has no video",
+		libraryReadOnly:    "Photos in the Photos library can't be renamed or moved",
+		libraryNotDeleted:  "Couldn't delete these photos from the Photos library",
 
 		collectTip: "Drag a picture from a web page here to collect it",
 

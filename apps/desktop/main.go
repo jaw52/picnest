@@ -25,6 +25,10 @@ const previewJPEGQuality = 0.9
 
 func serveLocalFile(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
+	if isLibraryPath(path) && r.URL.Query().Get("live") != "" {
+		serveLibraryLiveVideo(w, r, path)
+		return
+	}
 	if isLibraryPath(path) {
 		serveLibraryPhoto(w, r, path)
 		return

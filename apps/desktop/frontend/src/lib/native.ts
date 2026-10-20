@@ -23,6 +23,14 @@ export function convertPreviewSrc(path: string, maxEdge: number): string {
   return `${convertFileSrc(path)}&edge=${maxEdge}`
 }
 
+/**
+ * The video of a Live Photo in the Photos library. `modified` names the
+ * version, so the backend finds the video it wrote out without asking Photos.
+ */
+export function convertLiveSrc(path: string, modified: number): string {
+  return `${convertFileSrc(path)}&live=1&v=${modified}`
+}
+
 export function writeText(text: string): Promise<void> {
   return Native.writeText(text)
 }

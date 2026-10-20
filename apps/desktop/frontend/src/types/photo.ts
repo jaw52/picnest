@@ -7,6 +7,8 @@ export interface PhotoMeta {
   modified: number
   taken: number
   isCloudPlaceholder: boolean
+  /** How a Live Photo in the library moves: once through, or over and over. */
+  live?: 'live' | 'loop'
 }
 
 export interface PhotoPage {

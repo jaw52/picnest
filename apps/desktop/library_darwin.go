@@ -2,6 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"os"
@@ -48,6 +51,10 @@ const (
 	phImageDeliveryHighQuality    = 1
 	phImageResizeModeFast         = 1
 	phAssetResourceTypePhoto      = 1
+	phAssetResourceTypeVideo      = 9  // PHAssetResourceTypePairedVideo
+	phAssetResourceTypeFullVideo  = 10 // PHAssetResourceTypeFullSizePairedVideo
+	phAssetPlaybackStyleLive      = 3
+	phAssetPlaybackStyleLoop      = 5
 	phAuthorizationNotDetermined  = 0
 	phAuthorizationRestricted     = 1
 	phAuthorizationDenied         = 2
@@ -90,6 +97,7 @@ var (
 		SendIDBool   func(obj, sel, a objcID, b bool) objcID
 		SendID2      func(obj, sel, a, b objcID) objcID
 		SendID3      func(obj, sel, a, b, c objcID) objcID
+		SendID4      func(obj, sel, a, b, c, d objcID)
 		RequestImage func(obj, sel, asset objcID, width, height float64, mode int, opts, handler objcID) int32
 		SendChanges  func(obj, sel, changes objcID, nserr *objcID) bool
 	}
@@ -124,6 +132,7 @@ func loadPhotoKit() error {
 		purego.RegisterLibFunc(&pk.SendIDBool, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&pk.SendID2, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&pk.SendID3, lib, "objc_msgSend")
+		purego.RegisterLibFunc(&pk.SendID4, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&pk.RequestImage, lib, "objc_msgSend")
 		purego.RegisterLibFunc(&pk.SendChanges, lib, "objc_msgSend")
 	})
@@ -309,12 +318,26 @@ func scanLibraryPage(offset, limit int) (PhotoPage, error) {
 				Rating:   ratings[id],
 				Modified: assetStamp(asset),
 				Taken:    unixSeconds(objc.Send(asset, sel("creationDate"))),
+				Live:     assetLive(asset),
 			})
 			objc.PoolPop(pool)
 		}
 		return nil
 	})
 	return page, err
+}
+
+// assetLive is how the photo moves: as a Live Photo, as a loop or bounce
+// made of one, or not at all, including a Live Photo with Live turned off.
+func assetLive(asset objcID) LiveKind {
+	switch pk.SendInt(asset, sel("playbackStyle")) {
+	case phAssetPlaybackStyleLive:
+		return LiveKindLive
+	case phAssetPlaybackStyleLoop:
+		return LiveKindLoop
+	default:
+		return ""
+	}
 }
 
 // fetchLibraryAssets fetches the assets of the photos at paths that are
@@ -583,4 +606,118 @@ func libraryPhotoDetails(path string) (PhotoDetails, error) {
 		return nil
 	})
 	return details, err
+}
+
+// liveVideoDir holds the Live Photos' videos played so far, which Photos
+// hands over only as a file written out.
+func liveVideoDir() string {
+	return filepath.Join(libraryDataDir(), "live")
+}
+
+// serveLibraryLiveVideo serves the video of a Live Photo in the library: its
+// edited version if it has one. The first time, it is written out of Photos
+// (downloaded from iCloud if need be) into liveVideoDir. The request names
+// the photo's assetStamp (v), so the video, once written, is found without
+// asking Photos: the web view reads a video in many range requests, and a
+// fetch from Photos for each kept photolibraryd and the app busy.
+func serveLibraryLiveVideo(w http.ResponseWriter, r *http.Request, path string) {
+	stamp, _ := strconv.ParseInt(r.URL.Query().Get("v"), 10, 64)
+	h := sha256.New()
+	h.Write([]byte(path))
+	h.Write(binary.LittleEndian.AppendUint64(nil, uint64(stamp)))
+	video := filepath.Join(liveVideoDir(), hex.EncodeToString(h.Sum(nil))+".mov")
+	if err := writeLibraryLiveVideo(path, video); err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	http.ServeFile(w, r, video)
+}
+
+// liveVideoWrites lets one request write a video out of Photos while those
+// for the same video, arriving together, wait for it.
+var liveVideoWrites sync.Mutex
+
+// writeLibraryLiveVideo writes the video of the Live Photo at path to video,
+// unless it is there already.
+func writeLibraryLiveVideo(path, video string) error {
+	if _, err := os.Stat(video); err == nil {
+		return nil
+	}
+	liveVideoWrites.Lock()
+	defer liveVideoWrites.Unlock()
+	if _, err := os.Stat(video); err == nil {
+		return nil
+	}
+	return withPool(func() error {
+		if err := requireLibraryAccess(); err != nil {
+			return err
+		}
+		asset, err := fetchLibraryAsset(libraryAssetID(path))
+		if err != nil {
+			return err
+		}
+		res := liveVideoResource(asset)
+		if res == 0 {
+			return errors.New(text().libraryNoLiveVideo)
+		}
+		if err := os.MkdirAll(liveVideoDir(), 0o755); err != nil {
+			return err
+		}
+		// Written beside the video and moved into place once whole, so a
+		// request meanwhile never serves half of it.
+		tmp, err := os.CreateTemp(liveVideoDir(), "*.mov.part")
+		if err != nil {
+			return err
+		}
+		tmp.Close()
+		// Photos won't write over a file.
+		os.Remove(tmp.Name())
+		defer os.Remove(tmp.Name())
+		if err := writeAssetResource(res, tmp.Name()); err != nil {
+			return err
+		}
+		return os.Rename(tmp.Name(), video)
+	})
+}
+
+// liveVideoResource returns the asset's edited video if it has one, else
+// its original video, or 0 for a photo without one.
+func liveVideoResource(asset objcID) objcID {
+	resources := objc.SendID(objc.GetClass("PHAssetResource"), sel("assetResourcesForAsset:"), asset)
+	var found objcID
+	for i := range int(objc.SendCount(resources, sel("count"))) {
+		res := objc.SendIndex(resources, sel("objectAtIndex:"), uint(i))
+		switch pk.SendInt(res, sel("type")) {
+		case phAssetResourceTypeFullVideo:
+			return res
+		case phAssetResourceTypeVideo:
+			found = res
+		}
+	}
+	return found
+}
+
+// writeAssetResource writes the resource to the file at dst, which must not
+// exist, waiting for it to be written.
+func writeAssetResource(res objcID, dst string) error {
+	opts := objc.Send(objc.Send(objc.GetClass("PHAssetResourceRequestOptions"), sel("alloc")), sel("init"))
+	objc.Send(opts, sel("autorelease"))
+	// Photos kept only in iCloud ("Optimize Mac Storage") download.
+	pk.SendSetBool(opts, sel("setNetworkAccessAllowed:"), true)
+	done := make(chan string, 1)
+	// Called once, on a queue of Photos' own.
+	block := pobjc.NewBlock(func(_ pobjc.Block, nserr pobjc.ID) {
+		if nserr == 0 {
+			done <- ""
+			return
+		}
+		done <- nsStringValue(objc.Send(objcID(nserr), sel("localizedDescription")))
+	})
+	defer block.Release()
+	manager := objc.Send(objc.GetClass("PHAssetResourceManager"), sel("defaultManager"))
+	pk.SendID4(manager, sel("writeDataForAssetResource:toFile:options:completionHandler:"), res, fileURL(dst), opts, objcID(block))
+	if msg := <-done; msg != "" {
+		return errors.New(msg)
+	}
+	return nil
 }

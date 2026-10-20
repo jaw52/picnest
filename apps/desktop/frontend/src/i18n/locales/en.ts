@@ -114,6 +114,7 @@ export const en = {
     downloadOriginal: 'Download original',
     previous: 'Previous',
     next: 'Next',
+    live: 'LIVE',
   },
   photoInfo: {
     renameHint: '{{name}} (double-click to rename)',

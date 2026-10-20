@@ -4,10 +4,14 @@ import type { View } from '~/lib/zoom'
 import * as stylex from '@stylexjs/stylex'
 import { motion } from 'framer-motion'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import LivePhotoRegular from '~icons/mingcute/live-photo-line'
 import LoadingRegular from '~icons/mingcute/loading-line'
 import { ContextMenu } from '~/components/ContextMenu'
 import { spring } from '~/lib/springs'
 import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
+import { motion as motionTokens, radius } from '~/theme/layout.stylex'
+import { text } from '~/theme/text'
 
 /** Height kept clear above the photo: the title bar row, where the traffic lights sit. */
 const TITLEBAR_STRIP = 40
@@ -78,6 +82,35 @@ const styles = stylex.create({
     animationTimingFunction: 'linear',
     animationIterationCount: 'infinite',
   },
+  // A Live Photo's video over the photo, faded in once it plays.
+  video: {
+    opacity: 0,
+    transitionProperty: 'opacity',
+    transitionDuration: motionTokens.fast,
+  },
+  videoPlaying: { opacity: 1 },
+  // Marks a Live Photo in its corner; hovering it plays the video.
+  liveBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.full,
+    paddingInline: 8,
+    paddingBlock: 2,
+    backgroundColor: 'rgb(0 0 0 / 0.45)',
+    color: 'white',
+    cursor: 'default',
+    userSelect: 'none',
+  },
+  liveSpinner: {
+    animationName: spin,
+    animationDuration: '1s',
+    animationTimingFunction: 'linear',
+    animationIterationCount: 'infinite',
+  },
   fit: { cursor: 'zoom-in' },
   zoomed: { cursor: 'grab' },
   dragging: { cursor: 'grabbing' },
@@ -135,12 +168,20 @@ export interface FullImage {
   width: number
 }
 
+/** The video of a Live Photo, and whether it plays over and over (a loop or a bounce). */
+export interface LiveVideo {
+  src: string
+  loop: boolean
+}
+
 interface ZoomableImageProps {
   src: string
   /** Loaded over `src` once zoomed in, and what actual size means. */
   full?: FullImage
   /** Shown while `src` loads, with a spinner over it. */
   placeholder?: Placeholder
+  /** Played over the photo: once through while its badge is hovered, or over and over. */
+  live?: LiveVideo
   alt: string
   /** Fade and scale the photo in on mount; off when it replaces another. */
   fadeIn: boolean
@@ -180,7 +221,7 @@ export function FittedImage({ src, placeholder, alt }: { src: string, placeholde
  * fit and actual size. Pinch arrives as `gesture*` events in WebKit (the
  * macOS webview) and as ctrl+wheel in Chromium; both are handled.
  */
-export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }: ZoomableImageProps) {
+export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuItems }: ZoomableImageProps) {
   const { loaded, ...loadHandlers } = useLoaded(src)
   const { loaded: fullLoaded, ...fullLoadHandlers } = useLoaded(full?.src ?? '')
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -319,6 +360,7 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
   const [fullShown, setFullShown] = useState(false)
   if (fullLoaded && !moving && !fullShown)
     setFullShown(true)
+  const liveVideo = useLiveVideo(live, zoomed)
 
   return (
     <div
@@ -407,9 +449,84 @@ export function ZoomableImage({ src, full, placeholder, alt, fadeIn, menuItems }
               draggable={false}
             />
           )}
+          {live && liveVideo.video}
           {placeholder && !loaded && <LoadingRegular width={24} height={24} {...stylex.props(styles.spinner)} />}
+          {live && !live.loop && !zoomed && liveVideo.badge}
         </div>
       </ContextMenu>
     </div>
   )
+}
+
+/**
+ * A Live Photo's video, laid over the photo, and the badge that plays it.
+ * A loop plays from the start, over and over; a Live Photo plays once
+ * through while its badge is hovered, as in Photos. Zoomed in, the photo
+ * shows still.
+ */
+function useLiveVideo(live: LiveVideo | undefined, zoomed: boolean) {
+  const { t } = useTranslation()
+  const videoRef = useRef<HTMLVideoElement>(null)
+  // Asked to play, and playing: it is read from Photos the first time.
+  const [wanted, setWanted] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const loop = live?.loop ?? false
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video)
+      return
+    if (zoomed) {
+      video.pause()
+    }
+    else if (loop) {
+      video.play().catch(() => {})
+    }
+  }, [zoomed, loop])
+
+  function play() {
+    const video = videoRef.current
+    if (!video)
+      return
+    setWanted(true)
+    video.currentTime = 0
+    video.play().catch(() => {})
+  }
+  function stop() {
+    setWanted(false)
+    videoRef.current?.pause()
+  }
+
+  const video = live && (
+    <video
+      ref={videoRef}
+      src={live.src}
+      muted
+      playsInline
+      loop={live.loop}
+      preload="auto"
+      onPlaying={() => setPlaying(true)}
+      onPause={() => setPlaying(false)}
+      onEnded={() => {
+        setPlaying(false)
+        setWanted(false)
+      }}
+      {...stylex.props(styles.image, styles.over, styles.passThrough, styles.video, playing && styles.videoPlaying)}
+    />
+  )
+  const badge = (
+    <span
+      role="presentation"
+      {...stylex.props(styles.liveBadge, text.caption)}
+      onPointerEnter={play}
+      onPointerLeave={stop}
+      onClick={e => e.stopPropagation()}
+    >
+      {wanted && !playing
+        ? <LoadingRegular width={14} height={14} {...stylex.props(styles.liveSpinner)} />
+        : <LivePhotoRegular width={14} height={14} />}
+      {t('preview.live')}
+    </span>
+  )
+  return { video, badge }
 }

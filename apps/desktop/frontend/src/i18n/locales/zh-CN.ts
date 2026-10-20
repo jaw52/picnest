@@ -111,6 +111,7 @@ export const zhCN = {
     downloadOriginal: '下载原图',
     previous: '上一张',
     next: '下一张',
+    live: '实况',
   },
   photoInfo: {
     renameHint: '{{name}}（双击重命名）',
