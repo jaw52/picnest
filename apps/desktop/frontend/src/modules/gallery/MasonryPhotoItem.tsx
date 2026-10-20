@@ -57,23 +57,28 @@ const styles = stylex.create({
     overflow: 'hidden',
     borderRadius: 4,
     backgroundColor: colors['--ps-muted'],
-    transitionProperty: 'box-shadow',
+  },
+  // Like digiKam and Eagle: an accent border and a faint accent wash over
+  // the picture.
+  selectionMark: {
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+    borderRadius: 4,
+    backgroundColor: 'rgb(107 151 255 / 0.18)',
+    boxShadow: `inset 0 0 0 3px ${colors['--ps-focus-ring']}`,
+    opacity: 0,
+    transitionProperty: 'opacity',
     transitionDuration: motion.fast,
   },
+  selectionMarkOn: { opacity: 1 },
   focusRing: {
     outline: { 'default': 'none', ':focus-visible': `2px solid ${colors['--ps-focus-ring']}` },
     outlineOffset: 6,
   },
-  // Focus follows the selection, whose ring already marks the tile.
+  // Focus follows the selection, whose border already marks the tile.
   noFocusRing: { outline: 'none' },
   size: (width: number, height: number) => ({ width, height }),
-  // A 2px gap in the page color, then a 2px ring when selected.
-  selected: {
-    boxShadow: `0 0 0 2px ${colors['--ps-background']}, 0 0 0 4px ${colors['--ps-foreground']}`,
-  },
-  unselected: {
-    boxShadow: `0 0 0 2px ${colors['--ps-background']}, 0 0 0 4px transparent`,
-  },
   placeholder: {
     display: 'flex',
     width: '100%',
@@ -314,7 +319,6 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
           tileMarker,
           styles.item,
           styles.focusRing,
-          selected ? styles.selected : styles.unselected,
           selected && styles.noFocusRing,
           styles.size(width, height),
         )}
@@ -339,6 +343,7 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
         onDoubleClick={openPreview}
       >
         <TileImage photo={data} fileName={fileName} thumbnailUrl={thumbnailUrl} folderPath={folderPath} />
+        <div {...stylex.props(styles.selectionMark, selected && styles.selectionMarkOn)} />
         <TileCaption photo={data} onRate={r => rate([data], r)} />
         {data.rating > 0 && (
           <div {...stylex.props(styles.ratingBadge, text.caption, weight.semibold)}>
