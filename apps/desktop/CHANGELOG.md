@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+### What's new / 新功能
+
+- **Live Photos in the Photos library** — Live Photos in the library play in the lightbox: hover the Live badge to play one through, with its sound. Loops and bounces play over and over.
+  **照片图库里的实况照片**：图库里的实况照片可以在大图里播放，鼠标悬停在“实况”角标上就会播放一遍，并带有声音。循环和弹跳会一直循环播放。
+- **Grid reflows when photos leave it** — when photos are deleted or moved out, the rest slide over to fill the gap.
+  **照片离开后网格重新排列**：删除或移走照片后，其余照片会滑动补上空位。
+- **New selection style** — selected photos get a blue border and a faint blue wash instead of a black ring.
+  **新的选中样式**：选中的照片现在是蓝色边框加淡淡的蓝色蒙层，不再是黑色外框。
+
 ## 0.6.0
 
 ### What's new / 新功能
