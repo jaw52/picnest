@@ -20,6 +20,7 @@
         "lint-staged": "^17.5.0",
         "oxlint": "^1.85.0",
         "simple-git-hooks": "^2.14.0",
+        "tsrs": "0.16.0-ts7.1.0-dev.20260929",
         "typescript": "~6.0.3",
       },
     },

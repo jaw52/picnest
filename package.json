@@ -11,7 +11,7 @@
     "dev": "cd apps/desktop && CGO_ENABLED=0 go tool mygo dev",
     "build": "cd apps/desktop && CGO_ENABLED=0 go tool mygo build",
     "generate": "cd apps/desktop && CGO_ENABLED=0 go tool mygo generate",
-    "typecheck": "bun run --filter '*' typecheck",
+    "typecheck": "tsrs && bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test && cd apps/desktop && go test ./...",
     "lint": "oxlint && eslint . && bun run lint:go && bun run lint:dup",
     "lint:fix": "oxlint --fix && eslint . --fix && go -C apps/desktop tool golangci-lint fmt && go -C apps/desktop tool golangci-lint run --fix",
@@ -35,6 +35,7 @@
     "lint-staged": "^17.5.0",
     "oxlint": "^1.85.0",
     "simple-git-hooks": "^2.14.0",
+    "tsrs": "0.16.0-ts7.1.0-dev.20260929",
     "typescript": "~6.0.3"
   },
   "simple-git-hooks": {
