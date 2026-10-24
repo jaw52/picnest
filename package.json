@@ -10,8 +10,8 @@
     "generate": "cd apps/desktop && CGO_ENABLED=0 go tool mygo generate",
     "typecheck": "tsc -p tsconfig.json && pnpm -r run typecheck",
     "test": "pnpm -r run test && go -C apps/desktop test ./...",
-    "lint": "oxlint && eslint . --cache && pnpm run lint:go && pnpm run lint:dup",
-    "lint:fix": "oxlint --fix && eslint . --cache --fix && go -C apps/desktop tool golangci-lint fmt && go -C apps/desktop tool golangci-lint run --fix",
+    "lint": "eslint . --cache && pnpm run lint:go && pnpm run lint:dup",
+    "lint:fix": "eslint . --cache --fix && go -C apps/desktop tool golangci-lint fmt && go -C apps/desktop tool golangci-lint run --fix",
     "lint:go": "go -C apps/desktop tool golangci-lint fmt --diff && go -C apps/desktop tool golangci-lint run",
     "lint:dup": "jscpd",
     "knip": "knip",
@@ -25,7 +25,6 @@
     "@unocss/eslint-plugin": "catalog:dev",
     "eslint": "catalog:dev",
     "eslint-plugin-format": "catalog:dev",
-    "eslint-plugin-oxlint": "catalog:dev",
     "eslint-plugin-slop": "catalog:dev",
     "eslint-plugin-sonarjs": "catalog:dev",
     "eslint-plugin-vuejs-accessibility": "catalog:dev",
@@ -33,7 +32,6 @@
     "jscpd": "catalog:dev",
     "knip": "catalog:dev",
     "nano-staged": "catalog:dev",
-    "oxlint": "catalog:dev",
     "simple-git-hooks": "catalog:dev",
     "skills-npm": "catalog:agentic",
     "typescript": "catalog:dev"
@@ -42,7 +40,6 @@
     "pre-commit": "pnpm i --frozen-lockfile --ignore-scripts --offline && pnpm run ci && pnpm exec nano-staged"
   },
   "nano-staged": {
-    "*.{js,ts,vue}": "oxlint --fix",
     "*": "eslint --fix --no-warn-ignored"
   }
 }

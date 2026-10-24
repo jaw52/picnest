@@ -1,9 +1,5 @@
 import antfu from '@antfu/eslint-config'
-import oxlint from 'eslint-plugin-oxlint'
-import oxlintConfig from './oxlint.config'
 
-// oxlint 负责原生规则；ESLint 只跑 oxlint 无法覆盖的 JS 插件规则，
-// 与 oxlint 重复的规则通过 eslint-plugin-oxlint 关闭（放在最后）
 export default antfu(
   {
     vue: { a11y: true },
@@ -65,5 +61,4 @@ export default antfu(
       'ts/unbound-method': 'off',
     },
   },
-  ...oxlint.buildFromOxlintConfig(oxlintConfig),
 )

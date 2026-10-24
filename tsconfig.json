@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "skipLibCheck": true
   },
-  "include": ["eslint.config.ts", "oxlint.config.ts"]
+  "include": ["eslint.config.ts"]
 }
