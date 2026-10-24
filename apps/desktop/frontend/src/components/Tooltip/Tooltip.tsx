@@ -35,7 +35,7 @@ export function TooltipProvider({
   )
 }
 
-export type TooltipSide = 'top' | 'right' | 'bottom' | 'left'
+type TooltipSide = 'top' | 'right' | 'bottom' | 'left'
 
 export interface TooltipProps {
   content: ReactNode

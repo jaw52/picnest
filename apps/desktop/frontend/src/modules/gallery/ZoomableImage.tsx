@@ -163,7 +163,7 @@ function PlaceholderImage({ placeholder }: { placeholder: Placeholder }) {
 }
 
 /** The photo itself, and its width in pixels, when `src` is a scaled copy of it. */
-export interface FullImage {
+interface FullImage {
   src: string
   width: number
 }

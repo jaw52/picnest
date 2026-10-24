@@ -3,7 +3,7 @@ import { colors } from './colors.stylex'
 import { shadows } from './shadows.stylex'
 
 /** Background of each rung of the 8-step surface ladder (1 is the page). */
-export const surfaceBg = stylex.create({
+const surfaceBg = stylex.create({
   1: { backgroundColor: colors['--ps-surface-1'] },
   2: { backgroundColor: colors['--ps-surface-2'] },
   3: { backgroundColor: colors['--ps-surface-3'] },
@@ -15,7 +15,7 @@ export const surfaceBg = stylex.create({
 })
 
 /** Shadow recipe paired 1:1 with each surface rung. */
-export const surfaceShadow = stylex.create({
+const surfaceShadow = stylex.create({
   1: { boxShadow: shadows['--ps-shadow-1'] },
   2: { boxShadow: shadows['--ps-shadow-2'] },
   3: { boxShadow: shadows['--ps-shadow-3'] },

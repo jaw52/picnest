@@ -1,4 +1,4 @@
-import { isMyGo, on, onFileDrop as onNativeFileDrop, runtime } from 'mygo-runtime'
+import { isMyGo, onFileDrop as onNativeFileDrop, runtime } from 'mygo-runtime'
 
 import { Native } from '~/mygo'
 
@@ -59,14 +59,6 @@ export function ask(message: string, options: DialogOptions = {}): Promise<boole
 
 export function message(text: string, options: DialogOptions = {}): Promise<void> {
   return Native.message(options.title ?? '', text, options.kind ?? 'info')
-}
-
-/** Subscribes to a backend event; resolves to an unsubscribe function. */
-export function listen<T = unknown>(
-  name: string,
-  handler: (event: { payload: T }) => void,
-): Promise<() => void> {
-  return Promise.resolve(on<T>(name, payload => handler({ payload })))
 }
 
 const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false

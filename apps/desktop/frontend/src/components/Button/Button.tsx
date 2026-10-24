@@ -8,8 +8,8 @@ import { trim } from '~/theme/text'
 import { buttonMarker } from './marker.stylex'
 import { styles } from './style'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'destructive'
-export type ButtonSize = 'default' | 'compact' | 'icon' | 'icon-compact'
+type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'destructive'
+type ButtonSize = 'default' | 'compact' | 'icon' | 'icon-compact'
 
 export interface ButtonProps extends Omit<ComponentProps<typeof BaseButton>, 'className' | 'style' | 'children'> {
   variant?: ButtonVariant

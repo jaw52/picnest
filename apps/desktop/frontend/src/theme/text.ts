@@ -56,16 +56,6 @@ export const weight = stylex.create({
   bold: { fontVariationSettings: '\'wght\' 700, \'opsz\' 25' },
 })
 
-/**
- * The weight values as strings, for inline `style` where the weight is
- *  animated or chosen at runtime.
- */
-export const fontWeights = {
-  normal: '\'wght\' 400, \'opsz\' 14',
-  semibold: '\'wght\' 550, \'opsz\' 18',
-  bold: '\'wght\' 700, \'opsz\' 25',
-} as const
-
 export const trim = stylex.create({
   /**
    * Trims the line box to cap-height → baseline so labels center optically.
