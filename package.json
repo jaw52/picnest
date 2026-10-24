@@ -3,46 +3,41 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "apps/desktop/frontend"
-  ],
+  "packageManager": "pnpm@12.5.1",
   "scripts": {
     "dev": "cd apps/desktop && CGO_ENABLED=0 go tool mygo dev",
     "build": "cd apps/desktop && CGO_ENABLED=0 go tool mygo build",
     "generate": "cd apps/desktop && CGO_ENABLED=0 go tool mygo generate",
-    "typecheck": "tsrs && bun run --filter '*' typecheck",
-    "test": "bun run --filter '*' test && cd apps/desktop && go test ./...",
-    "lint": "oxlint && eslint . && bun run lint:go && bun run lint:dup",
+    "typecheck": "tsrs && pnpm -r run typecheck",
+    "test": "pnpm -r run test && cd apps/desktop && go test ./...",
+    "lint": "oxlint && eslint . && pnpm run lint:go && pnpm run lint:dup",
     "lint:fix": "oxlint --fix && eslint . --fix && go -C apps/desktop tool golangci-lint fmt && go -C apps/desktop tool golangci-lint run --fix",
     "lint:go": "go -C apps/desktop tool golangci-lint fmt --diff && go -C apps/desktop tool golangci-lint run",
     "lint:dup": "jscpd",
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks && skills-npm"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.5.1",
-    "@eslint-react/eslint-plugin": "^5.22.1",
-    "@stylexjs/eslint-plugin": "0.19.1",
-    "eslint": "^10.11.0",
-    "eslint-plugin-format": "^2.0.1",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-oxlint": "^1.86.0",
-    "eslint-plugin-react-refresh": "^0.5.7",
-    "eslint-plugin-slop": "^0.1.3",
-    "eslint-plugin-sonarjs": "^4.2.2",
-    "jiti": "^2.7.0",
-    "jscpd": "^5.4.1",
-    "lint-staged": "^17.5.0",
-    "oxlint": "^1.85.0",
-    "simple-git-hooks": "^2.14.0",
-    "tsrs": "0.16.0-ts7.1.0-dev.20260929",
-    "typescript": "~6.0.3"
+    "@antfu/eslint-config": "catalog:dev",
+    "@antfu/skills": "catalog:agentic",
+    "@eslint-react/eslint-plugin": "catalog:dev",
+    "@stylexjs/eslint-plugin": "catalog:dev",
+    "eslint": "catalog:dev",
+    "eslint-plugin-format": "catalog:dev",
+    "eslint-plugin-jsx-a11y": "catalog:dev",
+    "eslint-plugin-oxlint": "catalog:dev",
+    "eslint-plugin-react-refresh": "catalog:dev",
+    "eslint-plugin-slop": "catalog:dev",
+    "eslint-plugin-sonarjs": "catalog:dev",
+    "jiti": "catalog:dev",
+    "jscpd": "catalog:dev",
+    "lint-staged": "catalog:dev",
+    "oxlint": "catalog:dev",
+    "simple-git-hooks": "catalog:dev",
+    "skills-npm": "catalog:agentic",
+    "tsrs": "catalog:dev",
+    "typescript": "catalog:dev"
   },
   "simple-git-hooks": {
-    "pre-commit": "bunx lint-staged && bunx jscpd --silent"
-  },
-  "trustedDependencies": [
-    "esbuild",
-    "simple-git-hooks"
-  ]
+    "pre-commit": "pnpm exec lint-staged && pnpm exec jscpd --silent"
+  }
 }
