@@ -1,4 +1,4 @@
-import type { TabsState } from './tabs'
+import type { TabsState } from '~/types/tabs'
 import { describe, expect, it } from 'vitest'
 import {
   activeTab,

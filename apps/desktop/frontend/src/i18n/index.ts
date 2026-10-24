@@ -1,31 +1,28 @@
 import type { Language } from '~/mygo'
-import i18n from 'i18next'
-import { initReactI18next } from 'react-i18next'
+import { createI18n } from 'vue-i18n'
 import { en } from './locales/en'
 import { zhCN } from './locales/zh-CN'
 
-export const resources = {
-  'zh-CN': { translation: zhCN },
-  'en': { translation: en },
-} satisfies Record<Language, { translation: object }>
+/** Types `t` keys after the Chinese catalog, which every other catalog matches (see i18n.test.ts). */
+export type MessageSchema = typeof zhCN
 
-/** Starts i18next in `language`, ready before the first render. */
-export function initI18n(language: Language) {
-  void i18n.use(initReactI18next).init({
-    resources,
-    lng: language,
-    fallbackLng: 'en',
-    // React escapes what it renders.
-    interpolation: { escapeValue: false },
-    initAsync: false,
-  })
+export const messages = {
+  'zh-CN': zhCN,
+  'en': en,
+} satisfies Record<Language, MessageSchema>
+
+export const i18n = createI18n<[MessageSchema], Language, false>({
+  legacy: false,
+  locale: 'en',
+  fallbackLocale: 'en',
+  messages,
+})
+
+/** Shows the app in `language`; set before the first render, so it starts in it. */
+export function setLanguage(language: Language): void {
+  i18n.global.locale.value = language
   document.documentElement.lang = language
 }
 
-/** Shows the app in `language`. */
-export function changeLanguage(language: Language) {
-  void i18n.changeLanguage(language)
-  document.documentElement.lang = language
-}
-
-export { default as i18n } from 'i18next'
+/** The app's `t`, for code outside components. */
+export const t = i18n.global.t

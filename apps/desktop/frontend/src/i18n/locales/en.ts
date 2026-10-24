@@ -1,6 +1,6 @@
 /**
- * The app's text in English. Plurals take i18next's suffixes: `_one` and
- * `_other`.
+ * The app's text in English. A plural is its singular and plural forms
+ * joined by ` | `, picked by the count passed to `t`.
  */
 export const en = {
   common: {
@@ -10,10 +10,8 @@ export const en = {
     close: 'Close',
     cancel: 'Cancel',
     newTab: 'New Tab',
-    deletePhotos_one: 'Delete {{count}} Photo',
-    deletePhotos_other: 'Delete {{count}} Photos',
-    movePhotosTo_one: 'Move {{count}} Photo To…',
-    movePhotosTo_other: 'Move {{count}} Photos To…',
+    deletePhotos: 'Delete {count} Photo | Delete {count} Photos',
+    movePhotosTo: 'Move {count} Photo To… | Move {count} Photos To…',
     rescanFailed: 'Couldn\'t refresh the folder. Rescan it to see the changes.',
   },
   app: {
@@ -26,26 +24,25 @@ export const en = {
   rating: {
     label: 'Rating',
     none: 'No rating',
-    stars_one: '{{count}} star',
-    stars_other: '{{count}} stars',
+    stars: '{count} star | {count} stars',
   },
   dialogs: {
-    movePhotoTo: 'Move “{{name}}” To…',
+    movePhotoTo: 'Move “{name}” To…',
     movePhotosTitle: 'Move Photos',
-    deleteFolderConfirm: 'Move “{{name}}” to the Trash?',
+    deleteFolderConfirm: 'Move “{name}” to the Trash?',
     deleteFolderTitle: 'Delete Folder',
-    deleteFailed: 'Couldn\'t delete it: {{error}}',
-    downloadFailed: 'Couldn\'t download it: {{error}}',
+    deleteFailed: 'Couldn\'t delete it: {error}',
+    downloadFailed: 'Couldn\'t download it: {error}',
     downloadTitle: 'Download iCloud File',
     deletePhotosTitle: 'Delete Photos',
     undoDeleteTitle: 'Undo Delete',
-    renameFailed: 'Couldn\'t rename it: {{error}}',
+    renameFailed: 'Couldn\'t rename it: {error}',
     renameTitle: 'Rename',
   },
   tabs: {
     openInNewTab: 'Open in New Tab',
     removeFromList: 'Remove from List',
-    closeTab: 'Close {{title}}',
+    closeTab: 'Close {title}',
     closeOthers: 'Close Other Tabs',
     closeToRight: 'Close Tabs to the Right',
     list: 'Folder tabs',
@@ -71,8 +68,7 @@ export const en = {
   },
   library: {
     name: 'Photos Library',
-    photos_one: '{{count}} Photo',
-    photos_other: '{{count}} Photos',
+    photos: '{count} Photo | {count} Photos',
     allowAccess: 'Click to Allow Access',
     denied: 'Allow Access in System Settings',
   },
@@ -80,8 +76,8 @@ export const en = {
     photos: 'Photos',
     emptyFolder: 'This folder is empty',
     noMatches: 'No photos match this filter',
-    filterAll: 'All {{count}}',
-    filterUnrated: 'Unrated {{count}}',
+    filterAll: 'All {count}',
+    filterUnrated: 'Unrated {count}',
     groupNone: 'Ungrouped',
     groupYear: 'By year',
     groupMonth: 'By month',
@@ -99,12 +95,12 @@ export const en = {
     deleteSelected: 'Delete Selected',
     rescan: 'Rescan',
     trashedOne: 'Moved to the Trash',
-    trashedMany: 'Moved {{count}} photos to the Trash',
+    trashedMany: 'Moved {count} photos to the Trash',
     undo: 'Undo',
   },
   path: {
     breadcrumb: 'Folder path',
-    subfolders: 'Folders in {{name}}',
+    subfolders: 'Folders in {name}',
     back: 'Back',
     forward: 'Forward',
   },
@@ -117,7 +113,7 @@ export const en = {
     live: 'LIVE',
   },
   photoInfo: {
-    renameHint: '{{name}} (double-click to rename)',
+    renameHint: '{name} (double-click to rename)',
     copyFileName: 'Copy File Name',
     rateHint: 'Select it and press 0–5 to rate',
     basics: 'General',
@@ -137,7 +133,7 @@ export const en = {
     takenAt: 'Taken',
   },
   deleteConfirm: {
-    keep: 'Keep “{{name}}”',
+    keep: 'Keep “{name}”',
     keepTitle: 'Keep this one',
     nothingLeft: 'No photos left to delete',
     confirm: 'Delete',

@@ -1,61 +1,5 @@
-/* Global base styles. Design tokens live in the *.stylex.ts files next to this
- * one and are published as stable `--ps-*` custom properties, so plain CSS
- * like this can read them. Rules that components could also set sit in
- * :where() so a single StyleX class always wins over them. */
-@import '@fontsource-variable/inter/opsz.css';
-
-/* Reset: border-box sizing, no default margins or borders, and form controls
-   that inherit their text instead of the browser's own. */
-:where(*, ::before, ::after) {
-  box-sizing: border-box;
-  border: 0 solid;
-}
-
-:where(html) {
-  line-height: 1.5;
-  -webkit-text-size-adjust: 100%;
-  tab-size: 4;
-}
-
-:where(h1, h2, h3, h4, h5, h6, p, blockquote, dl, dd, figure, pre, hr) {
-  margin: 0;
-}
-
-:where(ol, ul, menu) {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-:where(a) {
-  color: inherit;
-  text-decoration: inherit;
-}
-
-:where(button, input, select, optgroup, textarea) {
-  margin: 0;
-  padding: 0;
-  border-radius: 0;
-  background-color: transparent;
-  color: inherit;
-  font: inherit;
-  letter-spacing: inherit;
-}
-
-:where(img, svg, video, canvas) {
-  display: block;
-  vertical-align: middle;
-}
-
-:where(img, video) {
-  max-width: 100%;
-  height: auto;
-}
-
-:where([hidden]:not([hidden='until-found'])) {
-  display: none !important;
-}
-
+/* Global base styles. The reset is UnoCSS's preflight; design tokens are the
+ * `--ps-*` custom properties in tokens.css. */
 :root {
   color-scheme: light dark;
 }
@@ -150,18 +94,8 @@ body {
   }
 }
 
-:where([data-icon-only='default']) svg {
-  width: 16px;
-  height: 16px;
-}
-
-:where([data-icon-only='compact']) svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Honour the OS reduced-motion setting for CSS animations (framer-motion has
-   its own switch in main.tsx). Loading pulses and spinners stop; state
+/* Honour the OS reduced-motion setting for CSS animations (motion-v has its
+   own switch in main.ts). Loading pulses and spinners stop; state
    changes still happen, just without the movement. */
 @media (prefers-reduced-motion: reduce) {
   *,

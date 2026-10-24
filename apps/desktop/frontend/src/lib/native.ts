@@ -1,4 +1,4 @@
-import { isMyGo, on, onFileDrop as onNativeFileDrop, runtime } from 'mygo-runtime'
+import { isMyGo, onFileDrop as onNativeFileDrop, runtime } from 'mygo-runtime'
 
 import { Native } from '~/mygo'
 
@@ -31,12 +31,12 @@ export function convertLiveSrc(path: string, modified: number): string {
   return `${convertFileSrc(path)}&live=1&v=${modified}`
 }
 
-export function writeText(text: string): Promise<void> {
+export async function writeText(text: string): Promise<void> {
   return Native.writeText(text)
 }
 
 /** Opens a folder in Finder (or a file in its default app). */
-export function openPath(path: string): Promise<void> {
+export async function openPath(path: string): Promise<void> {
   return Native.openPath(path)
 }
 
@@ -53,20 +53,12 @@ interface DialogOptions {
 }
 
 /** Yes/no confirmation; resolves to whether the user confirmed. */
-export function ask(message: string, options: DialogOptions = {}): Promise<boolean> {
+export async function ask(message: string, options: DialogOptions = {}): Promise<boolean> {
   return Native.ask(options.title ?? '', message, options.kind ?? 'info')
 }
 
-export function message(text: string, options: DialogOptions = {}): Promise<void> {
+export async function message(text: string, options: DialogOptions = {}): Promise<void> {
   return Native.message(options.title ?? '', text, options.kind ?? 'info')
-}
-
-/** Subscribes to a backend event; resolves to an unsubscribe function. */
-export function listen<T = unknown>(
-  name: string,
-  handler: (event: { payload: T }) => void,
-): Promise<() => void> {
-  return Promise.resolve(on<T>(name, payload => handler({ payload })))
 }
 
 const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false

@@ -15,7 +15,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 export function formatUnixSeconds(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleString(i18n.language)
+  return new Date(seconds * 1000).toLocaleString(i18n.global.locale.value)
 }
 
 export function fileExtension(fileName: string): string {
@@ -31,5 +31,5 @@ const PERIOD_FORMATS: Record<NonNullable<PhotoGrouping>, Intl.DateTimeFormatOpti
 
 /** Names the year, month or day starting at `start` (milliseconds since the epoch). */
 export function formatPeriod(start: number, grouping: NonNullable<PhotoGrouping>): string {
-  return new Date(start).toLocaleDateString(i18n.language, PERIOD_FORMATS[grouping])
+  return new Date(start).toLocaleDateString(i18n.global.locale.value, PERIOD_FORMATS[grouping])
 }

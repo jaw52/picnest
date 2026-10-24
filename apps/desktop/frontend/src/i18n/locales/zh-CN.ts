@@ -1,7 +1,7 @@
 /**
  * The app's text in Simplified Chinese, the language the other catalogs
- * are checked against (see i18n.test.ts). Plurals take i18next's suffixes:
- * Chinese needs only `_other`.
+ * are checked against (see i18n.test.ts). Chinese needs only one form for
+ * plurals, so its messages have no ` | `.
  */
 export const zhCN = {
   common: {
@@ -11,8 +11,8 @@ export const zhCN = {
     close: '关闭',
     cancel: '取消',
     newTab: '新标签页',
-    deletePhotos_other: '删除 {{count}} 张照片',
-    movePhotosTo_other: '移动 {{count}} 张照片到…',
+    deletePhotos: '删除 {count} 张照片',
+    movePhotosTo: '移动 {count} 张照片到…',
     rescanFailed: '刷新目录失败，请手动重新扫描。',
   },
   app: {
@@ -25,25 +25,25 @@ export const zhCN = {
   rating: {
     label: '评分',
     none: '未评分',
-    stars_other: '{{count}} 星',
+    stars: '{count} 星',
   },
   dialogs: {
-    movePhotoTo: '移动「{{name}}」到…',
+    movePhotoTo: '移动「{name}」到…',
     movePhotosTitle: '移动照片',
-    deleteFolderConfirm: '确定要将「{{name}}」移到废纸篓吗？',
+    deleteFolderConfirm: '确定要将「{name}」移到废纸篓吗？',
     deleteFolderTitle: '删除文件夹',
-    deleteFailed: '删除失败：{{error}}',
-    downloadFailed: '下载失败：{{error}}',
+    deleteFailed: '删除失败：{error}',
+    downloadFailed: '下载失败：{error}',
     downloadTitle: '下载 iCloud 文件',
     deletePhotosTitle: '删除照片',
     undoDeleteTitle: '撤销删除',
-    renameFailed: '重命名失败：{{error}}',
+    renameFailed: '重命名失败：{error}',
     renameTitle: '重命名',
   },
   tabs: {
     openInNewTab: '在新标签页中打开',
     removeFromList: '从列表中移除',
-    closeTab: '关闭 {{title}}',
+    closeTab: '关闭 {title}',
     closeOthers: '关闭其他标签页',
     closeToRight: '关闭右侧标签页',
     list: '文件夹标签页',
@@ -69,7 +69,7 @@ export const zhCN = {
   },
   library: {
     name: '照片图库',
-    photos_other: '{{count}} 张照片',
+    photos: '{count} 张照片',
     allowAccess: '点按以允许访问',
     denied: '在系统设置中允许访问',
   },
@@ -77,8 +77,8 @@ export const zhCN = {
     photos: '照片',
     emptyFolder: '这个文件夹是空的',
     noMatches: '没有匹配当前筛选条件的图片',
-    filterAll: '全部 {{count}}',
-    filterUnrated: '未评分 {{count}}',
+    filterAll: '全部 {count}',
+    filterUnrated: '未评分 {count}',
     groupNone: '不分组',
     groupYear: '按年',
     groupMonth: '按月',
@@ -96,12 +96,12 @@ export const zhCN = {
     deleteSelected: '删除选中项',
     rescan: '重新扫描',
     trashedOne: '已移到废纸篓',
-    trashedMany: '已将 {{count}} 张照片移到废纸篓',
+    trashedMany: '已将 {count} 张照片移到废纸篓',
     undo: '撤销',
   },
   path: {
     breadcrumb: '文件夹路径',
-    subfolders: '{{name}} 的子文件夹',
+    subfolders: '{name} 的子文件夹',
     back: '后退',
     forward: '前进',
   },
@@ -114,7 +114,7 @@ export const zhCN = {
     live: '实况',
   },
   photoInfo: {
-    renameHint: '{{name}}（双击重命名）',
+    renameHint: '{name}（双击重命名）',
     copyFileName: '复制文件名',
     rateHint: '选中后按 0–5 键评分',
     basics: '基本信息',
@@ -134,7 +134,7 @@ export const zhCN = {
     takenAt: '拍摄时间',
   },
   deleteConfirm: {
-    keep: '不删除「{{name}}」',
+    keep: '不删除「{name}」',
     keepTitle: '不删除这张',
     nothingLeft: '没有要删除的照片了',
     confirm: '确认删除',

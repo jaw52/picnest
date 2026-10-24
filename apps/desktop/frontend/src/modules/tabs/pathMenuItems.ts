@@ -1,18 +1,16 @@
-import type { TFunction } from 'i18next'
-import type { ContextMenuItem } from '~/components/ContextMenu'
-import CopyRegular from '~icons/mingcute/copy-line'
-import FolderOpenRegular from '~icons/mingcute/folder-open-line'
+import type { MenuItem } from '~/types/menu'
+import { t } from '~/i18n'
 import { openPath, writeText } from '~/lib/native'
 
 /** Copy Path and Reveal in Finder, for a menu on anything with a folder behind it. */
-export function pathMenuItems(t: TFunction, path: string): ContextMenuItem[] {
+export function pathMenuItems(path: string): MenuItem[] {
   return [
-    { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(path) },
+    { label: t('common.copyPath'), icon: 'i-mingcute-copy-line', onSelect: () => void writeText(path) },
     {
       label: t('common.revealInFinder'),
-      icon: FolderOpenRegular,
+      icon: 'i-mingcute-folder-open-line',
       onSelect: () =>
-        void openPath(path).catch(error => console.warn(`failed to open ${path}:`, error)),
+        void openPath(path).catch((error: unknown) => console.warn(`failed to open ${path}:`, error)),
     },
   ]
 }

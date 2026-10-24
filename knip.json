@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": [
+    "go"
+  ],
+  "ignoreDependencies": [
+    "@antfu/skills"
+  ],
+  "workspaces": {
+    ".": {},
+    "apps/desktop/frontend": {
+      "project": [
+        "src/**/*.{ts,vue}"
+      ],
+      "ignore": [
+        "src/mygo.ts"
+      ]
+    }
+  }
+}

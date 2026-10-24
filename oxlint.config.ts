@@ -1,12 +1,7 @@
 import { defineConfig } from 'oxlint'
 
-// Fluid Functionalism hooks and motion tokens, still kept as installed
-// upstream; they do not take part in lint.
-const fluid = 'apps/desktop/frontend/src'
-export const vendoredFluid = [`${fluid}/hooks/use-fluid-hover.ts`, `${fluid}/lib/springs.ts`]
-
 export default defineConfig({
-  plugins: ['typescript', 'unicorn', 'oxc', 'react'],
+  plugins: ['typescript', 'unicorn', 'oxc', 'vue'],
   categories: {
     correctness: 'error',
   },
@@ -14,5 +9,5 @@ export default defineConfig({
   env: {
     builtin: true,
   },
-  ignorePatterns: ['**/frontend/src/mygo.ts', ...vendoredFluid],
+  ignorePatterns: ['**/frontend/src/mygo.ts'],
 })

@@ -5,42 +5,32 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsrs && vite build",
-    "build:dev": "tsrs && vite build --minify false --mode development",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:dev": "vue-tsc --noEmit && vite build --minify false --mode development",
     "preview": "vite preview",
-    "typecheck": "tsrs",
+    "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@base-ui/react": "catalog:frontend",
     "@fontsource-variable/inter": "catalog:frontend",
-    "@stylexjs/stylex": "catalog:frontend",
-    "framer-motion": "catalog:frontend",
-    "i18next": "catalog:frontend",
-    "jotai": "catalog:frontend",
-    "jotai-scope": "catalog:frontend",
+    "@vueuse/core": "catalog:frontend",
+    "motion-v": "catalog:frontend",
     "mygo-runtime": "catalog:frontend",
-    "react": "catalog:frontend",
-    "react-dom": "catalog:frontend",
-    "react-i18next": "catalog:frontend"
+    "reka-ui": "catalog:frontend",
+    "vue": "catalog:frontend",
+    "vue-i18n": "catalog:frontend"
   },
   "devDependencies": {
     "@iconify-json/mingcute": "catalog:icons",
-    "@stylexjs/unplugin": "catalog:build",
-    "@svgr/core": "catalog:build",
-    "@svgr/plugin-jsx": "catalog:build",
-    "@testing-library/jest-dom": "catalog:testing",
-    "@testing-library/react": "catalog:testing",
-    "@types/react": "catalog:frontend",
-    "@types/react-dom": "catalog:frontend",
-    "@vitejs/plugin-react": "catalog:build",
-    "jsdom": "catalog:testing",
-    "oxc-transform-react": "catalog:build",
-    "tsrs": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@vitejs/plugin-vue": "catalog:build",
+    "@vue/test-utils": "catalog:testing",
+    "happy-dom": "catalog:testing",
     "typescript": "catalog:dev",
-    "unplugin-icons": "catalog:build",
+    "unocss": "catalog:build",
     "vite": "catalog:build",
-    "vitest": "catalog:testing"
+    "vitest": "catalog:testing",
+    "vue-tsc": "catalog:dev"
   }
 }

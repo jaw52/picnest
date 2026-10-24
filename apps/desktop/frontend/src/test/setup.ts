@@ -1,33 +1,23 @@
-import { initI18n } from '~/i18n'
-import '@testing-library/jest-dom/vitest'
+import { config, enableAutoUnmount } from '@vue/test-utils'
+import { afterEach } from 'vitest'
+import { i18n, setLanguage } from '~/i18n'
 
-// jsdom doesn't implement ResizeObserver; the masonry grid uses it to track
-// its container's width. The real WebKit webview has it natively.
-class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-// Stub only implements the methods the grid uses.
-globalThis.ResizeObserver = ResizeObserverStub
-
-// jsdom doesn't implement matchMedia; framer-motion and the Fluid
-// Functionalism components query it (reduced motion, pointer type).
-window.matchMedia ??= (query: string) =>
-  ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener() {},
-    removeEventListener() {},
-    addListener() {},
-    removeListener() {},
-    dispatchEvent: () => false,
-  }) as MediaQueryList
-
-// jsdom doesn't implement HTMLImageElement.decode; the lightbox decodes
+// happy-dom doesn't implement HTMLImageElement.decode; the lightbox decodes
 // photos before showing them. Resolving at once stands in for a decoded image.
-HTMLImageElement.prototype.decode ??= () => Promise.resolve()
+HTMLImageElement.prototype.decode ??= async () => {}
+
+// A cancelled animation rejects its `finished` promise, which the Web
+// Animations spec marks as handled; happy-dom doesn't, so every animation
+// motion stops would surface as an unhandled rejection.
+const cancel = Animation.prototype.cancel
+Animation.prototype.cancel = function (this: Animation) {
+  this.finished.catch(() => {})
+  cancel.call(this)
+}
 
 // Components render in Chinese, the language the tests query by.
-initI18n('zh-CN')
+setLanguage('zh-CN')
+config.global.plugins = [i18n]
+
+// Each test's components go once it ends, with their window listeners.
+enableAutoUnmount(afterEach)

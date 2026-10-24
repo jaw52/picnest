@@ -29,3 +29,6 @@ dist-ssr
 .junie/skills
 .claude/skills/*
 !.claude/skills/release
+
+# ESLint --cache
+.eslintcache

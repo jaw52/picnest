@@ -6,9 +6,7 @@ minimumReleaseAgeExclude:
 
 trustPolicy: no-downgrade
 trustPolicyExclude:
-  - tsrs@0.16.0-ts7.1.0-dev.20260929
   - '@vercel/detect-agent@1.2.7'
-  - semver@6.3.1
 
 shellEmulator: true
 
@@ -24,49 +22,38 @@ catalogs:
     '@antfu/skills': ^0.1.0
     skills-npm: ^4.1.0
   build:
-    '@stylexjs/unplugin': 0.19.1
-    '@svgr/core': ^8.1.0
-    '@svgr/plugin-jsx': ^8.1.0
-    '@vitejs/plugin-react': ^6.1.2
-    oxc-transform-react: ^0.154.0
-    unplugin-icons: ^24.0.0
+    '@vitejs/plugin-vue': ^6.0.10
+    unocss: ^66.11.0
     vite: ^8.3.4
   dev:
     '@antfu/eslint-config': ^9.5.1
-    '@eslint-react/eslint-plugin': ^5.28.6
-    '@stylexjs/eslint-plugin': 0.19.1
+    '@types/node': ^26.6.5
+    '@unocss/eslint-plugin': ^66.11.0
     eslint: ^10.13.0
     eslint-plugin-format: ^2.0.1
-    eslint-plugin-jsx-a11y: ^6.10.2
     eslint-plugin-oxlint: ^1.89.0
-    eslint-plugin-react-refresh: ^0.5.7
     eslint-plugin-slop: ^0.1.3
     eslint-plugin-sonarjs: ^4.2.2
+    eslint-plugin-vuejs-accessibility: ^2.6.3
     jiti: ^2.7.0
     jscpd: ^5.4.2
-    lint-staged: ^17.6.0
+    knip: ^6.42.1
+    nano-staged: ^1.0.2
     oxlint: ^1.89.0
     simple-git-hooks: ^2.14.0
-    tsrs: 0.16.0-ts7.1.0-dev.20260929
     typescript: ~6.0.3
+    vue-tsc: ^3.3.13
   frontend:
-    '@base-ui/react': ^1.9.0
     '@fontsource-variable/inter': ^5.3.0
-    '@stylexjs/stylex': 0.19.1
-    '@types/react': ^19.3.0
-    '@types/react-dom': ^19.3.0
-    framer-motion: ^14.3.0
-    i18next: ^26.4.7
-    jotai: ^3.0.1
-    jotai-scope: 0.12.2
+    '@vueuse/core': ^15.0.0
+    motion-v: ^2.8.0
     mygo-runtime: 0.5.5
-    react: ^19.3.1
-    react-dom: ^19.3.1
-    react-i18next: ^17.0.16
+    reka-ui: ^2.11.0
+    vue: ^3.5.44
+    vue-i18n: ^11.4.16
   icons:
     '@iconify-json/mingcute': ^1.2.8
   testing:
-    '@testing-library/jest-dom': ^7.0.1
-    '@testing-library/react': ^16.3.3
-    jsdom: ^30.1.3
+    '@vue/test-utils': ^2.5.1
+    happy-dom: ^21.0.4
     vitest: ^5.0.5

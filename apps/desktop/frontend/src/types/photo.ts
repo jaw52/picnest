@@ -22,7 +22,7 @@ export interface Photo extends PhotoMeta {
   thumbnailUrl?: string
 }
 
-export interface PhotoExif {
+interface PhotoExif {
   cameraMake?: string
   cameraModel?: string
   lensModel?: string

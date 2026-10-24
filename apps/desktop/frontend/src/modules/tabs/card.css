@@ -1,0 +1,23 @@
+/* The cell every card on the new-tab page sits in: an icon over its name. */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  background-color: transparent;
+  cursor: pointer;
+  color: var(--ps-foreground);
+}
+
+/* Like Finder, hovering highlights the icon, not the whole cell. */
+.card-well {
+  padding: 8px;
+  border-radius: 8px;
+  background-color: transparent;
+  transition: background-color 80ms;
+}
+
+.card:hover .card-well {
+  background-color: var(--ps-hover);
+}

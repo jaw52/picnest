@@ -1,0 +1,48 @@
+/* The lightbox's photo boxes, shared by the photo shown (ZoomableImage) and
+ * its neighbours (FittedImage). The viewport fills the overlay; its padding
+ * leaves the traffic lights' row above (40px), and the caption and
+ * filmstrip below (112px), strips of their own, so a tall photo is fitted
+ * between them instead of running underneath. 64px each side is kept clear
+ * for the previous/next buttons. */
+.lb-viewport {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-top: 40px;
+  padding-bottom: 112px;
+  touch-action: none;
+}
+
+.lb-stage {
+  position: relative;
+  margin: auto;
+  transform-origin: center;
+}
+
+.lb-image {
+  display: block;
+  max-height: calc(100vh - 152px);
+  max-width: calc(100vw - 128px);
+  object-fit: contain;
+}
+
+/* The photo over its placeholder, unseen until it has loaded. */
+.lb-over {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.lb-unloaded {
+  visibility: hidden;
+}
+
+/* Laid over the photo, leaving clicks to it. */
+.lb-pass-through {
+  pointer-events: none;
+}

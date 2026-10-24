@@ -1,0 +1,178 @@
+/* Shells shared by popups: menus (see MenuRows), dialogs, tooltips and cards.
+ * They are global, not scoped: Reka renders them in a portal, inside a
+ * positioning wrapper that takes the scope attribute instead. Reka marks
+ * them data-state open/closed and keeps a closing one mounted until its
+ * animation ends. */
+
+.menu-popup {
+  z-index: 50;
+  box-sizing: border-box;
+  width: 224px;
+  max-width: 100%;
+  max-height: min(480px, var(--reka-popper-available-height));
+  padding: 4px;
+  overflow-y: auto;
+  border-radius: 12px;
+  outline: none;
+  user-select: none;
+  transform-origin: var(--reka-popper-transform-origin);
+}
+
+.menu-popup[data-state='open'] {
+  animation: menu-in 80ms ease-out;
+}
+
+.menu-popup[data-state='closed'] {
+  animation: menu-out 80ms ease-out forwards;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0.96);
+  }
+}
+
+@keyframes menu-out {
+  to {
+    opacity: 0;
+    transform: scaleY(0.96);
+  }
+}
+
+/* A modal dialog: a dimming backdrop and a centred popup that fades and
+   settles in. Each dialog adds its own size and layout. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background-color: rgb(0 0 0 / 0.4);
+}
+
+.dialog-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  border-radius: 12px;
+  outline: none;
+  transform: translate(-50%, -50%);
+}
+
+.dialog-backdrop[data-state='open'] {
+  animation: fade-in 150ms;
+}
+
+.dialog-backdrop[data-state='closed'] {
+  animation: fade-out 150ms forwards;
+}
+
+.dialog-popup[data-state='open'] {
+  animation: dialog-in 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.dialog-popup[data-state='closed'] {
+  animation: dialog-out 150ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+}
+
+@keyframes dialog-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.97);
+  }
+}
+
+/* A tooltip (see AppTooltip), sliding in from the side it opens on. */
+.tooltip[data-state$='open'] {
+  animation: tooltip-in 80ms ease-out;
+}
+
+.tooltip[data-state='closed'] {
+  animation: tooltip-out 80ms ease-out forwards;
+}
+
+.tooltip[data-side='top'] {
+  --from: translateY(4px);
+}
+
+.tooltip[data-side='bottom'] {
+  --from: translateY(-4px);
+}
+
+.tooltip[data-side='left'] {
+  --from: translateX(4px);
+}
+
+.tooltip[data-side='right'] {
+  --from: translateX(-4px);
+}
+
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: var(--from);
+  }
+}
+
+@keyframes tooltip-out {
+  to {
+    opacity: 0;
+    transform: var(--from);
+  }
+}
+
+/* The photo info card beside its tile (see PhotoInfoPopover). */
+.info-card {
+  z-index: 50;
+  box-sizing: border-box;
+  width: 280px;
+  max-height: var(--reka-popper-available-height);
+  overflow-y: auto;
+  border-radius: 12px;
+  outline: none;
+  transform-origin: var(--reka-popper-transform-origin);
+}
+
+.info-card[data-state='open'] {
+  animation: info-in 120ms ease-out;
+}
+
+.info-card[data-state='closed'] {
+  animation: info-out 120ms ease-out forwards;
+}
+
+@keyframes info-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes info-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}

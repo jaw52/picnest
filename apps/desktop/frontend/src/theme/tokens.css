@@ -1,0 +1,164 @@
+/* Design tokens. Every color is a light/dark pair; the OS appearance picks
+ * the side (`color-scheme: light dark` is set on the root in theme.css).
+ *
+ * Surface ladder: light is two color steps (floor, sunken) then flat white,
+ * with shadow doing the work; dark is an additive ladder over #171717. Each
+ * surface pairs 1:1 with a rung of the shadow ladder. */
+:root {
+  --ps-surface-1: #fafafa;
+  --ps-surface-2: #fcfcfc;
+  --ps-surface-3: #ffffff;
+  --ps-surface-4: #ffffff;
+  --ps-surface-5: #ffffff;
+  --ps-surface-6: #ffffff;
+  --ps-surface-7: #ffffff;
+  --ps-surface-8: #ffffff;
+  --ps-background: #fafafa;
+  --ps-foreground: #171717;
+  --ps-card: #ffffff;
+  --ps-card-foreground: #171717;
+  --ps-muted: #f4f4f5;
+  --ps-titlebar: #ebebeb;
+  --ps-muted-foreground: #737373;
+  --ps-accent: #e5e5e5;
+  --ps-accent-foreground: #171717;
+  --ps-selected: #d4d4d4;
+  --ps-border: rgb(23 23 23 / 0.12);
+  --ps-ring: #e5e5e5;
+  --ps-input: #e5e5e5;
+  --ps-destructive: #ef4444;
+  --ps-destructive-light: #fef2f2;
+  --ps-info: #3b82f6;
+  --ps-success: #22c55e;
+  --ps-warning: #f59e0b;
+  --ps-focus-ring: #6b97ff;
+  --ps-rating: hsl(38 92% 50%);
+  --ps-hover: rgb(0 0 0 / 0.04);
+  --ps-active: rgb(0 0 0 / 0.07);
+  --ps-tint: rgb(0 0 0 / 0.08);
+  --ps-tint-hover: rgb(0 0 0 / 0.065);
+  --ps-scroll-thumb: rgb(0 0 0 / 0.08);
+  --ps-scroll-thumb-hover: rgb(0 0 0 / 0.12);
+  --ps-scroll-thumb-active: rgb(0 0 0 / 0.16);
+  --ps-shadow-1: 0 0 0 1px rgb(0 0 0 / 0.06);
+  --ps-shadow-2: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06);
+  --ps-shadow-3: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06);
+  --ps-shadow-4:
+    0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06),
+    0 6px 6px -3px rgb(0 0 0 / 0.06);
+  --ps-shadow-5:
+    0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06),
+    0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06);
+  --ps-shadow-6:
+    0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06),
+    0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06);
+  --ps-shadow-7:
+    0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06),
+    0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06),
+    0 48px 48px -24px rgb(0 0 0 / 0.06);
+  --ps-shadow-8:
+    0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06),
+    0 6px 6px -3px rgb(0 0 0 / 0.06), 0 12px 12px -6px rgb(0 0 0 / 0.06), 0 24px 24px -12px rgb(0 0 0 / 0.06),
+    0 48px 48px -24px rgb(0 0 0 / 0.06), 0 96px 96px -48px rgb(0 0 0 / 0.06);
+  --ps-shadow-2-inset: inset 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06);
+  --ps-shadow-3-inset:
+    inset 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 1px -0.5px rgb(0 0 0 / 0.06), 0 3px 3px -1.5px rgb(0 0 0 / 0.06);
+  --ps-font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'PingFang SC', system-ui, sans-serif;
+  --ps-fs-display: 28px;
+  --ps-lh-display: 34px;
+  --ps-fs-display-compact: 24px;
+  --ps-lh-display-compact: 30px;
+  --ps-fs-title: 16px;
+  --ps-lh-title: 22px;
+  --ps-fs-title-compact: 15px;
+  --ps-lh-title-compact: 20px;
+  --ps-fs-subtitle: 14px;
+  --ps-lh-subtitle: 20px;
+  --ps-fs-subtitle-compact: 13px;
+  --ps-lh-subtitle-compact: 18px;
+  --ps-fs-body: 13px;
+  --ps-lh-body: 20px;
+  --ps-fs-body-compact: 12px;
+  --ps-lh-body-compact: 18px;
+  --ps-fs-caption: 12px;
+  --ps-lh-caption: 16px;
+  --ps-fs-caption-compact: 11px;
+  --ps-lh-caption-compact: 14px;
+  --ps-fs-micro: 11px;
+  --ps-lh-micro: 14px;
+  --ps-fs-micro-compact: 10px;
+  --ps-lh-micro-compact: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ps-surface-1: #171717;
+    --ps-surface-2: #1e1e1e;
+    --ps-surface-3: #252525;
+    --ps-surface-4: #2c2c2c;
+    --ps-surface-5: #333333;
+    --ps-surface-6: #3a3a3a;
+    --ps-surface-7: #414141;
+    --ps-surface-8: #484848;
+    --ps-background: #171717;
+    --ps-foreground: #f5f5f5;
+    --ps-card: #252525;
+    --ps-card-foreground: #f5f5f5;
+    --ps-muted: #1e1e1e;
+    --ps-titlebar: #0e0e0e;
+    --ps-muted-foreground: #a3a3a3;
+    --ps-accent: #525252;
+    --ps-accent-foreground: #f5f5f5;
+    --ps-selected: #525252;
+    --ps-border: rgb(245 245 245 / 0.12);
+    --ps-ring: #404040;
+    --ps-input: #404040;
+    --ps-destructive: #fca5a5;
+    --ps-destructive-light: #450a0a;
+    --ps-info: #93c5fd;
+    --ps-success: #86efac;
+    --ps-warning: #fcd34d;
+    --ps-hover: rgb(255 255 255 / 0.06);
+    --ps-active: rgb(255 255 255 / 0.1);
+    --ps-tint: rgb(255 255 255 / 0.25);
+    --ps-tint-hover: rgb(255 255 255 / 0.2);
+    --ps-scroll-thumb: rgb(255 255 255 / 0.08);
+    --ps-scroll-thumb-hover: rgb(255 255 255 / 0.12);
+    --ps-scroll-thumb-active: rgb(255 255 255 / 0.16);
+    --ps-shadow-1: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    --ps-shadow-2:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.01), inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+      0 1px 1px -0.5px rgba(0, 0, 0, 0.18);
+    --ps-shadow-3:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.02), inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+      0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18);
+    --ps-shadow-4:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.02), inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 0 1px rgba(0, 0, 0, 0.14), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18),
+      0 6px 6px -3px rgba(0, 0, 0, 0.18);
+    --ps-shadow-5:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.04), inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+      0 0 0 1px rgba(0, 0, 0, 0.16), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18),
+      0 6px 6px -3px rgba(0, 0, 0, 0.18), 0 12px 12px -6px rgba(0, 0, 0, 0.18);
+    --ps-shadow-6:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.04), inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18),
+      0 6px 6px -3px rgba(0, 0, 0, 0.18), 0 12px 12px -6px rgba(0, 0, 0, 0.18), 0 24px 24px -12px rgba(0, 0, 0, 0.18);
+    --ps-shadow-7:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 0 1px rgba(0, 0, 0, 0.2), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18),
+      0 6px 6px -3px rgba(0, 0, 0, 0.18), 0 12px 12px -6px rgba(0, 0, 0, 0.18), 0 24px 24px -12px rgba(0, 0, 0, 0.18),
+      0 48px 48px -24px rgba(0, 0, 0, 0.18);
+    --ps-shadow-8:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18),
+      0 6px 6px -3px rgba(0, 0, 0, 0.18), 0 12px 12px -6px rgba(0, 0, 0, 0.18), 0 24px 24px -12px rgba(0, 0, 0, 0.18),
+      0 48px 48px -24px rgba(0, 0, 0, 0.18), 0 96px 96px -48px rgba(0, 0, 0, 0.18);
+    --ps-shadow-2-inset:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.01), inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+      0 1px 1px -0.5px rgba(0, 0, 0, 0.18);
+    --ps-shadow-3-inset:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.02), inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+      0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 1px -0.5px rgba(0, 0, 0, 0.18), 0 3px 3px -1.5px rgba(0, 0, 0, 0.18);
+  }
+}

@@ -18,7 +18,7 @@ async function call<T>(promise: PromiseLike<T>): Promise<T> {
   }
 }
 
-export function scanFolderPage(
+export async function scanFolderPage(
   folderPath: string,
   offset: number,
   limit: number,
@@ -32,12 +32,12 @@ export function scanFolderPage(
  * that happens. Each tab showing a folder watches it, so every call wants an
  * `unwatchFolder` of the same folder once its tab is done with it.
  */
-export function watchFolder(folderPath: string): Promise<void> {
+export async function watchFolder(folderPath: string): Promise<void> {
   return call(App.watchFolder(folderPath))
 }
 
 /** Undoes a `watchFolder` of `folderPath`. */
-export function unwatchFolder(folderPath: string): Promise<void> {
+export async function unwatchFolder(folderPath: string): Promise<void> {
   return call(App.unwatchFolder(folderPath))
 }
 
@@ -69,7 +69,7 @@ export async function ensureThumbnailUrl(
   }
 }
 
-export function setRating(folderPath: string, filePath: string, rating: number): Promise<void> {
+export async function setRating(folderPath: string, filePath: string, rating: number): Promise<void> {
   return call(App.setRating(folderPath, filePath, rating))
 }
 
@@ -79,17 +79,17 @@ export async function libraryFileNames(paths: string[]): Promise<Record<string, 
 }
 
 /** Whether the Photos library may be read, without asking. */
-export function libraryAccess(): Promise<LibraryAccess> {
+export async function libraryAccess(): Promise<LibraryAccess> {
   return call(App.libraryAccess())
 }
 
 /** Asks for the Photos library, with the system prompt the first time. */
-export function requestLibraryAccess(): Promise<LibraryAccess> {
+export async function requestLibraryAccess(): Promise<LibraryAccess> {
   return call(App.requestLibraryAccess())
 }
 
 /** Opens System Settings where Photos access refused earlier can be granted. */
-export function openLibraryPrivacySettings(): Promise<void> {
+export async function openLibraryPrivacySettings(): Promise<void> {
   return call(App.openLibraryPrivacySettings())
 }
 
@@ -98,35 +98,35 @@ export async function listSubfolders(folderPath: string): Promise<FolderEntry[]>
 }
 
 /** Whether a folder is in iCloud Drive, including a Desktop or Documents folder synced to it. */
-export function isICloudFolder(folderPath: string): Promise<boolean> {
+export async function isICloudFolder(folderPath: string): Promise<boolean> {
   return call(App.isICloudFolder(folderPath))
 }
 
-export function getPhotoDetails(filePath: string): Promise<PhotoDetails> {
+export async function getPhotoDetails(filePath: string): Promise<PhotoDetails> {
   return call(App.getPhotoDetails(filePath))
 }
 
 /** Asks iCloud Drive to fetch a not-yet-downloaded file; the download runs on in the background. */
-export function downloadPlaceholder(filePath: string): Promise<void> {
+export async function downloadPlaceholder(filePath: string): Promise<void> {
   return call(App.downloadPlaceholder(filePath))
 }
 
 /** Moves photos to the trash; some may fail while the rest go. */
-export function deletePhotos(folderPath: string, filePaths: string[]): Promise<DeleteResult> {
+export async function deletePhotos(folderPath: string, filePaths: string[]): Promise<DeleteResult> {
   return call(App.deletePhotos(folderPath, filePaths))
 }
 
 /** Puts trashed photos back into `folderPath`, ratings and all. */
-export function restorePhotos(folderPath: string, photos: TrashedPhoto[]): Promise<void> {
+export async function restorePhotos(folderPath: string, photos: TrashedPhoto[]): Promise<void> {
   return call(App.restorePhotos(folderPath, photos))
 }
 
 /** Moves `folderPath` itself to the system trash. */
-export function deleteFolder(folderPath: string): Promise<void> {
+export async function deleteFolder(folderPath: string): Promise<void> {
   return call(App.deleteFolder(folderPath))
 }
 
-export function renamePhoto(folderPath: string, oldName: string, newName: string): Promise<void> {
+export async function renamePhoto(folderPath: string, oldName: string, newName: string): Promise<void> {
   return call(App.renamePhoto(folderPath, oldName, newName))
 }
 
@@ -135,7 +135,7 @@ export function renamePhoto(folderPath: string, oldName: string, newName: string
  * their ratings along. Rejects with every per-file
  * failure joined by newlines; files that did move stay moved.
  */
-export function movePhotos(
+export async function movePhotos(
   folderPath: string,
   fileNames: string[],
   destFolder: string,
