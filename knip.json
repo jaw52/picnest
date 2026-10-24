@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["**/frontend/src/mygo.ts"],
+  "ignoreBinaries": ["go"],
+  "ignoreIssues": {
+    "apps/desktop/frontend/src/hooks/use-fluid-hover.ts": ["exports", "types"],
+    "apps/desktop/frontend/src/lib/springs.ts": ["exports", "types"],
+    "apps/desktop/frontend/src/components/FluidHoverHighlight/**": ["exports", "types"]
+  },
+  "workspaces": {
+    ".": {},
+    "apps/desktop/frontend": {
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@fontsource-variable/inter", "@svgr/plugin-jsx"]
+    }
+  }
+}

@@ -3,3 +3,9 @@
 # least a day ago.
 minimumReleaseAge = 86400
 minimumReleaseAgeExcludes = [ "mygo-runtime" ]
+
+[fmt]
+# Only css/html/md/yml go through `bun fmt` (see the `fmt` script); ts/tsx/json
+# stay with @antfu/eslint-config, whose stylistic rules disagree with it.
+singleQuote = true
+printWidth = 120

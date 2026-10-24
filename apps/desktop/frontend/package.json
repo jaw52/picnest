@@ -5,10 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsrs && vite build",
-    "build:dev": "tsrs && vite build --minify false --mode development",
+    "build": "bun check && vite build",
+    "build:dev": "bun check && vite build --minify false --mode development",
     "preview": "vite preview",
-    "typecheck": "tsrs",
+    "typecheck": "bun check",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -37,7 +37,6 @@
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^30.1.3",
     "oxc-transform-react": "^0.154.0",
-    "tsrs": "0.16.0-ts7.1.0-dev.20260929",
     "typescript": "~6.0.3",
     "unplugin-icons": "^24.0.0",
     "vite": "^8.3.4",

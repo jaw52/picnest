@@ -1,7 +1,10 @@
 import antfu from '@antfu/eslint-config'
 import stylex from '@stylexjs/eslint-plugin'
-import oxlint from 'eslint-plugin-oxlint'
-import oxlintConfig, { vendoredFluid } from './oxlint.config'
+
+// Fluid Functionalism hooks and motion tokens, still kept as installed
+// upstream; they do not take part in lint.
+const fluid = 'apps/desktop/frontend/src'
+const vendoredFluid = [`${fluid}/hooks/use-fluid-hover.ts`, `${fluid}/lib/springs.ts`]
 
 // @stylexjs/eslint-plugin 0.19 的 valid-styles 仍调用 ESLint 10 已移除的
 // context.getScope()，这里用 sourceCode 的作用域信息补上
@@ -31,8 +34,6 @@ const stylexPlugin = {
   },
 }
 
-// oxlint 负责原生规则；ESLint 只跑 oxlint 无法覆盖的 JS 插件规则，
-// 与 oxlint 重复的规则通过 eslint-plugin-oxlint 关闭（放在最后）
 export default antfu(
   {
     react: true,
@@ -108,5 +109,4 @@ export default antfu(
       '@stylexjs/no-lookahead-selectors': 'error',
     },
   },
-  ...oxlint.buildFromOxlintConfig(oxlintConfig),
 )
