@@ -40,7 +40,7 @@
     "typescript": "~6.0.3"
   },
   "simple-git-hooks": {
-    "pre-commit": "bunx lint-staged && bunx jscpd --silent"
+    "pre-commit": "bunx lint-staged && bunx jscpd --silent && bunx knip"
   },
   "trustedDependencies": [
     "esbuild",
