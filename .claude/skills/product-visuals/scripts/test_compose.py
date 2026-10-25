@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import unittest
+from pathlib import Path
+
+from PIL import Image
+
+import tempfile
+
+from compose import (
+    CANVAS,
+    PHONE_X_IN_PAD,
+    PHONE_Y_IN_PAD,
+    dual_hero_positions,
+    compose_mac_desktop,
+    hide_framebuffer_island,
+    load_bg,
+    opaque_bbox,
+    scale_to_height,
+    scale_to_width,
+    shot_palette,
+)
+
+CACHE = Path.home() / ".cache" / "product-visuals" / "bezels"
+
+
+def _device(size: tuple[int, int], box: tuple[int, int, int, int]) -> Image.Image:
+    im = Image.new("RGBA", size, (0, 0, 0, 0))
+    x0, y0, x1, y1 = box
+    im.paste(Image.new("RGBA", (x1 - x0, y1 - y0), (40, 40, 40, 255)), (x0, y0))
+    return im
+
+
+def _offset(box: tuple[int, int, int, int], origin: tuple[int, int]) -> tuple[int, int, int, int]:
+    x, y = origin
+    return box[0] + x, box[1] + y, box[2] + x, box[3] + y
+
+
+def _union(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> tuple[int, int, int, int]:
+    return min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3])
+
+
+class OpaqueBboxTests(unittest.TestCase):
+    def test_ignores_transparent_padding(self) -> None:
+        im = _device((200, 100), (20, 30, 180, 90))
+        self.assertEqual(opaque_bbox(im), (20, 30, 180, 90))
+
+
+class DualHeroPositionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.canvas = CANVAS
+        self.mac = _device((3360, 2211), (24, 202, 3336, 2202))
+        self.phone = _device((841, 1720), (10, 13, 831, 1706))
+
+    def _boxes(self, mac: Image.Image, phone: Image.Image):
+        mac_pos, phone_pos = dual_hero_positions(self.canvas, mac, phone)
+        mac_box = _offset(opaque_bbox(mac), mac_pos)
+        phone_box = _offset(opaque_bbox(phone), phone_pos)
+        return mac_pos, phone_pos, mac_box, phone_box, _union(mac_box, phone_box)
+
+    def _placed(self):
+        return self._boxes(self.mac, self.phone)
+
+    def test_opaque_union_is_centered_on_canvas(self) -> None:
+        _, _, _, _, union = self._placed()
+        left, top, right, bottom = union
+        cw, ch = self.canvas
+        self.assertLessEqual(abs(left - (cw - right)), 1)
+        self.assertLessEqual(abs(top - (ch - bottom)), 1)
+
+    def test_bezel_padding_does_not_shift_the_chassis(self) -> None:
+        phone = self.phone
+        padded = _device((3360, 2211), (24, 202, 3336, 2202))
+        tight = _device((3360, 2019), (24, 10, 3336, 2010))
+        _, _, padded_box, _, _ = self._boxes(padded, phone)
+        _, _, tight_box, _, _ = self._boxes(tight, phone)
+        self.assertLessEqual(abs(padded_box[1] - tight_box[1]), 1)
+        self.assertLessEqual(abs(padded_box[0] - tight_box[0]), 1)
+
+    def test_phone_overlaps_lower_right_of_mac(self) -> None:
+        _, _, mac_box, phone_box, _ = self._placed()
+        self.assertLess(phone_box[0], mac_box[2])
+        self.assertGreater(phone_box[2], mac_box[2])
+        self.assertGreater(phone_box[1], mac_box[1])
+        self.assertGreater(phone_box[3], mac_box[3])
+
+
+class PadPhonePositionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.canvas = CANVAS
+        self.pad = _device((3180, 2438), (32, 24, 3144, 2408))
+        self.phone = _device((821, 1693), (10, 13, 811, 1679))
+
+    def _placed(self):
+        pad_pos, phone_pos = dual_hero_positions(
+            self.canvas, self.pad, self.phone, PHONE_X_IN_PAD, PHONE_Y_IN_PAD
+        )
+        pad_box = _offset(opaque_bbox(self.pad), pad_pos)
+        phone_box = _offset(opaque_bbox(self.phone), phone_pos)
+        union = _union(pad_box, phone_box)
+        return pad_pos, phone_pos, pad_box, phone_box, union
+
+    def test_opaque_union_is_centered_on_canvas(self) -> None:
+        _, _, _, _, union = self._placed()
+        left, top, right, bottom = union
+        cw, ch = self.canvas
+        self.assertLessEqual(abs(left - (cw - right)), 1)
+        self.assertLessEqual(abs(top - (ch - bottom)), 1)
+
+    def test_phone_overlaps_lower_right_of_pad(self) -> None:
+        _, _, pad_box, phone_box, _ = self._placed()
+        self.assertLess(phone_box[0], pad_box[2])
+        self.assertGreater(phone_box[2], pad_box[2])
+        self.assertGreater(phone_box[1], pad_box[1])
+        self.assertGreater(phone_box[3], pad_box[3])
+
+
+@unittest.skipUnless(
+    (CACHE / "macbook-pro-m5-14-space-black.png").is_file()
+    and (CACHE / "iphone-17-pro-silver-portrait.png").is_file(),
+    "Apple bezels not cached",
+)
+class RealBezelLayoutTests(unittest.TestCase):
+    def test_real_bezel_group_is_centered(self) -> None:
+        mac = scale_to_width(
+            Image.open(CACHE / "macbook-pro-m5-14-space-black.png"), 3360
+        )
+        phone = scale_to_height(
+            Image.open(CACHE / "iphone-17-pro-silver-portrait.png"), 1720
+        )
+        mac_pos, phone_pos = dual_hero_positions(CANVAS, mac, phone)
+        union = _union(
+            _offset(opaque_bbox(mac), mac_pos),
+            _offset(opaque_bbox(phone), phone_pos),
+        )
+        left, top, right, bottom = union
+        self.assertLessEqual(abs(left - (CANVAS[0] - right)), 1)
+        self.assertLessEqual(abs(top - (CANVAS[1] - bottom)), 1)
+    def test_ios_hero_triptych_is_symmetric(self) -> None:
+        center = scale_to_height(
+            Image.open(CACHE / "iphone-17-pro-silver-portrait.png"), 2020
+        )
+        side = scale_to_height(
+            Image.open(CACHE / "iphone-17-pro-silver-portrait.png"), 1860
+        )
+        cx = (CANVAS[0] - center.width) // 2
+        gap = 120
+        lx = cx - side.width - gap
+        rx = cx + center.width + gap
+        left_margin = lx
+        right_margin = CANVAS[0] - (rx + side.width)
+        self.assertEqual(left_margin, right_margin)
+
+    def test_ios_hero_single_is_centered(self) -> None:
+        phone = scale_to_height(
+            Image.open(CACHE / "iphone-17-pro-silver-portrait.png"), 2040
+        )
+        px = (CANVAS[0] - phone.width) // 2
+        py = (CANVAS[1] - phone.height) // 2
+        self.assertLessEqual(abs(px - (CANVAS[0] - (px + phone.width))), 1)
+        self.assertLessEqual(abs(py - (CANVAS[1] - (py + phone.height))), 1)
+
+
+
+class MacDesktopCompositionTests(unittest.TestCase):
+    def test_wallpaper_owns_all_four_display_corners(self) -> None:
+        wallpaper = Image.new("RGB", (600, 400), (126, 95, 69))
+        menu = Image.new("RGBA", (600, 40), (0, 0, 0, 0))
+        window = Image.new("RGBA", (300, 220), (0, 0, 0, 0))
+        window.paste(Image.new("RGBA", (260, 180), (28, 28, 30, 255)), (20, 20))
+
+        out = compose_mac_desktop(window, (600, 400), wallpaper, menu)
+
+        for point in ((0, 0), (599, 0), (0, 399), (599, 399)):
+            self.assertEqual(out.getpixel(point), (126, 95, 69))
+
+    def test_compositor_does_not_create_window_shadow(self) -> None:
+        wallpaper = Image.new("RGB", (600, 400), (126, 95, 69))
+        menu = Image.new("RGBA", (600, 40), (0, 0, 0, 0))
+        window = Image.new("RGBA", (300, 220), (0, 0, 0, 0))
+        window.paste(Image.new("RGBA", (260, 180), (28, 28, 30, 255)), (20, 20))
+
+        out = compose_mac_desktop(window, (600, 400), wallpaper, menu)
+
+        self.assertEqual(out.getpixel((10, 200)), (126, 95, 69))
+        self.assertEqual(out.getpixel((590, 200)), (126, 95, 69))
+
+
+class HideFramebufferIslandTests(unittest.TestCase):
+    def test_ignores_status_bar_icon_specks(self) -> None:
+        im = Image.new("RGB", (1206, 2622), (242, 242, 247))
+        for x in range(430, 780):
+            for y in range(48, 140):
+                im.putpixel((x, y), (0, 0, 0))
+        for x in range(160, 180):
+            for y in range(70, 110):
+                im.putpixel((x, y), (0, 0, 0))
+        for x in range(920, 980):
+            for y in range(60, 100):
+                im.putpixel((x, y), (8, 8, 8))
+        out = hide_framebuffer_island(im)
+        self.assertGreater(sum(out.getpixel((600, 90))) / 3, 200)
+        self.assertEqual(out.getpixel((170, 90)), (0, 0, 0))
+        self.assertEqual(out.getpixel((950, 80))[0], 8)
+
+
+class ShotPaletteTests(unittest.TestCase):
+    def _swatch(self, rgb: tuple[int, int, int], accent: tuple[int, int, int] | None = None) -> Path:
+        im = Image.new("RGB", (96, 96), rgb)
+        if accent is not None:
+            for x in range(12, 36):
+                for y in range(12, 36):
+                    im.putpixel((x, y), accent)
+        path = Path(tempfile.mkdtemp()) / "shot.png"
+        im.save(path)
+        return path
+
+    def test_ume_on_charcoal_accent_is_warm_not_blue(self) -> None:
+        path = self._swatch((20, 20, 22), (197, 100, 115))
+        base, _lift, accent = shot_palette([path])
+        self.assertLess(sum(base) / 3, 80)
+        self.assertGreater(accent[0], accent[2])
+
+    def test_fallback_bg_is_not_cinematic_blue(self) -> None:
+        path = self._swatch((20, 20, 22), (197, 100, 115))
+        bg = load_bg(None, (240, 135), 1.0, shots=[path])
+        arr = __import__("numpy").asarray(bg.convert("RGB"), dtype=float)
+        self.assertGreaterEqual(arr[..., 0].mean() + 4, arr[..., 2].mean())
+
+
+if __name__ == "__main__":
+    unittest.main()
