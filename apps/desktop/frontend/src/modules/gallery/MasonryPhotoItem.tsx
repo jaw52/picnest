@@ -2,8 +2,8 @@ import type { TFunction } from 'i18next'
 import type { ContextMenuItem } from '~/components/ContextMenu'
 import type { Photo } from '~/types/photo'
 import * as stylex from '@stylexjs/stylex'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { memo } from 'react'
+import { atom, useAtomValue, useSetAtom, useStore } from 'jotai'
+import { memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import CloudRegular from '~icons/mingcute/cloud-line'
 import CopyRegular from '~icons/mingcute/copy-line'
@@ -219,21 +219,31 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
   const deletePhoto = useDeletePhoto(folderPath)
   const movePhotos = useMovePhotos(folderPath)
   const rate = useRatePhoto(folderPath)
+  const store = useStore()
   // Read selection here (rather than taking it as a prop) so a selection
-  // change re-renders only the tiles whose state changed, not the grid.
-  const [selectedIds, setSelectedIds] = useAtom(selectedPhotoIdsAtom)
-  const [anchorId, setAnchorId] = useAtom(selectedPhotoIdAtom)
-  const photos = useAtomValue(filteredPhotosAtom)
+  // change re-renders only the tiles whose state changed, not the grid: each
+  // tile subscribes to values of its own, which only change for it. The
+  // photos and the whole selection are read when needed, in the handlers.
+  const { selectionSize, isTabStop: isTabStopAtom } = useMemo(() => ({
+    // How many photos are selected, if this one is; else 0.
+    selectionSize: atom(get => (get(selectedPhotoIdsAtom).has(data.id) ? get(selectedPhotoIdsAtom).size : 0)),
+    isTabStop: atom(get => get(gridTabStopIdAtom) === data.id),
+  }), [data.id])
+  const setSelectedIds = useSetAtom(selectedPhotoIdsAtom)
+  const setAnchorId = useSetAtom(selectedPhotoIdAtom)
   const setPreviewId = useSetAtom(previewPhotoIdAtom)
   const bulkDeleteBlocked = useAtomValue(bulkDeleteBlockedAtom)
   const setRenamingId = useSetAtom(renamingPhotoIdAtom)
   const setInfoId = useSetAtom(photoInfoIdAtom)
-  const selected = selectedIds.has(data.id)
+  const size = useAtomValue(selectionSize)
+  const selected = size > 0
   const height = width / data.aspectRatio
-  const isTabStop = useAtomValue(gridTabStopIdAtom) === data.id
+  const isTabStop = useAtomValue(isTabStopAtom)
 
   const handleSelect = (e: React.MouseEvent) => {
+    const anchorId = store.get(selectedPhotoIdAtom)
     if (e.shiftKey && anchorId) {
+      const photos = store.get(filteredPhotosAtom)
       const anchorIndex = photos.findIndex(p => p.id === anchorId)
       const clickedIndex = photos.findIndex(p => p.id === data.id)
       if (anchorIndex !== -1 && clickedIndex !== -1) {
@@ -260,8 +270,11 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
     setAnchorId(data.id)
   }
 
-  const selectedCount = selected ? selectedIds.size : 1
-  const targets = () => (selected ? photos.filter(p => selectedIds.has(p.id)) : [data])
+  const selectedCount = Math.max(size, 1)
+  const targets = () => {
+    const selectedIds = store.get(selectedPhotoIdsAtom)
+    return selected ? store.get(filteredPhotosAtom).filter(p => selectedIds.has(p.id)) : [data]
+  }
   const openPreview = () => setPreviewId(data.id)
   const handleDelete = () => void deletePhoto(targets())
   const handleMove = () => void movePhotos(targets())
@@ -306,7 +319,7 @@ function MasonryPhotoItemInner({ data, width, folderPath, background }: MasonryP
     <ContextMenu
       items={menuItems}
       onOpenChange={(open) => {
-        if (!open || selectedIds.has(data.id)) {
+        if (!open || store.get(selectedPhotoIdsAtom).has(data.id)) {
           return
         }
 
