@@ -1,8 +1,8 @@
-import type { Photo } from '~/types/photo'
 import { useEffect, useSyncExternalStore } from 'react'
 
 import { libraryFileNames } from '~/lib/backend'
 import { isLibraryPath } from '~/lib/library'
+import type { Photo } from '~/types/photo'
 
 /**
  * Names of photos in the Photos library, by path. Scans leave them out, as
@@ -27,23 +27,18 @@ async function flush() {
   queued.clear()
   try {
     const found = await libraryFileNames(paths)
-    for (const [path, name] of Object.entries(found))
-      names.set(path, name)
-    for (const listener of listeners)
-      listener()
-  }
-  catch (error) {
+    for (const [path, name] of Object.entries(found)) names.set(path, name)
+    for (const listener of listeners) listener()
+  } catch (error) {
     // Asked again the next time one shows.
-    for (const path of paths)
-      asked.delete(path)
+    for (const path of paths) asked.delete(path)
     console.warn('failed to read photo names:', error)
   }
 }
 
 /** Queues path's name to be read with the others asked for in the same render. */
 function requestName(path: string) {
-  if (names.has(path) || asked.has(path))
-    return
+  if (names.has(path) || asked.has(path)) return
   asked.add(path)
   queued.add(path)
   flushTimer ??= setTimeout(() => void flush(), 0)
@@ -59,8 +54,7 @@ export function useFileName(photo: Photo | null): string {
   const path = photo?.path ?? ''
   const name = useSyncExternalStore(subscribe, () => (lazy ? names.get(path) : undefined))
   useEffect(() => {
-    if (lazy)
-      requestName(path)
+    if (lazy) requestName(path)
   }, [lazy, path])
-  return lazy ? name ?? '' : photo?.fileName ?? ''
+  return lazy ? (name ?? '') : (photo?.fileName ?? '')
 }

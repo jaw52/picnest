@@ -1,4 +1,3 @@
-import type { Photo } from '~/types/photo'
 import { useSetAtom } from 'jotai'
 import { useCallback } from 'react'
 
@@ -7,6 +6,7 @@ import { i18n } from '~/i18n'
 import { renamePhoto } from '~/lib/backend'
 import { isLibraryPath } from '~/lib/library'
 import { message } from '~/lib/native'
+import type { Photo } from '~/types/photo'
 
 import { useOpenFolder } from './useOpenFolder'
 
@@ -17,7 +17,13 @@ export function useRenamePhoto(folderPath: string | null) {
   return useCallback(
     async (photo: Photo, newFileName: string) => {
       const trimmed = newFileName.trim()
-      if (!folderPath || isLibraryPath(folderPath) || trimmed === '' || trimmed.includes('/') || trimmed === photo.fileName)
+      if (
+        !folderPath ||
+        isLibraryPath(folderPath) ||
+        trimmed === '' ||
+        trimmed.includes('/') ||
+        trimmed === photo.fileName
+      )
         return
 
       const newPath = `${folderPath}/${trimmed}`
@@ -27,9 +33,11 @@ export function useRenamePhoto(folderPath: string | null) {
       renamePhotoInState(photo.id, newPath, trimmed)
       try {
         await renamePhoto(folderPath, photo.fileName, trimmed)
-      }
-      catch (error) {
-        await message(i18n.t('dialogs.renameFailed', { error }), { title: i18n.t('dialogs.renameTitle'), kind: 'error' })
+      } catch (error) {
+        await message(i18n.t('dialogs.renameFailed', { error }), {
+          title: i18n.t('dialogs.renameTitle'),
+          kind: 'error',
+        })
         await refreshFolder(folderPath)
       }
     },

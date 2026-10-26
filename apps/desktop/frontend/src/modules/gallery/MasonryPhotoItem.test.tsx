@@ -1,9 +1,9 @@
-import type { Photo } from '~/types/photo'
 import { act, render, screen } from '@testing-library/react'
 import { createStore, Provider, useAtomValue } from 'jotai'
 import { expect, it, vi } from 'vitest'
 
 import { photosAtom, selectedPhotoIdAtom, selectedPhotoIdsAtom, setPhotoRatingAtom } from '~/atoms/gallery'
+import type { Photo } from '~/types/photo'
 
 // A tile calls useFileName on every render, so its calls count the tile's renders.
 const renders = vi.hoisted(() => new Map<string, number>())
@@ -14,8 +14,8 @@ vi.mock('~/hooks/useFileName', () => ({
   },
 }))
 
-vi.mock('~/lib/backend', async importOriginal => ({
-  ...await importOriginal<object>(),
+vi.mock('~/lib/backend', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   ensureThumbnailUrl: () => new Promise(() => {}),
 }))
 
@@ -39,21 +39,26 @@ function setup() {
   store.set(photosAtom, photos)
   // Like the grid: re-renders with the photos, each tile fed its photo.
   function Grid() {
-    return useAtomValue(photosAtom).map(p => (
-      <MasonryPhotoItem key={p.id} data={p} width={240} folderPath="/f" background={false} />
+    return useAtomValue(photosAtom).map((p) => (
+      <MasonryPhotoItem background={false} data={p} folderPath="/f" key={p.id} width={240} />
     ))
   }
-  render(<Provider store={store}><Grid /></Provider>)
+  render(
+    <Provider store={store}>
+      <Grid />
+    </Provider>,
+  )
   renders.clear()
   return { store }
 }
 
 it('selecting a photo re-renders only the tiles whose selection changed', () => {
   const { store } = setup()
-  const select = (id: string) => act(() => {
-    store.set(selectedPhotoIdsAtom, new Set([id]))
-    store.set(selectedPhotoIdAtom, id)
-  })
+  const select = (id: string) =>
+    act(() => {
+      store.set(selectedPhotoIdsAtom, new Set([id]))
+      store.set(selectedPhotoIdAtom, id)
+    })
 
   select(photos[3].id)
   expect(screen.getByLabelText('3.jpg')).toHaveAttribute('aria-selected', 'true')

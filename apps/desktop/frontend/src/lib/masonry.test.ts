@@ -34,7 +34,10 @@ describe('layoutMasonry', () => {
 describe('layoutMasonrySections', () => {
   it('stacks each section under its header, a gutter apart', () => {
     const layout = layoutMasonrySections(
-      [{ headerHeight: 0, aspectRatios: [1, 0.5] }, { headerHeight: 30, aspectRatios: [1] }],
+      [
+        { headerHeight: 0, aspectRatios: [1, 0.5] },
+        { headerHeight: 30, aspectRatios: [1] },
+      ],
       208,
       100,
       8,

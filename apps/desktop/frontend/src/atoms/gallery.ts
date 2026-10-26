@@ -1,11 +1,11 @@
+import { atom } from 'jotai'
+import { atomWithStorage, selectAtom } from 'jotai/utils'
+
 import type { PhotoGrouping, RatingFilter } from '~/lib/photo'
+import { filterPhotosByRating, matchesRatingFilter, sortByTaken, successorOf } from '~/lib/photo'
 import type { TrashedPhoto } from '~/mygo'
 import type { FolderEntry } from '~/types/folder'
 import type { Photo } from '~/types/photo'
-
-import { atom } from 'jotai'
-import { atomWithStorage, selectAtom } from 'jotai/utils'
-import { filterPhotosByRating, matchesRatingFilter, sortByTaken, successorOf } from '~/lib/photo'
 
 export const currentFolderAtom = atom<string | null>(null)
 export const photosAtom = atom<Photo[]>([])
@@ -18,7 +18,7 @@ export const THUMBNAIL_WIDTH_MIN = 120
 export const THUMBNAIL_WIDTH_MAX = 480
 export const thumbnailWidthAtom = atomWithStorage('picnest.thumbnailWidth', 240)
 /** Photos the backend reported that later pages haven't brought in yet. */
-export const unloadedPhotosAtom = atom(get => Math.max(0, get(photosTotalAtom) - get(photosAtom).length))
+export const unloadedPhotosAtom = atom((get) => Math.max(0, get(photosTotalAtom) - get(photosAtom).length))
 /**
  * How many of the folder's photos have their thumbnail ready, out of all of
  * them - including those in pages still loading, so the total is known from
@@ -26,7 +26,7 @@ export const unloadedPhotosAtom = atom(get => Math.max(0, get(photosTotalAtom) -
  * Resets to { total: 0, done: 0 } once every one is ready, so the progress
  * bar disappears instead of showing a stale 100%.
  */
-export const thumbnailProgressAtom = atom<{ total: number, done: number }>({
+export const thumbnailProgressAtom = atom<{ total: number; done: number }>({
   total: 0,
   done: 0,
 })
@@ -34,7 +34,7 @@ export const thumbnailProgressAtom = atom<{ total: number, done: number }>({
  * Deleting several photos waits for the prefetch: its confirmation dialog
  * shows every photo's thumbnail, which must not mean decoding originals.
  */
-export const bulkDeleteBlockedAtom = atom(get => get(thumbnailProgressAtom).total > 0)
+export const bulkDeleteBlockedAtom = atom((get) => get(thumbnailProgressAtom).total > 0)
 export const ratingFilterAtom = atom<RatingFilter>(null)
 /** Whether, and by which period, the grid groups photos by when they were taken. */
 export const photoGroupingAtom = atomWithStorage<PhotoGrouping>('picnest.photoGrouping', null)
@@ -58,12 +58,14 @@ const previewIdsAtom = atom<string[]>([])
 
 /** Non-null while the full-size single-photo viewer is open. */
 export const previewPhotoIdAtom = atom(
-  get => get(previewIdBaseAtom),
+  (get) => get(previewIdBaseAtom),
   (get, set, id: string | null) => {
-    if (id === null)
-      set(previewIdsAtom, [])
+    if (id === null) set(previewIdsAtom, [])
     else if (get(previewIdBaseAtom) === null)
-      set(previewIdsAtom, get(filteredPhotosAtom).map(p => p.id))
+      set(
+        previewIdsAtom,
+        get(filteredPhotosAtom).map((p) => p.id),
+      )
     set(previewIdBaseAtom, id)
   },
 )
@@ -97,30 +99,24 @@ export const undoableDeletionAtom = atom<UndoableDeletion | null>(null)
  * the photo after the removed ones is selected instead, so a delete or a
  * rating key can be pressed again for the next photo.
  */
-export const selectAfterRemovalAtom = atom(
-  null,
-  (get, set, removed: ReadonlySet<string>, before: readonly Photo[]) => {
-    const selected = get(selectedPhotoIdsAtom)
-    if ([...selected].every(id => !removed.has(id)))
-      return
-    const kept = new Set([...selected].filter(id => !removed.has(id)))
-    if (kept.size > 0) {
-      set(selectedPhotoIdsAtom, kept)
-      const anchorId = get(selectedPhotoIdAtom)
-      if (anchorId && removed.has(anchorId))
-        set(selectedPhotoIdAtom, null)
-      return
-    }
-    const next = successorOf(before, removed)
-    if (next) {
-      set(selectPhotoAtom, next.id)
-    }
-    else {
-      set(selectedPhotoIdsAtom, new Set())
-      set(selectedPhotoIdAtom, null)
-    }
-  },
-)
+export const selectAfterRemovalAtom = atom(null, (get, set, removed: ReadonlySet<string>, before: readonly Photo[]) => {
+  const selected = get(selectedPhotoIdsAtom)
+  if ([...selected].every((id) => !removed.has(id))) return
+  const kept = new Set([...selected].filter((id) => !removed.has(id)))
+  if (kept.size > 0) {
+    set(selectedPhotoIdsAtom, kept)
+    const anchorId = get(selectedPhotoIdAtom)
+    if (anchorId && removed.has(anchorId)) set(selectedPhotoIdAtom, null)
+    return
+  }
+  const next = successorOf(before, removed)
+  if (next) {
+    set(selectPhotoAtom, next.id)
+  } else {
+    set(selectedPhotoIdsAtom, new Set())
+    set(selectedPhotoIdAtom, null)
+  }
+})
 
 export interface DeleteConfirmRequest {
   folderPath: string
@@ -148,7 +144,7 @@ export const filteredPhotosAtom = atom((get) => {
  */
 export const prefetchPathsAtom = selectAtom(
   photosAtom,
-  photos => photos.filter(p => !p.isCloudPlaceholder).map(p => p.path),
+  (photos) => photos.filter((p) => !p.isCloudPlaceholder).map((p) => p.path),
   (a, b) => a.length === b.length && a.every((path, i) => path === b[i]),
 )
 
@@ -159,20 +155,19 @@ export const prefetchPathsAtom = selectAtom(
 export const gridTabStopIdAtom = atom((get) => {
   const photos = get(filteredPhotosAtom)
   const anchorId = get(selectedPhotoIdAtom)
-  return photos.some(p => p.id === anchorId) ? anchorId : photos[0]?.id ?? null
+  return photos.some((p) => p.id === anchorId) ? anchorId : (photos[0]?.id ?? null)
 })
 
 /** The photos the viewer pages through, with their current ratings and names. */
 export const previewPhotosAtom = atom((get) => {
-  const byId = new Map(get(photosAtom).map(p => [p.id, p]))
-  return get(previewIdsAtom).flatMap(id => byId.get(id) ?? [])
+  const byId = new Map(get(photosAtom).map((p) => [p.id, p]))
+  return get(previewIdsAtom).flatMap((id) => byId.get(id) ?? [])
 })
 
 export const previewPhotoAtom = atom((get) => {
   const id = get(previewPhotoIdAtom)
-  if (!id)
-    return null
-  return get(photosAtom).find(p => p.id === id) ?? null
+  if (!id) return null
+  return get(photosAtom).find((p) => p.id === id) ?? null
 })
 
 /**
@@ -181,15 +176,13 @@ export const previewPhotoAtom = atom((get) => {
  */
 export const closePreviewAtom = atom(null, (get, set) => {
   const id = get(previewPhotoIdAtom)
-  if (id === null)
-    return
+  if (id === null) return
   const shown = get(previewPhotosAtom)
   set(previewPhotoIdAtom, null)
-  const inGrid = new Set(get(filteredPhotosAtom).map(p => p.id))
-  const gone = new Set(shown.filter(p => !inGrid.has(p.id)).map(p => p.id))
+  const inGrid = new Set(get(filteredPhotosAtom).map((p) => p.id))
+  const gone = new Set(shown.filter((p) => !inGrid.has(p.id)).map((p) => p.id))
   const target = inGrid.has(id) ? id : successorOf(shown, gone)?.id
-  if (target)
-    set(selectPhotoAtom, target)
+  if (target) set(selectPhotoAtom, target)
 })
 
 /**
@@ -201,10 +194,9 @@ export const setPhotoRatingAtom = atom(null, (get, set, photoIds: string[], rati
   const before = get(filteredPhotosAtom)
   set(
     photosAtom,
-    get(photosAtom).map(p => (ids.has(p.id) ? { ...p, rating } : p)),
+    get(photosAtom).map((p) => (ids.has(p.id) ? { ...p, rating } : p)),
   )
-  if (!matchesRatingFilter({ rating }, get(ratingFilterAtom)))
-    set(selectAfterRemovalAtom, ids, before)
+  if (!matchesRatingFilter({ rating }, get(ratingFilterAtom))) set(selectAfterRemovalAtom, ids, before)
 })
 
 /**
@@ -212,30 +204,22 @@ export const setPhotoRatingAtom = atom(null, (get, set, photoIds: string[], rati
  * rescanning the folder, so the selection, anchor, and open preview all
  * survive the rename instead of being dropped when the old id disappears.
  */
-export const renamePhotoAtom = atom(
-  null,
-  (get, set, photoId: string, newPath: string, newFileName: string) => {
-    set(
-      photosAtom,
-      get(photosAtom).map(p =>
-        p.id === photoId ? { ...p, id: newPath, path: newPath, fileName: newFileName } : p,
-      ),
-    )
-    set(selectedPhotoIdsAtom, (prev) => {
-      if (!prev.has(photoId))
-        return prev
-      const next = new Set(prev)
-      next.delete(photoId)
-      next.add(newPath)
-      return next
-    })
-    if (get(selectedPhotoIdAtom) === photoId)
-      set(selectedPhotoIdAtom, newPath)
-    set(previewIdsAtom, ids => ids.map(id => (id === photoId ? newPath : id)))
-    if (get(previewPhotoIdAtom) === photoId)
-      set(previewPhotoIdAtom, newPath)
-  },
-)
+export const renamePhotoAtom = atom(null, (get, set, photoId: string, newPath: string, newFileName: string) => {
+  set(
+    photosAtom,
+    get(photosAtom).map((p) => (p.id === photoId ? { ...p, id: newPath, path: newPath, fileName: newFileName } : p)),
+  )
+  set(selectedPhotoIdsAtom, (prev) => {
+    if (!prev.has(photoId)) return prev
+    const next = new Set(prev)
+    next.delete(photoId)
+    next.add(newPath)
+    return next
+  })
+  if (get(selectedPhotoIdAtom) === photoId) set(selectedPhotoIdAtom, newPath)
+  set(previewIdsAtom, (ids) => ids.map((id) => (id === photoId ? newPath : id)))
+  if (get(previewPhotoIdAtom) === photoId) set(previewPhotoIdAtom, newPath)
+})
 
 /**
  * The atoms each tab has a copy of: everything about the folder it shows,

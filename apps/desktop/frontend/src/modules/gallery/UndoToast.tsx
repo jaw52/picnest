@@ -1,40 +1,18 @@
-import * as stylex from '@stylexjs/stylex'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useAtomValue } from 'jotai'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { undoableDeletionAtom } from '~/atoms/gallery'
 import { Button } from '~/components/Button'
 import { Tooltip } from '~/components/Tooltip'
 import { useUndoDeletion } from '~/hooks/useDeletePhoto'
+import { cn } from '~/lib/cn'
 import { spring } from '~/lib/springs'
-import { colors } from '~/theme/colors.stylex'
-import { radius } from '~/theme/layout.stylex'
-import { shadows } from '~/theme/shadows.stylex'
-import { text } from '~/theme/text'
+import { popupSurface } from '~/lib/surface'
 
 /** How long the toast stays up, unless the pointer rests on it. */
 const VISIBLE_MS = 6000
-
-const styles = stylex.create({
-  toast: {
-    position: 'fixed',
-    bottom: 20,
-    left: '50%',
-    zIndex: 60,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: radius.container,
-    backgroundColor: colors['--ps-surface-5'],
-    boxShadow: shadows['--ps-shadow-5'],
-    paddingBlock: 6,
-    paddingLeft: 14,
-    paddingRight: 6,
-    color: colors['--ps-foreground'],
-    whiteSpace: 'nowrap',
-  },
-})
 
 /**
  * "Moved to the trash · Undo", for a few seconds after a deletion. ⌘Z undoes
@@ -56,8 +34,7 @@ export function UndoToast() {
   }
 
   useEffect(() => {
-    if (!shown || hovered)
-      return
+    if (!shown || hovered) return
     timerRef.current = window.setTimeout(setShown, VISIBLE_MS, null)
     return () => window.clearTimeout(timerRef.current)
   }, [shown, hovered])
@@ -67,18 +44,21 @@ export function UndoToast() {
     <AnimatePresence>
       {shown && (
         <motion.div
-          role="status"
-          {...stylex.props(styles.toast, text.caption)}
-          initial={{ opacity: 0, x: '-50%', y: 8 }}
           animate={{ opacity: 1, x: '-50%', y: 0 }}
           exit={{ opacity: 0, x: '-50%', y: 8, transition: spring.moderate.exit }}
+          initial={{ opacity: 0, x: '-50%', y: 8 }}
+          role="status"
           transition={spring.moderate}
+          className={cn(
+            popupSurface,
+            'fixed bottom-5 left-1/2 z-60 flex items-center gap-3 rounded-container py-1.5 pr-1.5 pl-3.5 text-caption whitespace-nowrap',
+          )}
           onPointerEnter={() => setHovered(true)}
           onPointerLeave={() => setHovered(false)}
         >
           <span>{count > 1 ? t('gallery.trashedMany', { count }) : t('gallery.trashedOne')}</span>
           <Tooltip content="⌘Z">
-            <Button variant="secondary" size="compact" onClick={() => void undo()}>
+            <Button variant="secondary" onClick={() => void undo()}>
               {t('gallery.undo')}
             </Button>
           </Tooltip>

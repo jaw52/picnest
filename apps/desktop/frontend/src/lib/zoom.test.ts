@@ -1,5 +1,6 @@
-import type { Box } from './zoom'
 import { expect, it } from 'vitest'
+
+import type { Box } from './zoom'
 import { actualSizeScale, clampView, FIT, zoomAbout } from './zoom'
 
 // A 400x300 photo in an 800x600 viewport.
@@ -25,7 +26,7 @@ it('never zooms out past fit or in past the maximum', () => {
   expect(zoomAbout(FIT, 100, 0, 0, box, 8).scale).toBe(8)
 })
 
-it('stops panning at the photo\'s edges', () => {
+it("stops panning at the photo's edges", () => {
   // 3x is 1200 wide in an 800 viewport: 200px of slack each way.
   expect(clampView({ scale: 3, x: 999, y: 0 }, box).x).toBe(200)
   expect(clampView({ scale: 3, x: -999, y: 0 }, box).x).toBe(-200)

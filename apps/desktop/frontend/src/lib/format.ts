@@ -1,9 +1,8 @@
-import type { PhotoGrouping } from '~/lib/photo'
 import { i18n } from '~/i18n'
+import type { PhotoGrouping } from '~/lib/photo'
 
 export function formatFileSize(bytes: number): string {
-  if (bytes < 1024)
-    return `${bytes} B`
+  if (bytes < 1024) return `${bytes} B`
   const units = ['KB', 'MB', 'GB']
   let value = bytes / 1024
   let unitIndex = 0

@@ -1,7 +1,6 @@
-import type { GridDirection } from '~/lib/masonry'
-import type { Photo } from '~/types/photo'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useEffect, useRef } from 'react'
+
 import {
   currentFolderAtom,
   deleteConfirmRequestAtom,
@@ -16,7 +15,10 @@ import {
   THUMBNAIL_WIDTH_MIN,
   thumbnailWidthAtom,
 } from '~/atoms/gallery'
+import type { GridDirection } from '~/lib/masonry'
 import { ratingFromKey } from '~/lib/rating-key'
+import type { Photo } from '~/types/photo'
+
 import { useDeletePhoto } from './useDeletePhoto'
 import { useRatePhoto } from './useRatePhoto'
 
@@ -43,8 +45,7 @@ function isGridTarget(target: EventTarget | null) {
 
 /** The photo to preview for a selection: the one last clicked if still selected, else the first. */
 function previewTarget(photos: Photo[], selectedIds: ReadonlySet<string>, anchorId: string | null) {
-  return photos.find(p => p.id === anchorId && selectedIds.has(p.id))
-    ?? photos.find(p => selectedIds.has(p.id))
+  return photos.find((p) => p.id === anchorId && selectedIds.has(p.id)) ?? photos.find((p) => selectedIds.has(p.id))
 }
 
 const THUMBNAIL_WIDTH_STEPS: Partial<Record<string, number>> = {
@@ -58,11 +59,9 @@ const THUMBNAIL_WIDTH_STEPS: Partial<Record<string, number>> = {
  * `e.key`, so the numeric keypad's keys count too.
  */
 function thumbnailWidthFromKey(e: KeyboardEvent, width: number): number | undefined {
-  if (!e.metaKey || e.altKey || e.ctrlKey)
-    return undefined
+  if (!e.metaKey || e.altKey || e.ctrlKey) return undefined
   const step = THUMBNAIL_WIDTH_STEPS[e.key]
-  if (step !== undefined)
-    return Math.min(THUMBNAIL_WIDTH_MAX, Math.max(THUMBNAIL_WIDTH_MIN, width + step))
+  if (step !== undefined) return Math.min(THUMBNAIL_WIDTH_MAX, Math.max(THUMBNAIL_WIDTH_MIN, width + step))
   return e.key === '0' ? DEFAULT_THUMBNAIL_WIDTH : undefined
 }
 
@@ -97,50 +96,43 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
   const leadRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (previewId !== null || confirmingDelete)
-      return
+    if (previewId !== null || confirmingDelete) return
 
-    const selected = () => photos.filter(p => selectedIds.has(p.id))
+    const selected = () => photos.filter((p) => selectedIds.has(p.id))
 
     function moveSelection(direction: GridDirection, extend: boolean) {
-      const lead = [leadRef.current, anchorId].find(id => id !== null && selectedIds.has(id)) ?? null
+      const lead = [leadRef.current, anchorId].find((id) => id !== null && selectedIds.has(id)) ?? null
       const next = neighbor(lead, direction)
-      if (!next)
-        return
+      if (!next) return
       leadRef.current = next
-      const anchorIndex = photos.findIndex(p => p.id === anchorId)
-      const nextIndex = photos.findIndex(p => p.id === next)
+      const anchorIndex = photos.findIndex((p) => p.id === anchorId)
+      const nextIndex = photos.findIndex((p) => p.id === next)
       if (extend && anchorIndex !== -1 && nextIndex !== -1) {
         const [start, end] = anchorIndex < nextIndex ? [anchorIndex, nextIndex] : [nextIndex, anchorIndex]
-        setSelectedIds(new Set(photos.slice(start, end + 1).map(p => p.id)))
+        setSelectedIds(new Set(photos.slice(start, end + 1).map((p) => p.id)))
         reveal({ id: next })
-      }
-      else {
+      } else {
         selectPhoto(next)
       }
     }
 
     function previewSelection(e: KeyboardEvent) {
       // Left alone on buttons (stars, toolbar), where Space means "press".
-      if ((e.target as HTMLElement | null)?.tagName === 'BUTTON' || selectedIds.size === 0)
-        return
+      if ((e.target as HTMLElement | null)?.tagName === 'BUTTON' || selectedIds.size === 0) return
       e.preventDefault()
       const photo = previewTarget(photos, selectedIds, anchorId)
-      if (photo && !e.repeat)
-        setPreviewId(photo.id)
+      if (photo && !e.repeat) setPreviewId(photo.id)
     }
 
     function showSelectionInfo(e: KeyboardEvent) {
       e.preventDefault()
       const photo = previewTarget(photos, selectedIds, anchorId)
-      if (photo)
-        setInfoId(photo.id)
+      if (photo) setInfoId(photo.id)
     }
 
     function onKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement | null
-      if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName))
-        return
+      if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
 
       const direction = e.metaKey || e.ctrlKey || e.altKey ? undefined : ARROWS[e.key]
       if (direction) {
@@ -156,26 +148,37 @@ export function useGridShortcuts(neighbor: (id: string | null, direction: GridDi
       if (width !== undefined) {
         e.preventDefault()
         setThumbnailWidth(width)
-      }
-      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault()
-        setSelectedIds(new Set(photos.map(p => p.id)))
-      }
-      else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
+        setSelectedIds(new Set(photos.map((p) => p.id)))
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
         showSelectionInfo(e)
-      }
-      else if (isPlainSpace(e)) {
+      } else if (isPlainSpace(e)) {
         previewSelection(e)
-      }
-      else if (ratingFromKey(e) !== null) {
+      } else if (ratingFromKey(e) !== null) {
         rate(selected(), ratingFromKey(e) as number)
-      }
-      else if (isDeleteKey(e) && !e.repeat && selectedIds.size > 0) {
+      } else if (isDeleteKey(e) && !e.repeat && selectedIds.size > 0) {
         e.preventDefault()
         void deletePhoto(selected())
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [previewId, confirmingDelete, selectedIds, anchorId, photos, thumbnailWidth, neighbor, deletePhoto, rate, setSelectedIds, setPreviewId, setInfoId, selectPhoto, reveal, setThumbnailWidth])
+  }, [
+    previewId,
+    confirmingDelete,
+    selectedIds,
+    anchorId,
+    photos,
+    thumbnailWidth,
+    neighbor,
+    deletePhoto,
+    rate,
+    setSelectedIds,
+    setPreviewId,
+    setInfoId,
+    selectPhoto,
+    reveal,
+    setThumbnailWidth,
+  ])
 }

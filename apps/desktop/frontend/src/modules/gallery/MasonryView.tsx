@@ -1,12 +1,8 @@
-import type { GridDirection, MasonryCell, MasonrySection, SectionedMasonryLayout } from '~/lib/masonry'
-import type { PhotoGroup, PhotoGrouping } from '~/lib/photo'
-import type { FolderEntry } from '~/types/folder'
-import type { Photo } from '~/types/photo'
-import * as stylex from '@stylexjs/stylex'
-import { animate } from 'framer-motion'
 import { useAtom, useAtomValue } from 'jotai'
+import { animate } from 'motion/react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import {
   currentFolderAtom,
   filteredPhotosAtom,
@@ -29,11 +25,13 @@ import { thumbnailCache, thumbnailCacheKey, thumbnailEdgeFor } from '~/hooks/use
 import { useThumbnailPinch } from '~/hooks/useThumbnailPinch'
 import { useThumbnailPrefetch } from '~/hooks/useThumbnailPrefetch'
 import { formatPeriod } from '~/lib/format'
+import type { GridDirection, MasonryCell, MasonrySection, SectionedMasonryLayout } from '~/lib/masonry'
 import { cellsInRange, layoutMasonrySections, masonryColumns, neighborCell } from '~/lib/masonry'
+import type { PhotoGroup, PhotoGrouping } from '~/lib/photo'
 import { groupPhotos } from '~/lib/photo'
 import { FolderTile } from '~/modules/tabs/FolderCard'
-import { colors } from '~/theme/colors.stylex'
-import { text, weight } from '~/theme/text'
+import type { FolderEntry } from '~/types/folder'
+import type { Photo } from '~/types/photo'
 
 import { MasonryPhotoItem } from './MasonryPhotoItem'
 import { OverscrollArc } from './OverscrollArc'
@@ -63,18 +61,18 @@ type GridInputs = readonly [
 ]
 
 interface GridLayout {
-  inputs: GridInputs
-  layout: SectionedMasonryLayout
   /** The photos' groups, whose headers are the layout's sections' after the subfolders'. */
   groups: PhotoGroup[]
-  /** The subfolders' tiles, then the photos', in the order of the layout's cells. */
-  tiles: string[]
+  inputs: GridInputs
   /** What the tiles were laid out for; layouts for the same key follow on from each other. */
   key: string
+  layout: SectionedMasonryLayout
   /** The layout this one took over from for the same key, which is still on screen until it renders. */
-  replaced: { tiles: string[], cells: MasonryCell[] } | null
+  replaced: { tiles: string[]; cells: MasonryCell[] } | null
   /** Whether the tiles slide over from their places in `replaced`: only photos came or went, at the same size. */
   slide: boolean
+  /** The subfolders' tiles, then the photos', in the order of the layout's cells. */
+  tiles: string[]
 }
 
 /**
@@ -83,17 +81,21 @@ interface GridLayout {
  */
 function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout {
   const [subfolders, photos, containerWidth, columnWidth, folderPath, ratingFilter, grouping] = inputs
-  const tiles = [...subfolders.map(f => `folder:${f.path}`), ...photos.map(p => p.id)]
+  const tiles = [...subfolders.map((f) => `folder:${f.path}`), ...photos.map((p) => p.id)]
   const { count } = masonryColumns(containerWidth, columnWidth, COLUMN_GUTTER)
   const key = `${folderPath}|${ratingFilter}|${grouping}|${count}`
   const folderRatios = subfolders.map(() => FOLDER_TILE_ASPECT_RATIO)
   const groups = grouping === null ? [] : groupPhotos(photos, grouping)
-  const sections: MasonrySection[] = grouping === null
-    ? [{ headerHeight: 0, aspectRatios: [...folderRatios, ...photos.map(p => p.aspectRatio)] }]
-    : [
-        ...(subfolders.length > 0 ? [{ headerHeight: 0, aspectRatios: folderRatios }] : []),
-        ...groups.map(g => ({ headerHeight: GROUP_HEADER_HEIGHT, aspectRatios: g.photos.map(p => p.aspectRatio) })),
-      ]
+  const sections: MasonrySection[] =
+    grouping === null
+      ? [{ headerHeight: 0, aspectRatios: [...folderRatios, ...photos.map((p) => p.aspectRatio)] }]
+      : [
+          ...(subfolders.length > 0 ? [{ headerHeight: 0, aspectRatios: folderRatios }] : []),
+          ...groups.map((g) => ({
+            headerHeight: GROUP_HEADER_HEIGHT,
+            aspectRatios: g.photos.map((p) => p.aspectRatio),
+          })),
+        ]
   const layout = layoutMasonrySections(sections, containerWidth, columnWidth, COLUMN_GUTTER)
   const follows = previous?.key === key
   const replaced = follows ? { tiles: previous.tiles, cells: previous.layout.cells } : null
@@ -107,20 +109,17 @@ function layOutGrid(inputs: GridInputs, previous: GridLayout | null): GridLayout
  */
 function slideTiles(container: HTMLElement, grid: GridLayout, shift: number) {
   const { replaced } = grid
-  if (!replaced || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)
-    return
+  if (!replaced || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
   const before = new Map(replaced.tiles.map((tile, i) => [tile, replaced.cells[i]]))
   const after = new Map(grid.tiles.map((tile, i) => [tile, grid.layout.cells[i]]))
   for (const el of container.querySelectorAll<HTMLElement>('[data-tile]')) {
     const tile = el.dataset.tile ?? ''
     const from = before.get(tile)
     const to = after.get(tile)
-    if (!from || !to)
-      continue
+    if (!from || !to) continue
     const x = from.left - to.left
     const y = from.top - to.top + shift
-    if (x !== 0 || y !== 0)
-      void animate(el, { x: [x, 0], y: [y, 0] }, SLIDE)
+    if (x !== 0 || y !== 0) void animate(el, { x: [x, 0], y: [y, 0] }, SLIDE)
   }
 }
 
@@ -130,12 +129,10 @@ function slideTiles(container: HTMLElement, grid: GridLayout, shift: number) {
  */
 function anchorShift(grid: GridLayout, shown: number) {
   const previous = grid.replaced
-  if (!previous)
-    return 0
+  if (!previous) return 0
   let anchor = -1
   for (const [i, cell] of previous.cells.entries()) {
-    if (cell.top + cell.height > shown && (anchor === -1 || cell.top < previous.cells[anchor].top))
-      anchor = i
+    if (cell.top + cell.height > shown && (anchor === -1 || cell.top < previous.cells[anchor].top)) anchor = i
   }
   const to = anchor === -1 ? -1 : grid.tiles.indexOf(previous.tiles[anchor])
   return to === -1 ? 0 : grid.layout.cells[to].top - previous.cells[anchor].top
@@ -148,30 +145,6 @@ function anchorShift(grid: GridLayout, shown: number) {
 function gridHeaderBottom(scroller: HTMLElement | null) {
   return scroller?.querySelector('[data-grid-header]')?.getBoundingClientRect().bottom ?? 0
 }
-
-const styles = stylex.create({
-  empty: {
-    display: 'flex',
-    minHeight: '60vh',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: colors['--ps-muted-foreground'],
-  },
-  grid: { position: 'relative' },
-  groupHeader: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    display: 'flex',
-    alignItems: 'center',
-    height: GROUP_HEADER_HEIGHT - COLUMN_GUTTER,
-    color: colors['--ps-foreground'],
-  },
-  gridHeight: (height: number) => ({ height }),
-  cell: { position: 'absolute' },
-  cellPosition: (top: number, left: number) => ({ top, left }),
-  headerPosition: (top: number) => ({ top }),
-})
 
 /**
  * The open folder's subfolders, then its photos, in one masonry. A subfolder
@@ -200,8 +173,7 @@ export function MasonryView() {
   const hasItems = subfolders.length + photos.length > 0
   useLayoutEffect(() => {
     const el = containerRef.current
-    if (!el)
-      return
+    if (!el) return
     const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width))
     observer.observe(el)
     return () => observer.disconnect()
@@ -214,8 +186,7 @@ export function MasonryView() {
   let current: GridLayout
   if (grid && inputs.every((input, i) => input === grid.inputs[i])) {
     current = grid
-  }
-  else {
+  } else {
     current = layOutGrid(inputs, grid)
     setGrid(current)
   }
@@ -227,15 +198,12 @@ export function MasonryView() {
   // time this runs.
   useLayoutEffect(() => {
     const el = containerRef.current
-    if (!grid || !el || !scroller)
-      return
+    if (!grid || !el || !scroller) return
     // In grid coordinates; at the very top, new photos show up above.
     const shown = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top
     const shift = shown > 0 ? anchorShift(grid, shown) : 0
-    if (shift !== 0)
-      scroller.scrollBy({ top: shift })
-    if (grid.slide)
-      slideTiles(el, grid, shift)
+    if (shift !== 0) scroller.scrollBy({ top: shift })
+    if (grid.slide) slideTiles(el, grid, shift)
   }, [grid, scroller])
 
   const thumbnailEdge = thumbnailEdgeFor(layout.columnWidth)
@@ -246,22 +214,19 @@ export function MasonryView() {
   // per screen rather than every frame.
   const [viewport, setViewport] = useState({ top: 0, height: window.innerHeight })
   useEffect(() => {
-    if (!scroller)
-      return
+    if (!scroller) return
     let frame = 0
     function update() {
       frame = 0
       const el = containerRef.current
-      if (!el || !scroller)
-        return
+      if (!el || !scroller) return
       const shown = scroller.getBoundingClientRect().top - el.getBoundingClientRect().top
       const top = Math.floor(shown / SCROLL_STEP) * SCROLL_STEP
       const height = scroller.clientHeight
-      setViewport(prev => (prev.top === top && prev.height === height ? prev : { top, height }))
+      setViewport((prev) => (prev.top === top && prev.height === height ? prev : { top, height }))
     }
     function schedule() {
-      if (!frame)
-        frame = requestAnimationFrame(update)
+      if (!frame) frame = requestAnimationFrame(update)
     }
     schedule()
     scroller.addEventListener('scroll', schedule, { passive: true })
@@ -277,11 +242,7 @@ export function MasonryView() {
   // Mount a screen above and below the visible part, so fast scrolling with
   // 1000+ photos never shows blank gaps.
   const visible = useMemo(
-    () => cellsInRange(
-      layout.cells,
-      viewport.top - viewport.height,
-      viewport.top + SCROLL_STEP + viewport.height * 2,
-    ),
+    () => cellsInRange(layout.cells, viewport.top - viewport.height, viewport.top + SCROLL_STEP + viewport.height * 2),
     [layout, viewport],
   )
 
@@ -290,12 +251,12 @@ export function MasonryView() {
   const neighbor = useCallback(
     (id: string | null, direction: GridDirection) => {
       const offset = subfolders.length
-      const from = id === null ? -1 : photos.findIndex(p => p.id === id)
+      const from = id === null ? -1 : photos.findIndex((p) => p.id === id)
       if (from === -1) {
         // In grid coordinates, the first line not hidden under the bars.
         const shownFrom = gridHeaderBottom(scroller) - (containerRef.current?.getBoundingClientRect().top ?? 0)
         const onScreen = visible
-          .filter(i => i >= offset && layout.cells[i].top >= shownFrom)
+          .filter((i) => i >= offset && layout.cells[i].top >= shownFrom)
           .toSorted((a, b) => layout.cells[a].top - layout.cells[b].top || a - b)[0]
         return photos[(onScreen ?? offset) - offset]?.id
       }
@@ -316,29 +277,25 @@ export function MasonryView() {
   const pendingFocusRef = useRef<string | null>(null)
   const focusPending = useCallback(() => {
     const id = pendingFocusRef.current
-    const tile = id === null
-      ? null
-      : containerRef.current?.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(id)}"]`)
+    const tile =
+      id === null ? null : containerRef.current?.querySelector<HTMLElement>(`[data-photo-id="${CSS.escape(id)}"]`)
     if (tile) {
       tile.focus({ preventScroll: true })
       pendingFocusRef.current = null
     }
   }, [])
   useEffect(() => {
-    if (!reveal)
-      return
+    if (!reveal) return
     setReveal(null)
-    const index = photos.findIndex(p => p.id === reveal.id)
+    const index = photos.findIndex((p) => p.id === reveal.id)
     const el = containerRef.current
-    if (index === -1 || !el || !scroller)
-      return
+    if (index === -1 || !el || !scroller) return
     // In viewport coordinates.
     const cell = layout.cells[subfolders.length + index]
     const top = el.getBoundingClientRect().top + cell.top
     const visibleTop = gridHeaderBottom(scroller) + REVEAL_MARGIN
     const visibleBottom = scroller.getBoundingClientRect().bottom - REVEAL_MARGIN
-    if (top < visibleTop)
-      scroller.scrollBy({ top: top - visibleTop })
+    if (top < visibleTop) scroller.scrollBy({ top: top - visibleTop })
     else if (top + cell.height > visibleBottom)
       scroller.scrollBy({ top: Math.min(top - visibleTop, top + cell.height - visibleBottom) })
     pendingFocusRef.current = reveal.id
@@ -352,10 +309,9 @@ export function MasonryView() {
   if (!hasItems) {
     // No folder yet means the active tab's folder is still being scanned
     // (the new-tab page replaces this view otherwise).
-    if (!folderPath || isScanning)
-      return null
+    if (!folderPath || isScanning) return null
     return (
-      <div {...stylex.props(styles.empty, text.body)}>
+      <div className="flex min-h-[60vh] items-center justify-center text-body text-text-secondary">
         {photosTotal === 0 ? t('gallery.emptyFolder') : t('gallery.noMatches')}
       </div>
     )
@@ -364,62 +320,74 @@ export function MasonryView() {
   return (
     <>
       <div
+        aria-multiselectable
+        aria-label={t('gallery.photos')}
+        className="relative"
         ref={containerRef}
         role="listbox"
-        aria-label={t('gallery.photos')}
-        aria-multiselectable
-        {...stylex.props(styles.grid, styles.gridHeight(layout.height))}
+        style={{ height: layout.height }}
       >
-        {containerWidth > 0 && grouping !== null && groups.map((group, g) => {
-          // The groups' sections come after the subfolders', if there are any.
-          const top = layout.headerTops[g + layout.headerTops.length - groups.length]
-          if (top < viewport.top - viewport.height || top > viewport.top + SCROLL_STEP + viewport.height * 2)
-            return null
-          return (
-            <h2
-              key={group.start}
-              {...stylex.props(styles.groupHeader, styles.headerPosition(top), text.body, weight.semibold)}
-            >
-              {formatPeriod(group.start, grouping)}
-            </h2>
-          )
-        })}
-        {containerWidth > 0 && visible.map((i) => {
-          const cell = layout.cells[i]
-          const position = stylex.props(styles.cell, styles.cellPosition(cell.top, cell.left))
-          if (i < subfolders.length) {
-            const folder = subfolders[i]
+        {containerWidth > 0 &&
+          grouping !== null &&
+          groups.map((group, g) => {
+            // The groups' sections come after the subfolders', if there are any.
+            const top = layout.headerTops[g + layout.headerTops.length - groups.length]
+            if (top < viewport.top - viewport.height || top > viewport.top + SCROLL_STEP + viewport.height * 2)
+              return null
             return (
-              <div key={folder.path} data-tile={tiles[i]} {...position}>
-                <FolderTile
-                  path={folder.path}
-                  name={folder.name}
+              <h2
+                className="wght-semibold absolute inset-x-0 flex items-center text-body text-text"
+                key={group.start}
+                style={{ top, height: GROUP_HEADER_HEIGHT - COLUMN_GUTTER }}
+              >
+                {formatPeriod(group.start, grouping)}
+              </h2>
+            )
+          })}
+        {containerWidth > 0 &&
+          visible.map((i) => {
+            const cell = layout.cells[i]
+            const position = { className: 'absolute', style: { top: cell.top, left: cell.left } }
+            if (i < subfolders.length) {
+              const folder = subfolders[i]
+              return (
+                <div data-tile={tiles[i]} key={folder.path} {...position}>
+                  <FolderTile
+                    height={cell.height}
+                    name={folder.name}
+                    path={folder.path}
+                    width={layout.columnWidth}
+                    onOpen={(e) => openFromClick(folder.path, e)}
+                    onDelete={() =>
+                      void deleteFolder(folder.path).then(() => {
+                        if (folderPath) void refreshFolder(folderPath)
+                      })
+                    }
+                  />
+                </div>
+              )
+            }
+            const photo = photos[i - subfolders.length]
+            // The window's top is somewhere in the SCROLL_STEP below viewport.top.
+            const onScreen =
+              cell.top < viewport.top + SCROLL_STEP + viewport.height && cell.top + cell.height > viewport.top
+            // A tile off screen asks for its thumbnail behind those on screen.
+            // One that has its thumbnail keeps the flag as it is, so scrolling
+            // past doesn't render it again.
+            const background =
+              !onScreen &&
+              !thumbnailCache.has(thumbnailCacheKey(folderPath, photo.path, thumbnailEdge, photo.isCloudPlaceholder))
+            return (
+              <div data-tile={photo.id} key={photo.id} {...position}>
+                <MasonryPhotoItem
+                  background={background}
+                  data={photo}
+                  folderPath={folderPath}
                   width={layout.columnWidth}
-                  height={cell.height}
-                  onOpen={e => openFromClick(folder.path, e)}
-                  onDelete={() => void deleteFolder(folder.path).then(() => {
-                    if (folderPath)
-                      void refreshFolder(folderPath)
-                  })}
                 />
               </div>
             )
-          }
-          const photo = photos[i - subfolders.length]
-          // The window's top is somewhere in the SCROLL_STEP below viewport.top.
-          const onScreen = cell.top < viewport.top + SCROLL_STEP + viewport.height
-            && cell.top + cell.height > viewport.top
-          // A tile off screen asks for its thumbnail behind those on screen.
-          // One that has its thumbnail keeps the flag as it is, so scrolling
-          // past doesn't render it again.
-          const background = !onScreen
-            && !thumbnailCache.has(thumbnailCacheKey(folderPath, photo.path, thumbnailEdge, photo.isCloudPlaceholder))
-          return (
-            <div key={photo.id} data-tile={photo.id} {...position}>
-              <MasonryPhotoItem data={photo} width={layout.columnWidth} folderPath={folderPath} background={background} />
-            </div>
-          )
-        })}
+          })}
       </div>
       <OverscrollArc pull={pull} />
     </>

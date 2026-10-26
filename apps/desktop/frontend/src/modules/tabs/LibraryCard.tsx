@@ -1,9 +1,8 @@
-import type { MotionValue } from 'framer-motion'
-import type { LibraryAccess } from '~/mygo'
-import * as stylex from '@stylexjs/stylex'
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
+import type { MotionValue } from 'motion/react'
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
 import { useOpenOnHover } from '~/hooks/useOpenOnHover'
 import { useTabs } from '~/hooks/useTabs'
 import {
@@ -15,11 +14,9 @@ import {
 } from '~/lib/backend'
 import { LIBRARY_PATH } from '~/lib/library'
 import { spring } from '~/lib/springs'
-import { colors } from '~/theme/colors.stylex'
-import { text } from '~/theme/text'
+import type { LibraryAccess } from '~/mygo'
 
-import { card } from './card'
-import { cardMarker } from './markers.stylex'
+import { cardClass, cardIconWellClass } from './card'
 
 /** Thumbnail edge for the fanned photos: small, and shared with nothing else. */
 const PREVIEW_EDGE = 256
@@ -54,17 +51,21 @@ const PLACEHOLDERS = [
   { sky: ['#9fc5e8', '#3d85c6'], hill: '#0b5394' },
 ] as const
 
-const styles = stylex.create({
-  icon: { display: 'block', width: W, height: H, overflow: 'visible' },
-  label: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, maxWidth: '100%' },
-  status: { color: colors['--ps-muted-foreground'], textAlign: 'center' },
-})
-
-function Print({ index, spread, coverUrl, id }: { index: number, spread: MotionValue<number>, coverUrl: string | undefined, id: string }) {
+function Print({
+  index,
+  spread,
+  coverUrl,
+  id,
+}: {
+  index: number
+  spread: MotionValue<number>
+  coverUrl: string | undefined
+  id: string
+}) {
   const fan = FAN[index]
-  const rotate = useTransform(spread, s => fan.rotate[0] + (fan.rotate[1] - fan.rotate[0]) * s)
-  const x = useTransform(spread, s => fan.x[0] + (fan.x[1] - fan.x[0]) * s)
-  const y = useTransform(spread, s => fan.y[0] + (fan.y[1] - fan.y[0]) * s)
+  const rotate = useTransform(spread, (s) => fan.rotate[0] + (fan.rotate[1] - fan.rotate[0]) * s)
+  const x = useTransform(spread, (s) => fan.x[0] + (fan.x[1] - fan.x[0]) * s)
+  const y = useTransform(spread, (s) => fan.y[0] + (fan.y[1] - fan.y[0]) * s)
   const inner = {
     x: PRINT_X + PRINT.border,
     y: PRINT_Y + PRINT.border,
@@ -83,41 +84,47 @@ function Print({ index, spread, coverUrl, id }: { index: number, spread: MotionV
         <clipPath id={clip}>
           <rect {...inner} rx={PRINT.radius - PRINT.border} />
         </clipPath>
-        <linearGradient id={sky} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={sky} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor={placeholder.sky[0]} />
           <stop offset="1" stopColor={placeholder.sky[1]} />
         </linearGradient>
       </defs>
       <rect
-        x={PRINT_X}
-        y={PRINT_Y}
-        width={PRINT.width}
-        height={PRINT.height}
-        rx={PRINT.radius}
         fill="#fff"
         filter={`url(#${id}shadow)`}
+        height={PRINT.height}
+        rx={PRINT.radius}
+        width={PRINT.width}
+        x={PRINT_X}
+        y={PRINT_Y}
       />
       <g clipPath={`url(#${clip})`}>
-        {coverUrl
-          ? <image href={coverUrl} {...inner} preserveAspectRatio="xMidYMid slice" />
-          : (
-              <>
-                <rect {...inner} fill={`url(#${sky})`} />
-                <circle cx={inner.x + inner.width * 0.72} cy={inner.y + inner.height * 0.3} r={4.5} fill="#fff" fillOpacity={0.85} />
-                <path
-                  d={[
-                    `M ${inner.x} ${horizon + 6}`,
-                    `L ${inner.x + inner.width * 0.3} ${horizon - 10}`,
-                    `L ${inner.x + inner.width * 0.5} ${horizon}`,
-                    `L ${inner.x + inner.width * 0.68} ${horizon - 6}`,
-                    `L ${inner.x + inner.width} ${horizon + 4}`,
-                    `V ${inner.y + inner.height} H ${inner.x} Z`,
-                  ].join(' ')}
-                  fill={placeholder.hill}
-                  fillOpacity={0.8}
-                />
-              </>
-            )}
+        {coverUrl ? (
+          <image href={coverUrl} {...inner} preserveAspectRatio="xMidYMid slice" />
+        ) : (
+          <>
+            <rect {...inner} fill={`url(#${sky})`} />
+            <circle
+              cx={inner.x + inner.width * 0.72}
+              cy={inner.y + inner.height * 0.3}
+              fill="#fff"
+              fillOpacity={0.85}
+              r={4.5}
+            />
+            <path
+              fill={placeholder.hill}
+              fillOpacity={0.8}
+              d={[
+                `M ${inner.x} ${horizon + 6}`,
+                `L ${inner.x + inner.width * 0.3} ${horizon - 10}`,
+                `L ${inner.x + inner.width * 0.5} ${horizon}`,
+                `L ${inner.x + inner.width * 0.68} ${horizon - 6}`,
+                `L ${inner.x + inner.width} ${horizon + 4}`,
+                `V ${inner.y + inner.height} H ${inner.x} Z`,
+              ].join(' ')}
+            />
+          </>
+        )}
       </g>
     </motion.g>
   )
@@ -127,7 +134,7 @@ function Print({ index, spread, coverUrl, id }: { index: number, spread: MotionV
  * The Photos library drawn as three prints fanned out, its latest photos on
  * them once it may be read; they fan out further while pointed at.
  */
-function LibraryIcon({ coverUrls, open }: { coverUrls: string[], open: boolean }) {
+function LibraryIcon({ coverUrls, open }: { coverUrls: string[]; open: boolean }) {
   const spread = useMotionValue(0)
   const reduceMotion = useReducedMotion()
   useEffect(() => {
@@ -147,14 +154,14 @@ function LibraryIcon({ coverUrls, open }: { coverUrls: string[], open: boolean }
   const ordered = [coverUrls[2], coverUrls[1], coverUrls[0]]
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} {...stylex.props(styles.icon)}>
+    <svg className="block overflow-visible" height={H} viewBox={`0 0 ${W} ${H}`} width={W}>
       <defs>
-        <filter id={`${id}shadow`} x="-15%" y="-15%" width="130%" height="140%">
-          <feDropShadow dx="0" dy="0.75" stdDeviation="1" floodOpacity="0.3" />
+        <filter height="140%" id={`${id}shadow`} width="130%" x="-15%" y="-15%">
+          <feDropShadow dx="0" dy="0.75" floodOpacity="0.3" stdDeviation="1" />
         </filter>
       </defs>
       {FAN.map((print, i) => (
-        <Print key={print.name} index={i} spread={spread} coverUrl={ordered[i]} id={id} />
+        <Print coverUrl={ordered[i]} id={id} index={i} key={print.name} spread={spread} />
       ))}
     </svg>
   )
@@ -174,18 +181,17 @@ function useLibrarySource() {
   const refresh = useCallback(async () => {
     const current = await libraryAccess()
     setAccess(current)
-    if (current !== 'granted')
-      return
+    if (current !== 'granted') return
     const page = await scanFolderPage(LIBRARY_PATH, 0, FAN.length)
     setTotal(page.total)
     const urls = await Promise.all(
-      page.photos.map(p => ensureThumbnailUrl(LIBRARY_PATH, p.path, PREVIEW_EDGE).catch(() => {})),
+      page.photos.map((p) => ensureThumbnailUrl(LIBRARY_PATH, p.path, PREVIEW_EDGE).catch(() => {})),
     )
-    setCoverUrls(urls.filter(url => url !== undefined))
+    setCoverUrls(urls.filter((url) => url !== undefined))
   }, [])
 
   useEffect(() => {
-    const load = () => void refresh().catch(error => console.warn('failed to read the Photos library:', error))
+    const load = () => void refresh().catch((error) => console.warn('failed to read the Photos library:', error))
     load()
     window.addEventListener('focus', load)
     return () => window.removeEventListener('focus', load)
@@ -212,33 +218,29 @@ export function LibraryCard() {
     }
     const granted = access === 'granted' ? access : await requestLibraryAccess()
     setAccess(granted)
-    if (granted !== 'granted')
-      return
+    if (granted !== 'granted') return
     openInNewTab(LIBRARY_PATH)
     void refresh()
   }
 
   let status = ''
-  if (access === 'granted')
-    status = total === undefined ? '' : t('library.photos', { count: total })
-  else if (access === 'denied')
-    status = t('library.denied')
-  else if (access !== undefined)
-    status = t('library.allowAccess')
+  if (access === 'granted') status = total === undefined ? '' : t('library.photos', { count: total })
+  else if (access === 'denied') status = t('library.denied')
+  else if (access !== undefined) status = t('library.allowAccess')
 
   return (
     <button
       type="button"
-      onClick={() => void activate().catch(error => console.warn('failed to open the Photos library:', error))}
+      onClick={() => void activate().catch((error) => console.warn('failed to open the Photos library:', error))}
       {...handlers}
-      {...stylex.props(cardMarker, card.root)}
+      className={cardClass}
     >
-      <span aria-hidden {...stylex.props(card.iconWell)}>
+      <span aria-hidden className={cardIconWellClass}>
         <LibraryIcon coverUrls={access === 'granted' ? coverUrls : []} open={open} />
       </span>
-      <span {...stylex.props(styles.label)}>
-        <span {...stylex.props(text.caption)}>{t('library.name')}</span>
-        {status && <span {...stylex.props(styles.status, text.caption)}>{status}</span>}
+      <span className="flex max-w-full flex-col items-center gap-px">
+        <span className="text-caption">{t('library.name')}</span>
+        {status && <span className="text-center text-caption text-text-secondary">{status}</span>}
       </span>
     </button>
   )

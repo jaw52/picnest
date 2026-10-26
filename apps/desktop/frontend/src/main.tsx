@@ -1,15 +1,23 @@
-import { MotionConfig } from 'framer-motion'
+import './styles/globals.css'
+
 import { getDefaultStore } from 'jotai'
+import { MotionConfig } from 'motion/react'
 import * as React from 'react'
 import ReactDOM from 'react-dom/client'
+
 import { languageStateAtom } from '~/atoms/settings'
 import { TooltipProvider } from '~/components/Tooltip'
-import { SizeProvider } from '~/context/size'
 import { initI18n } from '~/i18n'
 import { CollectPanel } from '~/modules/collect/CollectPanel'
 import { App as GoApp } from '~/mygo'
+
 import App from './App'
-import './theme/theme.css'
+import { useSystemTheme } from './lib/useSystemTheme'
+
+function Root() {
+  useSystemTheme()
+  return <TooltipProvider>{isCollectPanel ? <CollectPanel /> : <App />}</TooltipProvider>
+}
 
 // The menu bar icon's panel loads this page too, under #collect.
 const isCollectPanel = window.location.hash === '#collect'
@@ -26,14 +34,9 @@ void GoApp.getLanguage().then((languageState) => {
 
   ReactDOM.createRoot(document.querySelector('#root')!).render(
     <React.StrictMode>
-      {/* Honour the OS reduced-motion setting in every framer-motion component. */}
+      {/* Honour the OS reduced-motion setting in every motion component. */}
       <MotionConfig reducedMotion="user">
-        {/* A dense desktop tool: every control sits on the 28px compact step. */}
-        <SizeProvider size="compact">
-          <TooltipProvider>
-            {isCollectPanel ? <CollectPanel /> : <App />}
-          </TooltipProvider>
-        </SizeProvider>
+        <Root />
       </MotionConfig>
     </React.StrictMode>,
   )

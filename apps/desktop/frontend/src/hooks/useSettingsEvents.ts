@@ -1,5 +1,6 @@
 import { useSetAtom } from 'jotai'
 import { useEffect } from 'react'
+
 import { languageStateAtom, settingsOpenAtom } from '~/atoms/settings'
 import { changeLanguage } from '~/i18n'
 import { events } from '~/mygo'

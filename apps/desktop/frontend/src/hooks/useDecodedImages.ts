@@ -19,10 +19,12 @@ export function useDecodedImages() {
       image.src = src
       images.set(src, image)
     }
-    return image.decode().then(() => {
-      if (images.get(src) === image)
-        decodedRef.current.add(src)
-    }).catch(() => {})
+    return image
+      .decode()
+      .then(() => {
+        if (images.get(src) === image) decodedRef.current.add(src)
+      })
+      .catch(() => {})
   }, [])
 
   const retain = useCallback((srcs: string[]) => {

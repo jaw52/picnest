@@ -16,14 +16,14 @@ description: 发布 Picnest 的新版本：改版本号、写 CHANGELOG、打 ta
 ## 1. 检查
 
 ```bash
-bun run typecheck && bun run test && bun run lint
+pnpm typecheck && pnpm test && pnpm lint
 ```
 
 有失败就停下来，告诉用户。
 
 ## 2. 改版本号
 
-下面两处要改成同一个版本号，然后运行 `bun install` 更新 `bun.lock`：
+下面两处要改成同一个版本号，然后运行 `pnpm install` 更新 `pnpm-lock.yaml`：
 
 - `apps/desktop/mygo.json` 的 `version`
 - `apps/desktop/frontend/package.json` 的 `version`
@@ -53,7 +53,7 @@ bun run typecheck && bun run test && bun run lint
 ## 4. 提交、打 tag、推送
 
 ```bash
-git add apps/desktop/mygo.json apps/desktop/frontend/package.json bun.lock apps/desktop/CHANGELOG.md
+git add apps/desktop/mygo.json apps/desktop/frontend/package.json pnpm-lock.yaml apps/desktop/CHANGELOG.md
 git commit -m "chore: release <版本>"
 git tag v<版本>
 git push origin master v<版本>

@@ -1,8 +1,7 @@
-import type { Photo } from '~/types/photo'
 import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider, useAtomValue } from 'jotai'
-
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   currentFolderAtom,
   deleteConfirmRequestAtom,
@@ -13,6 +12,7 @@ import {
   thumbnailProgressAtom,
   undoableDeletionAtom,
 } from '~/atoms/gallery'
+import type { Photo } from '~/types/photo'
 
 import { useDeletePhoto, useUndoDeletion } from './useDeletePhoto'
 
@@ -40,7 +40,7 @@ vi.mock('~/lib/backend', () => ({
 
 /** The backend trashing every photo it is given. */
 async function trashAll(_folder: string, paths: string[]) {
-  return { trashed: paths.map(path => ({ path, trashPath: `/.Trash${path}`, rating: 0 })), deleted: [], failures: [] }
+  return { trashed: paths.map((path) => ({ path, trashPath: `/.Trash${path}`, rating: 0 })), deleted: [], failures: [] }
 }
 
 function makePhoto(id: string): Photo {
@@ -79,7 +79,7 @@ async function deleteConfirmed(
   photos: Photo[],
 ) {
   const pending = deletePhoto(photos)
-  await answerDialog(store, kept => kept)
+  await answerDialog(store, (kept) => kept)
   await pending
 }
 
@@ -126,7 +126,7 @@ describe('useDeletePhoto', () => {
 
   it('selects the photo after a deleted one, ready for the next delete', async () => {
     const store = createStore()
-    const [a, b, c] = ['a', 'b', 'c'].map(id => makePhoto(id))
+    const [a, b, c] = ['a', 'b', 'c'].map((id) => makePhoto(id))
     store.set(photosAtom, [a, b, c])
     store.set(selectedPhotoIdsAtom, new Set([b.id]))
     store.set(selectedPhotoIdAtom, b.id)
@@ -143,7 +143,7 @@ describe('useDeletePhoto', () => {
 
   it('keeps the viewer open on the next photo when deleting the one shown', async () => {
     const store = createStore()
-    const [a, b, c] = ['a', 'b', 'c'].map(id => makePhoto(id))
+    const [a, b, c] = ['a', 'b', 'c'].map((id) => makePhoto(id))
     store.set(photosAtom, [a, b, c])
     store.set(previewPhotoIdAtom, c.id)
     scanFolderPage.mockResolvedValueOnce({ photos: [a, b], total: 2 })
@@ -159,7 +159,7 @@ describe('useDeletePhoto', () => {
 
   it('puts the deleted photos back on undo and selects them', async () => {
     const store = createStore()
-    const [a, b] = ['a', 'b'].map(id => makePhoto(id))
+    const [a, b] = ['a', 'b'].map((id) => makePhoto(id))
     store.set(photosAtom, [a, b])
     scanFolderPage.mockResolvedValueOnce({ photos: [b], total: 1 })
     const { result } = renderWithStore(store)
@@ -176,18 +176,20 @@ describe('useDeletePhoto', () => {
       await result.current.undo()
     })
 
-    expect(restorePhotos).toHaveBeenCalledWith('/folder', [
-      { path: a.path, trashPath: `/.Trash${a.path}`, rating: 0 },
-    ])
+    expect(restorePhotos).toHaveBeenCalledWith('/folder', [{ path: a.path, trashPath: `/.Trash${a.path}`, rating: 0 }])
     expect(result.current.photos).toEqual([a, b])
     expect(result.current.selectedIds).toEqual(new Set([a.id]))
     expect(store.get(undoableDeletionAtom)).toBeNull()
   })
 
   it('deletes from the Photos library without offering undo', async () => {
-    deletePhotos.mockImplementationOnce(async (_folder: string, paths: string[]) => ({ trashed: [], deleted: paths, failures: [] }))
+    deletePhotos.mockImplementationOnce(async (_folder: string, paths: string[]) => ({
+      trashed: [],
+      deleted: paths,
+      failures: [],
+    }))
     const store = createStore()
-    const [a, b] = ['A', 'B'].map(name => libraryPhoto(name))
+    const [a, b] = ['A', 'B'].map((name) => libraryPhoto(name))
     store.set(photosAtom, [a, b])
     store.set(selectedPhotoIdsAtom, new Set([a.id]))
     scanFolderPage.mockResolvedValueOnce({ photos: [b], total: 1 })
@@ -233,7 +235,7 @@ describe('useDeletePhoto', () => {
 
     await act(async () => {
       const pending = result.current.deletePhoto([a, b])
-      await answerDialog(store, photos => photos)
+      await answerDialog(store, (photos) => photos)
       await pending
     })
 
@@ -275,7 +277,7 @@ describe('useDeletePhoto', () => {
 
     await act(async () => {
       const pending = result.current.deletePhoto([a, b])
-      await answerDialog(store, photos => photos)
+      await answerDialog(store, (photos) => photos)
       await pending
     })
 
@@ -299,7 +301,7 @@ describe('useDeletePhoto', () => {
   })
 
   it('shares the pending guard across deletion entry points until refresh finishes', async () => {
-    let finishRefresh!: (value: { photos: Photo[], total: number }) => void
+    let finishRefresh!: (value: { photos: Photo[]; total: number }) => void
     scanFolderPage.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
@@ -309,13 +311,13 @@ describe('useDeletePhoto', () => {
     const store = createStore()
     const first = renderWithStore(store)
     const second = renderWithStore(store)
-    const [a, b] = ['a', 'b'].map(id => makePhoto(id))
+    const [a, b] = ['a', 'b'].map((id) => makePhoto(id))
 
     await act(async () => {
       const pending = first.result.current.deletePhoto([a, b])
       // Waiting on the dialog: a second request is ignored.
       await second.result.current.deletePhoto([a])
-      await answerDialog(store, photos => photos)
+      await answerDialog(store, (photos) => photos)
       // Allow the backend operation to settle; the refresh is still running.
       await Promise.resolve()
       await Promise.resolve()
@@ -329,13 +331,13 @@ describe('useDeletePhoto', () => {
   it('allows another attempt after cancellation', async () => {
     const store = createStore()
     const { result } = renderWithStore(store)
-    const [a, b] = ['a', 'b'].map(id => makePhoto(id))
+    const [a, b] = ['a', 'b'].map((id) => makePhoto(id))
     await act(async () => {
       const cancelled = result.current.deletePhoto([a, b])
       await answerDialog(store, () => null)
       await cancelled
       const confirmed = result.current.deletePhoto([a, b])
-      await answerDialog(store, photos => photos)
+      await answerDialog(store, (photos) => photos)
       await confirmed
     })
     expect(deletePhotos).toHaveBeenCalledTimes(1)
@@ -350,7 +352,7 @@ describe('useDeletePhoto', () => {
 
     await act(async () => {
       const pending = result.current.deletePhoto([a, b, c])
-      await answerDialog(store, photos => photos.filter(p => p.id !== b.id))
+      await answerDialog(store, (photos) => photos.filter((p) => p.id !== b.id))
       await pending
     })
 

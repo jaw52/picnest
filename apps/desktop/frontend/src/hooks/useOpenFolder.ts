@@ -1,4 +1,3 @@
-import type { Photo } from '~/types/photo'
 import { useAtom, useSetAtom, useStore } from 'jotai'
 import { useCallback } from 'react'
 
@@ -17,6 +16,7 @@ import {
 import { recentFoldersAtom, withFolderRemoved } from '~/atoms/recentFolders'
 import { listSubfolders, scanFolderPage } from '~/lib/backend'
 import { toPhoto } from '~/lib/photo'
+import type { Photo } from '~/types/photo'
 
 // How many photos to fetch per backend round-trip. Keeps a single scan from
 // becoming one giant IPC payload (and, for new/changed files, one giant
@@ -37,11 +37,9 @@ async function loadRemainingPages(
 ) {
   while (photos.length < total) {
     const page = await scanFolderPage(folder, photos.length, PAGE_SIZE)
-    if (!isLatest())
-      return false
-    if (page.photos.length === 0)
-      break // Shrunk on disk mid-scan; avoid looping forever.
-    const more = page.photos.map(p => toPhoto(p))
+    if (!isLatest()) return false
+    if (page.photos.length === 0) break // Shrunk on disk mid-scan; avoid looping forever.
+    const more = page.photos.map((p) => toPhoto(p))
     photos.push(...more)
     onPage?.(more)
   }
@@ -87,13 +85,9 @@ export function useOpenFolder() {
       setAnchorId(null)
       setPreviewId(null)
       try {
-        const [first, subfolders] = await Promise.all([
-          scanFolderPage(folder, 0, PAGE_SIZE),
-          subfoldersOf(folder),
-        ])
-        if (!isLatest())
-          return true
-        const photos = first.photos.map(p => toPhoto(p))
+        const [first, subfolders] = await Promise.all([scanFolderPage(folder, 0, PAGE_SIZE), subfoldersOf(folder)])
+        if (!isLatest()) return true
+        const photos = first.photos.map((p) => toPhoto(p))
 
         // The previous folder stays on screen until now, then everything
         // the grid shows changes in one render.
@@ -108,27 +102,21 @@ export function useOpenFolder() {
         const held: Photo[] = []
         const showHeld = () => {
           const more = held.splice(0)
-          if (more.length > 0)
-            setPhotos(prev => [...prev, ...more])
+          if (more.length > 0) setPhotos((prev) => [...prev, ...more])
         }
         // A copy: the pages are appended to the atom's photos, and pushing
         // them onto the array it holds too would add them twice.
         const done = await loadRemainingPages(folder, [...photos], first.total, isLatest, (more) => {
           held.push(...more)
-          if (store.get(photoGroupingAtom) === null)
-            showHeld()
+          if (store.get(photoGroupingAtom) === null) showHeld()
         })
-        if (done)
-          showHeld()
+        if (done) showHeld()
         return true
-      }
-      catch (error) {
+      } catch (error) {
         console.warn(`failed to open folder ${folder}:`, error)
         return false
-      }
-      finally {
-        if (isLatest())
-          setIsScanning(false)
+      } finally {
+        if (isLatest()) setIsScanning(false)
       }
     },
     [
@@ -156,38 +144,28 @@ export function useOpenFolder() {
     async (folder: string): Promise<boolean> => {
       const isLatest = startScan()
       try {
-        const [first, subfolders] = await Promise.all([
-          scanFolderPage(folder, 0, PAGE_SIZE),
-          subfoldersOf(folder),
-        ])
-        const photos = first.photos.map(p => toPhoto(p))
+        const [first, subfolders] = await Promise.all([scanFolderPage(folder, 0, PAGE_SIZE), subfoldersOf(folder)])
+        const photos = first.photos.map((p) => toPhoto(p))
         while (photos.length < first.total) {
           const page = await scanFolderPage(folder, photos.length, PAGE_SIZE)
-          if (page.photos.length === 0)
-            break // Shrunk on disk mid-scan.
-          photos.push(...page.photos.map(p => toPhoto(p)))
+          if (page.photos.length === 0) break // Shrunk on disk mid-scan.
+          photos.push(...page.photos.map((p) => toPhoto(p)))
         }
-        if (!isLatest() || store.get(currentFolderAtom) !== folder)
-          return true
+        if (!isLatest() || store.get(currentFolderAtom) !== folder) return true
 
-        const ids = new Set(photos.map(p => p.id))
+        const ids = new Set(photos.map((p) => p.id))
         setSubfolders(subfolders)
         setPhotos(photos)
         setPhotosTotal(first.total)
-        setSelectedIds(prev =>
-          [...prev].every(id => ids.has(id))
-            ? prev
-            : new Set([...prev].filter(id => ids.has(id))),
+        setSelectedIds((prev) =>
+          [...prev].every((id) => ids.has(id)) ? prev : new Set([...prev].filter((id) => ids.has(id))),
         )
         const anchorId = store.get(selectedPhotoIdAtom)
-        if (anchorId && !ids.has(anchorId))
-          setAnchorId(null)
+        if (anchorId && !ids.has(anchorId)) setAnchorId(null)
         const previewId = store.get(previewPhotoIdAtom)
-        if (previewId && !ids.has(previewId))
-          setPreviewId(null)
+        if (previewId && !ids.has(previewId)) setPreviewId(null)
         return true
-      }
-      catch (error) {
+      } catch (error) {
         console.warn(`failed to refresh folder ${folder}:`, error)
         return false
       }
@@ -206,7 +184,7 @@ export function useOpenFolder() {
       if (!ok) {
         // The folder was likely moved/deleted/unmounted; if it was
         // bookmarked, drop the now-dead shortcut.
-        setRecentFolders(prev => withFolderRemoved(prev, folder))
+        setRecentFolders((prev) => withFolderRemoved(prev, folder))
       }
       return ok
     },

@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+@import '@pastel-palette/tailwindcss/dist/theme-oklch.css';
+@import '@fontsource-variable/inter/opsz.css';
+@import './app.css';
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@layer base {
+  body {
+    @apply bg-background text-text;
+  }
+}

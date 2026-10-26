@@ -1,5 +1,6 @@
-import type { TabsState } from './tabs'
 import { describe, expect, it } from 'vitest'
+
+import type { TabsState } from './tabs'
 import {
   activeTab,
   withBack,
@@ -20,7 +21,7 @@ function state(paths: (string | null)[], activeIndex = 0): TabsState {
   return { tabs, activeId: tabs[activeIndex].id }
 }
 
-const paths = (s: TabsState) => s.tabs.map(t => t.path)
+const paths = (s: TabsState) => s.tabs.map((t) => t.path)
 
 describe('tabs', () => {
   it('opens a new tab right after the active one and focuses it', () => {
@@ -92,10 +93,7 @@ describe('tabs', () => {
   })
 
   it('opens ⌘-clicked folders behind the active tab, in the order they were clicked', () => {
-    const next = withPathOpenedInBackground(
-      withPathOpenedInBackground(state(['/a', '/z']), '/a/1'),
-      '/a/2',
-    )
+    const next = withPathOpenedInBackground(withPathOpenedInBackground(state(['/a', '/z']), '/a/1'), '/a/2')
     expect(paths(next)).toEqual(['/a', '/a/1', '/a/2', '/z'])
     expect(next.activeId).toBe('t0')
   })

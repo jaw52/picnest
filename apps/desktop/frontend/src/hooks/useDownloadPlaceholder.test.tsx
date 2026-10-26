@@ -1,8 +1,10 @@
-import type { Photo } from '~/types/photo'
 import { act, renderHook } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+
 import { currentFolderAtom, photosAtom } from '~/atoms/gallery'
+import type { Photo } from '~/types/photo'
+
 import { downloadingIdsAtom, useDownloadPlaceholder } from './useDownloadPlaceholder'
 
 const { downloadPlaceholder, refreshFolder } = vi.hoisted(() => ({

@@ -1,21 +1,7 @@
-import type { MotionValue } from 'framer-motion'
-import * as stylex from '@stylexjs/stylex'
-import { motion, useTransform } from 'framer-motion'
-import { PULL_MAX } from '~/hooks/useBottomPull'
-import { colors } from '~/theme/colors.stylex'
+import type { MotionValue } from 'motion/react'
+import { motion, useTransform } from 'motion/react'
 
-const styles = stylex.create({
-  arc: {
-    position: 'fixed',
-    insetInline: 0,
-    bottom: 0,
-    pointerEvents: 'none',
-    // The page's gray a shade deeper, mostly opaque, so it stands out over
-    // any photo while still hinting at what is under it.
-    backgroundColor: `color-mix(in srgb, color-mix(in oklab, ${colors['--ps-foreground']} 14%, ${colors['--ps-background']}) 65%, transparent)`,
-    backdropFilter: 'blur(8px)',
-  },
-})
+import { PULL_MAX } from '~/hooks/useBottomPull'
 
 /**
  * The arc from one bottom corner to the other, bulging up by `pull` px:
@@ -32,13 +18,15 @@ function arcPath(pull: number) {
  * edge glow.
  */
 export function OverscrollArc({ pull }: { pull: MotionValue<number> }) {
-  const clipPath = useTransform(pull, p => `path('${arcPath(p)} Z')`)
+  const clipPath = useTransform(pull, (p) => `path('${arcPath(p)} Z')`)
   const opacity = useTransform(pull, [0, PULL_MAX * 0.25], [0, 1])
 
   return (
     <motion.div
       aria-hidden
-      className={stylex.props(styles.arc).className}
+      // The page's gray a shade deeper, mostly opaque, so it stands out over any
+      // photo while still hinting at what is under it.
+      className="pointer-events-none fixed inset-x-0 bottom-0 bg-[color-mix(in_srgb,color-mix(in_oklab,var(--color-text)_14%,var(--color-background))_65%,transparent)] backdrop-blur-sm"
       style={{ height: PULL_MAX, clipPath, WebkitClipPath: clipPath, opacity }}
     />
   )

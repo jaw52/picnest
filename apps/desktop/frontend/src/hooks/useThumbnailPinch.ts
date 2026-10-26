@@ -1,5 +1,6 @@
 import { useSetAtom, useStore } from 'jotai'
 import { useEffect } from 'react'
+
 import { THUMBNAIL_WIDTH_MAX, THUMBNAIL_WIDTH_MIN, thumbnailWidthAtom } from '~/atoms/gallery'
 
 /** Pinch deltas arrive as small wheel `deltaY`s with ctrl held; this turns them into a scale factor. */
@@ -26,8 +27,7 @@ export function useThumbnailPinch(enabled: boolean) {
   const setWidth = useSetAtom(thumbnailWidthAtom)
 
   useEffect(() => {
-    if (!enabled)
-      return
+    if (!enabled) return
     let base: number | null = null
     // Unsnapped width through a ctrl+wheel pinch, whose many small deltas
     // would each round away to nothing.
@@ -39,22 +39,22 @@ export function useThumbnailPinch(enabled: boolean) {
     }
     function onGestureChange(e: Event) {
       e.preventDefault()
-      if (base !== null)
-        setWidth(clampWidth(base * (e as WebKitGestureEvent).scale))
+      if (base !== null) setWidth(clampWidth(base * (e as WebKitGestureEvent).scale))
     }
     function onGestureEnd(e: Event) {
       e.preventDefault()
       base = null
     }
     function onWheel(e: WheelEvent) {
-      if (!e.ctrlKey)
-        return
+      if (!e.ctrlKey) return
       e.preventDefault()
-      if (base !== null)
-        return
+      if (base !== null) return
       wheelWidth = Math.min(
         THUMBNAIL_WIDTH_MAX,
-        Math.max(THUMBNAIL_WIDTH_MIN, (wheelWidth ?? store.get(thumbnailWidthAtom)) * Math.exp(-e.deltaY * WHEEL_ZOOM_RATE)),
+        Math.max(
+          THUMBNAIL_WIDTH_MIN,
+          (wheelWidth ?? store.get(thumbnailWidthAtom)) * Math.exp(-e.deltaY * WHEEL_ZOOM_RATE),
+        ),
       )
       setWidth(clampWidth(wheelWidth))
       window.clearTimeout(wheelIdle)
@@ -69,14 +69,12 @@ export function useThumbnailPinch(enabled: boolean) {
     // makes WebKit wait on the main thread before scrolling, so the grid's
     // renders while scrolling would stall the scroll itself.
     const pinchIsWheel = !('GestureEvent' in window)
-    if (pinchIsWheel)
-      window.addEventListener('wheel', onWheel, { passive: false })
+    if (pinchIsWheel) window.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       document.removeEventListener('gesturestart', onGestureStart)
       document.removeEventListener('gesturechange', onGestureChange)
       document.removeEventListener('gestureend', onGestureEnd)
-      if (pinchIsWheel)
-        window.removeEventListener('wheel', onWheel)
+      if (pinchIsWheel) window.removeEventListener('wheel', onWheel)
       window.clearTimeout(wheelIdle)
     }
   }, [enabled, store, setWidth])

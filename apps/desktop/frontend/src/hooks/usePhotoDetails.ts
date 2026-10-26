@@ -1,7 +1,7 @@
-import type { PhotoDetails } from '~/types/photo'
-
 import { useEffect, useState } from 'react'
+
 import { getPhotoDetails } from '~/lib/backend'
+import type { PhotoDetails } from '~/types/photo'
 
 // Module-level cache: EXIF/file-size never changes for the lifetime of the
 // app, so once we've read it for a path there's no need to ask the backend again
@@ -27,28 +27,22 @@ export function usePhotoDetails(path: string | null): {
   }
 
   useEffect(() => {
-    if (!path || detailsCache.has(path))
-      return
+    if (!path || detailsCache.has(path)) return
 
     let cancelled = false
     async function load() {
       try {
         // path is narrowed above, but TS can't see that across the async
         // boundary without re-checking it here.
-        if (!path)
-          return
+        if (!path) return
         const resolved = await getPhotoDetails(path)
-        if (cancelled)
-          return
+        if (cancelled) return
         detailsCache.set(path, resolved)
         setFetchedDetails(resolved)
-      }
-      catch (error) {
+      } catch (error) {
         console.warn(`failed to read photo details for ${path}:`, error)
-      }
-      finally {
-        if (!cancelled)
-          setLoading(false)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
     }
     void load()

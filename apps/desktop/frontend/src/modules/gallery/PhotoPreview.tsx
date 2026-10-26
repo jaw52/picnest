@@ -1,19 +1,10 @@
-import type { AnimationPlaybackControls } from 'framer-motion'
-import type { MouseEvent, WheelEvent } from 'react'
-import type { Placeholder } from './ZoomableImage'
-import type { IconComponent } from '~/lib/icon'
-import type { PageDirection, SwipePager } from '~/lib/swipe-pager'
-import type { Photo } from '~/types/photo'
-import * as stylex from '@stylexjs/stylex'
-import { animate, AnimatePresence, motion, useMotionValue } from 'framer-motion'
 import { useAtomValue, useSetAtom } from 'jotai'
+import type { AnimationPlaybackControls } from 'motion/react'
+import { animate, AnimatePresence, motion, useMotionValue } from 'motion/react'
+import type { MouseEvent, WheelEvent } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import CloseRegular from '~icons/mingcute/close-line'
-import CopyRegular from '~icons/mingcute/copy-line'
-import Delete2Regular from '~icons/mingcute/delete-2-line'
-import LeftRegular from '~icons/mingcute/left-line'
-import RightRegular from '~icons/mingcute/right-line'
+
 import {
   closePreviewAtom,
   currentFolderAtom,
@@ -29,14 +20,23 @@ import { downloadingIdsAtom, useDownloadPlaceholder } from '~/hooks/useDownloadP
 import { useFileName } from '~/hooks/useFileName'
 import { useRatePhoto } from '~/hooks/useRatePhoto'
 import { largestCachedThumbnail, useThumbnail } from '~/hooks/useThumbnail'
+import { cn } from '~/lib/cn'
+import type { IconComponent } from '~/lib/icon'
 import { isLibraryPath } from '~/lib/library'
 import { convertFileSrc, convertLiveSrc, convertPreviewSrc, writeText } from '~/lib/native'
 import { ratingFromKey } from '~/lib/rating-key'
 import { spring } from '~/lib/springs'
+import type { PageDirection, SwipePager } from '~/lib/swipe-pager'
 import { createSwipePager } from '~/lib/swipe-pager'
-import { motion as motionTokens, radius } from '~/theme/layout.stylex'
-import { text } from '~/theme/text'
+import type { Photo } from '~/types/photo'
+import CloseRegular from '~icons/mingcute/close-line'
+import CopyRegular from '~icons/mingcute/copy-line'
+import Delete2Regular from '~icons/mingcute/delete-2-line'
+import LeftRegular from '~icons/mingcute/left-line'
+import RightRegular from '~icons/mingcute/right-line'
+
 import { Filmstrip } from './Filmstrip'
+import type { Placeholder } from './ZoomableImage'
 import { FittedImage, ZoomableImage } from './ZoomableImage'
 
 /** Space between the photo and its neighbours as they slide past. */
@@ -49,90 +49,6 @@ function slideTransition() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? { duration: 0 } : SLIDE
 }
 
-const styles = stylex.create({
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 50,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    backgroundColor: 'rgb(0 0 0 / 0.9)',
-    outline: 'none',
-  },
-  // The photo and its neighbours side by side, slid along by a swipe.
-  track: { position: 'absolute', inset: 0 },
-  page: { position: 'absolute', inset: 0, display: 'flex' },
-  before: { transform: `translateX(calc(-100% - ${PAGE_GAP}px))` },
-  after: { transform: `translateX(calc(100% + ${PAGE_GAP}px))` },
-  // A round control on the lightbox, which stays dark whatever the theme.
-  button: {
-    position: 'absolute',
-    display: 'flex',
-    width: 36,
-    height: 36,
-    cursor: 'pointer',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 0,
-    borderRadius: radius.full,
-    backgroundColor: {
-      'default': 'rgb(255 255 255 / 0.1)',
-      ':hover': 'rgb(255 255 255 / 0.2)',
-      ':active': 'rgb(255 255 255 / 0.25)',
-    },
-    color: { 'default': 'rgb(255 255 255 / 0.8)', ':hover': 'white' },
-    transitionProperty: 'color, background-color',
-    transitionDuration: motionTokens.fast,
-  },
-  close: { top: 16, right: 16 },
-  prev: { top: '50%', left: 16, transform: 'translateY(-50%)' },
-  next: { top: '50%', right: 16, transform: 'translateY(-50%)' },
-  notice: { margin: 'auto', color: 'rgb(255 255 255 / 0.8)' },
-  // Above the filmstrip.
-  caption: {
-    position: 'absolute',
-    bottom: 72,
-    left: '50%',
-    transform: 'translateX(-50%)',
-    // As wide as its content, up to the window: a long file name gives way
-    // (it ellipsizes) instead of squeezing the count onto two lines.
-    width: 'max-content',
-    maxWidth: 'calc(100% - 32px)',
-    borderRadius: radius.item,
-    backgroundColor: 'rgb(255 255 255 / 0.1)',
-    paddingInline: 12,
-    paddingBlock: 4,
-    color: 'rgb(255 255 255 / 0.8)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  },
-  captionName: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-  captionCount: {
-    flexShrink: 0,
-    whiteSpace: 'nowrap',
-    fontVariantNumeric: 'tabular-nums',
-    color: 'rgb(255 255 255 / 0.6)',
-  },
-  captionRating: { display: 'flex', flexShrink: 0 },
-  captionCloud: { flexShrink: 0, whiteSpace: 'nowrap', color: 'rgb(255 255 255 / 0.6)' },
-  captionAction: {
-    flexShrink: 0,
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    borderWidth: 0,
-    borderRadius: radius.item,
-    paddingInline: 8,
-    paddingBlock: 2,
-    backgroundColor: { 'default': 'rgb(255 255 255 / 0.12)', ':hover': 'rgb(255 255 255 / 0.24)' },
-    color: 'white',
-    transitionProperty: 'background-color',
-    transitionDuration: motionTokens.fast,
-  },
-})
-
 /**
  * The longest edge iCloud keeps a thumbnail at. An undownloaded photo is
  * previewed from that, upscaled to fit.
@@ -140,6 +56,12 @@ const styles = stylex.create({
 const CLOUD_PREVIEW_EDGE = 1024
 
 type LightboxPosition = 'close' | 'prev' | 'next'
+
+const POSITION_CLASS: Record<LightboxPosition, string> = {
+  close: 'top-4 right-4',
+  prev: 'top-1/2 left-4 -translate-y-1/2',
+  next: 'top-1/2 right-4 -translate-y-1/2',
+}
 
 function LightboxButton({
   label,
@@ -156,11 +78,15 @@ function LightboxButton({
     <Tooltip content={label}>
       <button
         type="button"
-        aria-label={label}
-        {...stylex.props(styles.button, styles[position])}
         onClick={onClick}
+        aria-label={label}
+        // A round control on the lightbox, which stays dark whatever the theme.
+        className={cn(
+          'absolute flex size-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors duration-80 hover:bg-white/20 hover:text-white active:bg-white/25',
+          POSITION_CLASS[position],
+        )}
       >
-        <Icon width={18} height={18} />
+        <Icon height={18} width={18} />
       </button>
     </Tooltip>
   )
@@ -168,13 +94,13 @@ function LightboxButton({
 
 function CloudNotice() {
   const { t } = useTranslation()
-  return <div {...stylex.props(styles.notice, text.body)}>{t('preview.notDownloaded')}</div>
+  return <div className="m-auto text-body text-white/80">{t('preview.notDownloaded')}</div>
 }
 
 /** An undownloaded photo, shown from iCloud's thumbnail when it has one. */
-function CloudPreview({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
+function CloudPreview({ photo, folderPath }: { photo: Photo; folderPath: string | null }) {
   const url = useThumbnail(folderPath, photo.path, CLOUD_PREVIEW_EDGE, true, true)
-  return url ? <FittedImage src={url} alt={photo.fileName} /> : <CloudNotice />
+  return url ? <FittedImage alt={photo.fileName} src={url} /> : <CloudNotice />
 }
 
 /**
@@ -218,25 +144,27 @@ function usePreviewEdge() {
 }
 
 /** The photo either side of the one shown, in place for a swipe to slide in. */
-function Neighbour({ photo, folderPath, src }: { photo: Photo, folderPath: string | null, src: string }) {
+function Neighbour({ photo, folderPath, src }: { photo: Photo; folderPath: string | null; src: string }) {
   const fileName = useFileName(photo)
-  return photo.isCloudPlaceholder
-    ? <CloudPreview photo={photo} folderPath={folderPath} />
-    : <FittedImage src={src} placeholder={placeholderFor(folderPath, photo)} alt={fileName} />
+  return photo.isCloudPlaceholder ? (
+    <CloudPreview folderPath={folderPath} photo={photo} />
+  ) : (
+    <FittedImage alt={fileName} placeholder={placeholderFor(folderPath, photo)} src={src} />
+  )
 }
 
 /** Marks an undownloaded photo in the caption, with a button to download it. */
-function CloudCaption({ photo, folderPath }: { photo: Photo, folderPath: string | null }) {
+function CloudCaption({ photo, folderPath }: { photo: Photo; folderPath: string | null }) {
   const { t } = useTranslation()
   const downloadPlaceholder = useDownloadPlaceholder(folderPath)
   const downloading = useAtomValue(downloadingIdsAtom).has(photo.id)
   return (
     <>
-      <span {...stylex.props(styles.captionCloud)}>{t('preview.cloudOnly')}</span>
+      <span className="shrink-0 whitespace-nowrap text-white/60">{t('preview.cloudOnly')}</span>
       <button
-        type="button"
+        className="shrink-0 rounded-item bg-white/10 px-2 py-0.5 text-caption whitespace-nowrap text-white transition-colors duration-80 hover:bg-white/25"
         disabled={downloading}
-        {...stylex.props(styles.captionAction, text.caption)}
+        type="button"
         onClick={() => void downloadPlaceholder(photo)}
       >
         {downloading ? t('gallery.downloading') : t('preview.downloadOriginal')}
@@ -262,19 +190,16 @@ export function PhotoPreview() {
   const overlayRef = useRef<HTMLDivElement>(null)
   const isOpen = photo !== null
   useEffect(() => {
-    if (isOpen)
-      overlayRef.current?.focus()
+    if (isOpen) overlayRef.current?.focus()
   }, [isOpen])
 
   // The lightbox fades its photo in when it opens, but swaps photos in place
   // after that: fading each one in would blink the backdrop through.
   const [openedId, setOpenedId] = useState<string | null>(null)
-  if (!photo && openedId !== null)
-    setOpenedId(null)
-  if (photo && openedId === null)
-    setOpenedId(photo.id)
+  if (!photo && openedId !== null) setOpenedId(null)
+  if (photo && openedId === null) setOpenedId(photo.id)
 
-  const index = photo ? photos.findIndex(p => p.id === photo.id) : -1
+  const index = photo ? photos.findIndex((p) => p.id === photo.id) : -1
   const edge = usePreviewEdge()
   const srcOf = useCallback((p: Photo) => convertPreviewSrc(p.path, edge), [edge])
 
@@ -282,18 +207,15 @@ export function PhotoPreview() {
   // photo to decode, so the current one stays up until the next can paint.
   const { decode, retain, isDecoded } = useDecodedImages()
   useEffect(() => {
-    if (index === -1)
-      return
+    if (index === -1) return
     const srcs = [photos[index - 1], photos[index], photos[index + 1]]
-      .filter(p => p !== undefined && !p.isCloudPlaceholder)
-      .map(p => srcOf(p))
+      .filter((p) => p !== undefined && !p.isCloudPlaceholder)
+      .map((p) => srcOf(p))
     retain(srcs)
-    for (const src of srcs)
-      void decode(src)
+    for (const src of srcs) void decode(src)
   }, [index, photos, decode, retain, srcOf])
   useEffect(() => {
-    if (!isOpen)
-      retain([])
+    if (!isOpen) retain([])
   }, [isOpen, retain])
 
   // How far the photo and its neighbours are slid, by a swipe in progress.
@@ -320,17 +242,16 @@ export function PhotoPreview() {
   }, [shownId, slide])
   const ready = useCallback(
     (photo: Photo) => {
-      if (photo.isCloudPlaceholder)
-        return Promise.resolve()
+      if (photo.isCloudPlaceholder) return Promise.resolve()
       const full = decode(srcOf(photo))
-      if (!isLibraryPath(folderPath))
-        return full
+      if (!isLibraryPath(folderPath)) return full
       // A photo in the Photos library may take a while to read: the switch
       // waits only briefly for it (a neighbour is decoded already), then
       // goes ahead on its thumbnail.
       const placeholder = placeholderFor(folderPath, photo)
-      const fallback = new Promise<void>(resolve => setTimeout(resolve, LIBRARY_SWITCH_WAIT_MS))
-        .then(() => placeholder && decode(placeholder.src))
+      const fallback = new Promise<void>((resolve) => setTimeout(resolve, LIBRARY_SWITCH_WAIT_MS)).then(
+        () => placeholder && decode(placeholder.src),
+      )
       return Promise.race([full, fallback])
     },
     [decode, folderPath, srcOf],
@@ -338,12 +259,10 @@ export function PhotoPreview() {
   const goTo = useCallback(
     (delta: number) => {
       const next = index === -1 ? undefined : photos[index + delta]
-      if (next === undefined)
-        return
+      if (next === undefined) return
       const token = ++switchRef.current
       void ready(next).then(() => {
-        if (switchRef.current === token)
-          setPreviewId(next.id)
+        if (switchRef.current === token) setPreviewId(next.id)
       })
     },
     [index, photos, ready, setPreviewId],
@@ -351,14 +270,12 @@ export function PhotoPreview() {
   // A swipe's page turn: the neighbour finishes sliding in, then lands.
   const turnPage = (direction: PageDirection) => {
     const next = photos[index + direction]
-    if (next === undefined)
-      return
+    if (next === undefined) return
     const token = ++switchRef.current
     turningRef.current = true
     const slid = slideTo(-direction * (window.innerWidth + PAGE_GAP)).finished
     void Promise.all([ready(next), slid]).then(() => {
-      if (switchRef.current === token)
-        setPreviewId(next.id)
+      if (switchRef.current === token) setPreviewId(next.id)
     })
   }
 
@@ -373,8 +290,7 @@ export function PhotoPreview() {
   const pagerRef = useRef<SwipePager | null>(null)
   useEffect(() => () => pagerRef.current?.dispose(), [])
   function onWheel(e: WheelEvent<HTMLDivElement>) {
-    if (e.ctrlKey)
-      return
+    if (e.ctrlKey) return
     if (!pagerRef.current) {
       pagerRef.current = createSwipePager({
         distance: () => Math.min(PAGE_TURN_DISTANCE, window.innerWidth / 5),
@@ -386,7 +302,7 @@ export function PhotoPreview() {
           slideRef.current?.stop()
           slide.set(offset)
         },
-        commit: direction => swipeRef.current.turnPage(direction),
+        commit: (direction) => swipeRef.current.turnPage(direction),
         turning: () => turningRef.current,
         release: () => void slideTo(0),
       })
@@ -395,8 +311,7 @@ export function PhotoPreview() {
   }
 
   useEffect(() => {
-    if (!photo)
-      return
+    if (!photo) return
     const current = photo
     function onKeyDown(e: KeyboardEvent) {
       // Space closes it too, as Quick Look does in Finder.
@@ -404,8 +319,7 @@ export function PhotoPreview() {
         case 'Escape':
         case ' ': {
           e.preventDefault()
-          if (!e.repeat)
-            close()
+          if (!e.repeat) close()
 
           break
         }
@@ -422,15 +336,13 @@ export function PhotoPreview() {
         case 'Delete':
         case 'Backspace': {
           e.preventDefault()
-          if (!e.repeat)
-            void deletePhoto([current])
+          if (!e.repeat) void deletePhoto([current])
 
           break
         }
         default: {
           const rating = ratingFromKey(e)
-          if (rating !== null)
-            rate([current], rating)
+          if (rating !== null) rate([current], rating)
         }
       }
     }
@@ -442,74 +354,76 @@ export function PhotoPreview() {
     <AnimatePresence>
       {photo && (
         <motion.div
+          animate={{ opacity: 1 }}
+          aria-label={fileName}
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/90 outline-none"
+          exit={{ opacity: 0, transition: spring.slow.exit }}
+          initial={{ opacity: 0 }}
           ref={overlayRef}
           role="dialog"
-          aria-modal="true"
-          aria-label={fileName}
           tabIndex={-1}
-          {...stylex.props(styles.overlay)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: spring.slow.exit }}
           transition={spring.slow}
           onClick={close}
           onWheel={onWheel}
         >
-          <motion.div className={stylex.props(styles.track).className} style={{ x: slide }}>
+          {/* The photo and its neighbours side by side, slid along by a swipe. */}
+          <motion.div className="absolute inset-0" style={{ x: slide }}>
             {index > 0 && (
-              <div {...stylex.props(styles.page, styles.before)}>
-                <Neighbour photo={photos[index - 1]} folderPath={folderPath} src={srcOf(photos[index - 1])} />
+              <div className="absolute inset-0 flex -translate-x-[calc(100%+32px)]">
+                <Neighbour folderPath={folderPath} photo={photos[index - 1]} src={srcOf(photos[index - 1])} />
               </div>
             )}
-            <div {...stylex.props(styles.page)}>
-              {photo.isCloudPlaceholder
-                ? <CloudPreview photo={photo} folderPath={folderPath} />
-                : (
-                    <ZoomableImage
-                      key={photo.id}
-                      src={srcOf(photo)}
-                      // Shown from a scaled copy, the photo itself loads
-                      // for a closer look.
-                      full={Math.max(photo.width, photo.height) > edge
-                        ? { src: convertFileSrc(photo.path), width: photo.width }
-                        : undefined}
-                      // A photo already decoded shows straight away, without
-                      // its thumbnail and spinner blinking up first.
-                      placeholder={isDecoded(srcOf(photo)) ? undefined : placeholderFor(folderPath, photo)}
-                      live={photo.live && { src: convertLiveSrc(photo.path, photo.modified), loop: photo.live === 'loop' }}
-                      alt={fileName}
-                      fadeIn={photo.id === openedId}
-                      menuItems={[
-                        isLibraryPath(folderPath)
-                          // Not a file of its own to point at.
-                          ? { label: t('photoInfo.copyFileName'), icon: CopyRegular, onSelect: () => void writeText(fileName) }
-                          : { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
+            <div className="absolute inset-0 flex">
+              {photo.isCloudPlaceholder ? (
+                <CloudPreview folderPath={folderPath} photo={photo} />
+              ) : (
+                <ZoomableImage
+                  alt={fileName}
+                  src={srcOf(photo)}
+                  // Shown from a scaled copy, the photo itself loads
+                  // for a closer look.
+                  full={
+                    Math.max(photo.width, photo.height) > edge
+                      ? { src: convertFileSrc(photo.path), width: photo.width }
+                      : undefined
+                  }
+                  // A photo already decoded shows straight away, without
+                  // its thumbnail and spinner blinking up first.
+                  fadeIn={photo.id === openedId}
+                  key={photo.id}
+                  live={photo.live && { src: convertLiveSrc(photo.path, photo.modified), loop: photo.live === 'loop' }}
+                  placeholder={isDecoded(srcOf(photo)) ? undefined : placeholderFor(folderPath, photo)}
+                  menuItems={[
+                    isLibraryPath(folderPath)
+                      ? // Not a file of its own to point at.
                         {
-                          label: t('common.delete'),
-                          icon: Delete2Regular,
-                          destructive: true,
-                          onSelect: () => void deletePhoto([photo]),
-                        },
-                      ]}
-                    />
-                  )}
+                          label: t('photoInfo.copyFileName'),
+                          icon: CopyRegular,
+                          onSelect: () => void writeText(fileName),
+                        }
+                      : { label: t('common.copyPath'), icon: CopyRegular, onSelect: () => void writeText(photo.path) },
+                    {
+                      label: t('common.delete'),
+                      icon: Delete2Regular,
+                      destructive: true,
+                      onSelect: () => void deletePhoto([photo]),
+                    },
+                  ]}
+                />
+              )}
             </div>
             {index !== -1 && index < photos.length - 1 && (
-              <div {...stylex.props(styles.page, styles.after)}>
-                <Neighbour photo={photos[index + 1]} folderPath={folderPath} src={srcOf(photos[index + 1])} />
+              <div className="absolute inset-0 flex translate-x-[calc(100%+32px)]">
+                <Neighbour folderPath={folderPath} photo={photos[index + 1]} src={srcOf(photos[index + 1])} />
               </div>
             )}
           </motion.div>
-          <LightboxButton
-            label={t('common.close')}
-            icon={CloseRegular}
-            position="close"
-            onClick={close}
-          />
+          <LightboxButton icon={CloseRegular} label={t('common.close')} position="close" onClick={close} />
           {index > 0 && (
             <LightboxButton
-              label={t('preview.previous')}
               icon={LeftRegular}
+              label={t('preview.previous')}
               position="prev"
               onClick={(e) => {
                 e.stopPropagation()
@@ -519,8 +433,8 @@ export function PhotoPreview() {
           )}
           {index !== -1 && index < photos.length - 1 && (
             <LightboxButton
-              label={t('preview.next')}
               icon={RightRegular}
+              label={t('preview.next')}
               position="next"
               onClick={(e) => {
                 e.stopPropagation()
@@ -528,23 +442,25 @@ export function PhotoPreview() {
               }}
             />
           )}
-          <div {...stylex.props(styles.caption, text.caption)} role="presentation" onClick={e => e.stopPropagation()}>
-            <span {...stylex.props(styles.captionName)}>{fileName}</span>
+          {/* Above the filmstrip. As wide as its content, up to the window: a long
+           * file name gives way (it ellipsizes) instead of squeezing the count onto
+           * two lines. */}
+          <div
+            className="absolute bottom-18 left-1/2 flex w-max max-w-[calc(100%-32px)] -translate-x-1/2 items-center gap-3 rounded-item bg-white/10 px-3 py-1 text-caption text-white/80"
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="min-w-0 truncate">{fileName}</span>
             {index !== -1 && (
-              <span {...stylex.props(styles.captionCount)}>{`${index + 1} / ${photos.length}`}</span>
+              <span className="shrink-0 whitespace-nowrap text-white/60 tabular-nums">{`${index + 1} / ${photos.length}`}</span>
             )}
-            <span {...stylex.props(styles.captionRating)}>
-              <StarRating rating={photo.rating} onChange={r => rate([photo], r)} size={14} />
+            <span className="flex shrink-0">
+              <StarRating rating={photo.rating} size={14} onChange={(r) => rate([photo], r)} />
             </span>
-            {photo.isCloudPlaceholder && <CloudCaption photo={photo} folderPath={folderPath} />}
+            {photo.isCloudPlaceholder && <CloudCaption folderPath={folderPath} photo={photo} />}
           </div>
           {index !== -1 && (
-            <Filmstrip
-              photos={photos}
-              index={index}
-              folderPath={folderPath}
-              onSelect={i => goTo(i - index)}
-            />
+            <Filmstrip folderPath={folderPath} index={index} photos={photos} onSelect={(i) => goTo(i - index)} />
           )}
         </motion.div>
       )}

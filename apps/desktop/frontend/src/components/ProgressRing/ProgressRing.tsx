@@ -1,16 +1,15 @@
-import type { StyleXStyles } from '@stylexjs/stylex'
-import * as stylex from '@stylexjs/stylex'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
+
+import { cn } from '~/lib/cn'
 import { spring } from '~/lib/springs'
-import { styles } from './style'
 
 export interface ProgressRingProps {
+  className?: string
   label: string
-  value: number
   max?: number
   /** Diameter in px. */
   size?: number
-  xstyle?: StyleXStyles
+  value: number
 }
 
 const STROKE = 2
@@ -19,32 +18,32 @@ const STROKE = 2
  * A small determinate ring, filling clockwise from the top. Like
  * ProgressBar, the fill moves on a spring.
  */
-export function ProgressRing({ label, value, max = 100, size = 16, xstyle }: ProgressRingProps) {
+export function ProgressRing({ label, value, max = 100, size = 16, className }: ProgressRingProps) {
   const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0
   const r = (size - STROKE) / 2
 
   return (
     <svg
-      role="progressbar"
       aria-label={label}
-      aria-valuemin={0}
       aria-valuemax={max}
+      aria-valuemin={0}
       aria-valuenow={value}
-      width={size}
+      className={cn('shrink-0 -rotate-90', className)}
       height={size}
+      role="progressbar"
       viewBox={`0 0 ${size} ${size}`}
-      {...stylex.props(styles.ring, xstyle)}
+      width={size}
     >
-      <circle cx={size / 2} cy={size / 2} r={r} strokeWidth={STROKE} {...stylex.props(styles.track)} />
+      <circle className="fill-none stroke-fill-secondary" cx={size / 2} cy={size / 2} r={r} strokeWidth={STROKE} />
       <motion.circle
+        animate={{ pathLength: ratio }}
+        className="fill-none stroke-text"
         cx={size / 2}
         cy={size / 2}
-        r={r}
-        strokeWidth={STROKE}
-        strokeLinecap="round"
-        {...stylex.props(styles.fill)}
         initial={false}
-        animate={{ pathLength: ratio }}
+        r={r}
+        strokeLinecap="round"
+        strokeWidth={STROKE}
         transition={spring.moderate}
       />
     </svg>

@@ -1,5 +1,3 @@
-import type { PhotoOperation } from './usePhotoOperation'
-import type { Photo } from '~/types/photo'
 import { atom, useStore } from 'jotai'
 import { useCallback, useEffect } from 'react'
 
@@ -20,8 +18,10 @@ import { i18n } from '~/i18n'
 import { deletePhotos, restorePhotos } from '~/lib/backend'
 import { message } from '~/lib/native'
 import { successorOf } from '~/lib/photo'
+import type { Photo } from '~/types/photo'
 
 import { useOpenFolder } from './useOpenFolder'
+import type { PhotoOperation } from './usePhotoOperation'
 import { usePhotoOperation } from './usePhotoOperation'
 
 // Shared by every deletion entry point in the window, whichever tab it is in.
@@ -49,18 +49,14 @@ function moveOnFrom(
   previewBefore: Photo[],
 ) {
   const previewId = store.get(previewPhotoIdAtom)
-  if (previewId === null)
-    store.set(selectAfterRemovalAtom, removed, gridBefore)
-  else if (removed.has(previewId))
-    store.set(previewPhotoIdAtom, successorOf(previewBefore, removed)?.id ?? null)
+  if (previewId === null) store.set(selectAfterRemovalAtom, removed, gridBefore)
+  else if (removed.has(previewId)) store.set(previewPhotoIdAtom, successorOf(previewBefore, removed)?.id ?? null)
 }
 
 const trash: PhotoOperation = async (store, folderPath, photos) => {
-  if (photos.length > 1 && store.get(bulkDeleteBlockedAtom))
-    return null
+  if (photos.length > 1 && store.get(bulkDeleteBlockedAtom)) return null
   const targets = await confirmTargets(store, folderPath, photos)
-  if (!targets || targets.length === 0)
-    return null
+  if (!targets || targets.length === 0) return null
 
   // What the grid and viewer showed, to pick the photo after the deleted
   // ones once they are gone.
@@ -70,18 +66,16 @@ const trash: PhotoOperation = async (store, folderPath, photos) => {
   try {
     const result = await deletePhotos(
       folderPath,
-      targets.map(p => p.path),
+      targets.map((p) => p.path),
     )
     // The Photos library's deletions go to its Recently Deleted album,
     // which can't be undone from here.
-    if (result.trashed.length > 0)
-      store.set(undoableDeletionAtom, { folderPath, trashed: result.trashed })
-    const removed = new Set([...result.trashed.map(t => t.path), ...result.deleted])
+    if (result.trashed.length > 0) store.set(undoableDeletionAtom, { folderPath, trashed: result.trashed })
+    const removed = new Set([...result.trashed.map((t) => t.path), ...result.deleted])
     if (removed.size > 0 && store.get(currentFolderAtom) === folderPath)
       moveOnFrom(store, removed, gridBefore, previewBefore)
-    return result.failures.map(failure => i18n.t('dialogs.deleteFailed', { error: failure }))
-  }
-  catch (error) {
+    return result.failures.map((failure) => i18n.t('dialogs.deleteFailed', { error: failure }))
+  } catch (error) {
     return [i18n.t('dialogs.deleteFailed', { error })]
   }
 }
@@ -97,33 +91,33 @@ export function useUndoDeletion() {
 
   return useCallback(async () => {
     const deletion = store.get(undoableDeletionAtom)
-    if (!deletion || store.get(deletionPendingAtom))
-      return
+    if (!deletion || store.get(deletionPendingAtom)) return
     store.set(undoableDeletionAtom, null)
     let error: unknown
     try {
       await restorePhotos(deletion.folderPath, deletion.trashed)
-    }
-    catch (error_) {
+    } catch (error_) {
       error = error_
     }
     if (store.get(currentFolderAtom) === deletion.folderPath) {
       await refreshFolder(deletion.folderPath)
       // The viewer, if open, kept the deleted photos' places in its list.
       const viewing = store.get(previewPhotoIdAtom) !== null
-      const shown = new Set(store.get(viewing ? previewPhotosAtom : filteredPhotosAtom).map(p => p.id))
-      const restored = deletion.trashed.map(t => t.path).filter(path => shown.has(path))
+      const shown = new Set(store.get(viewing ? previewPhotosAtom : filteredPhotosAtom).map((p) => p.id))
+      const restored = deletion.trashed.map((t) => t.path).filter((path) => shown.has(path))
       if (restored.length > 0 && viewing) {
         store.set(previewPhotoIdAtom, restored[0])
-      }
-      else if (restored.length > 0) {
+      } else if (restored.length > 0) {
         store.set(selectedPhotoIdsAtom, new Set(restored))
         store.set(selectedPhotoIdAtom, restored[0])
         store.set(revealPhotoAtom, { id: restored[0] })
       }
     }
     if (error !== undefined)
-      await message(String(error), { title: i18n.t('dialogs.undoDeleteTitle'), kind: 'error' })
+      await message(error instanceof Error ? error.message : JSON.stringify(error), {
+        title: i18n.t('dialogs.undoDeleteTitle'),
+        kind: 'error',
+      })
   }, [store, refreshFolder])
 }
 
@@ -132,11 +126,9 @@ export function useUndoShortcut() {
   const undo = useUndoDeletion()
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey || e.key.toLowerCase() !== 'z')
-        return
+      if (!e.metaKey || e.shiftKey || e.altKey || e.ctrlKey || e.key.toLowerCase() !== 'z') return
       const target = e.target as HTMLElement | null
-      if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName))
-        return
+      if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
       e.preventDefault()
       void undo()
     }

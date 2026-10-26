@@ -1,4 +1,3 @@
-import type { PageDirection } from './swipe-pager'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import doubleSwipeRight from './__fixtures__/wheel/double-swipe-right.json'
@@ -6,9 +5,10 @@ import slowDragRight from './__fixtures__/wheel/slow-drag-right.json'
 import swipeDownFast from './__fixtures__/wheel/swipe-down-fast-trackpad.json'
 import swipeLeftFast from './__fixtures__/wheel/swipe-left-fast-trackpad.json'
 import swipeLeft from './__fixtures__/wheel/swipe-left-trackpad.json'
-import swipeRightFast from './__fixtures__/wheel/swipe-right-fast.json'
 import swipeRight from './__fixtures__/wheel/swipe-right.json'
+import swipeRightFast from './__fixtures__/wheel/swipe-right-fast.json'
 import swipeUp from './__fixtures__/wheel/swipe-up-trackpad.json'
+import type { PageDirection } from './swipe-pager'
 import { createSwipePager } from './swipe-pager'
 
 // The fixtures are real Mac trackpad recordings (Chrome and Safari), taken
@@ -83,7 +83,7 @@ describe('createSwipePager', () => {
   })
 
   it('turns again for a swipe after the previous one ended', () => {
-    const shifted = swipeLeft.map(e => ({ ...e, timeStamp: e.timeStamp + 5000 }))
+    const shifted = swipeLeft.map((e) => ({ ...e, timeStamp: e.timeStamp + 5000 }))
     expect(replay([...swipeLeft, ...shifted]).commits).toEqual([1, 1])
   })
 
@@ -97,7 +97,13 @@ describe('createSwipePager', () => {
   })
 
   it('waits for a turn to land before following fresh fingers', () => {
-    expect(replay(doubleSwipeRight, () => true, () => true).commits).toEqual([-1])
+    expect(
+      replay(
+        doubleSwipeRight,
+        () => true,
+        () => true,
+      ).commits,
+    ).toEqual([-1])
   })
 
   it('ignores vertical scrolls', () => {
@@ -116,7 +122,7 @@ describe('createSwipePager', () => {
   })
 
   it('only gives a little past the first photo, and settles back', () => {
-    const { commits, follows, releases } = replay(swipeRight, direction => direction === 1)
+    const { commits, follows, releases } = replay(swipeRight, (direction) => direction === 1)
     expect(commits).toEqual([])
     expect(Math.max(...follows)).toBeLessThan(1634 * 0.25 + 1)
     expect(releases).toBe(1)

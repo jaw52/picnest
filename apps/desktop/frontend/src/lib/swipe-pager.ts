@@ -14,17 +14,17 @@ const RUBBER_BAND = 0.25
 export type PageDirection = -1 | 1
 
 interface SwipePagerOptions {
-  /** Travel, in px, that turns a drag into a page turn. */
-  distance: () => number
   canPage: (direction: PageDirection) => boolean
-  /** The photo follows the fingers: how far it has moved, negative to the left. */
-  follow: (offset: number) => void
   /** Turn the page: 1 for the next photo, -1 for the previous. */
   commit: (direction: PageDirection) => void
-  /** A page turn is still sliding in: fresh fingers wait for it to land. */
-  turning: () => boolean
+  /** Travel, in px, that turns a drag into a page turn. */
+  distance: () => number
+  /** The photo follows the fingers: how far it has moved, negative to the left. */
+  follow: (offset: number) => void
   /** The gesture ended short of a page turn: settle back. */
   release: () => void
+  /** A page turn is still sliding in: fresh fingers wait for it to land. */
+  turning: () => boolean
 }
 
 type WheelSample = Pick<WheelEvent, 'deltaX' | 'deltaY' | 'timeStamp'>
@@ -81,8 +81,7 @@ export function createSwipePager(options: SwipePagerOptions) {
   function start(e: WheelSample) {
     startX += e.deltaX
     startY += e.deltaY
-    if (Math.abs(startX) + Math.abs(startY) < AXIS_SLOP)
-      return
+    if (Math.abs(startX) + Math.abs(startY) < AXIS_SLOP) return
     if (Math.abs(startY) > Math.abs(startX)) {
       settle('ignoring')
       return
@@ -93,8 +92,7 @@ export function createSwipePager(options: SwipePagerOptions) {
   }
 
   function end() {
-    if (state === 'following')
-      options.release()
+    if (state === 'following') options.release()
     state = 'idle'
     startX = 0
     startY = 0
@@ -123,10 +121,8 @@ export function createSwipePager(options: SwipePagerOptions) {
         startX = 0
         startY = 0
       }
-      if (state === 'idle')
-        start(e)
-      else
-        follow(e.deltaX)
+      if (state === 'idle') start(e)
+      else follow(e.deltaX)
     },
     dispose() {
       clearTimeout(idleTimer)

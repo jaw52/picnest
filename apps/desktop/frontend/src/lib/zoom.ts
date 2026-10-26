@@ -13,12 +13,12 @@ export const FIT: View = { scale: 1, x: 0, y: 0 }
  * viewport's center (the caption's strip pushes it off-center vertically).
  */
 export interface Box {
-  imageW: number
   imageH: number
-  viewW: number
-  viewH: number
+  imageW: number
   offsetX?: number
   offsetY?: number
+  viewH: number
+  viewW: number
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
@@ -26,8 +26,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 /** One axis: the photo covers the viewport once it is bigger than it, and stays centered while smaller. */
 function clampAxis(offset: number, size: number, view: number, rest: number) {
   const slack = (size - view) / 2
-  if (slack <= 0)
-    return 0
+  if (slack <= 0) return 0
   // `|| 0` turns a -0 from clamping into 0.
   return clamp(offset, -slack - rest, slack - rest) || 0
 }
@@ -44,14 +43,7 @@ export function clampView(view: View, box: Box): View {
  * Zooms to `scale` (kept within 1..max) so the spot under the cursor stays put.
  * `cx`/`cy` are the cursor's offset from where the photo is centered, in px.
  */
-export function zoomAbout(
-  view: View,
-  scale: number,
-  cx: number,
-  cy: number,
-  box: Box,
-  max: number,
-): View {
+export function zoomAbout(view: View, scale: number, cx: number, cy: number, box: Box, max: number): View {
   const next = clamp(scale, 1, max)
   const k = next / view.scale
   return clampView({ scale: next, x: cx - k * (cx - view.x), y: cy - k * (cy - view.y) }, box)

@@ -1,9 +1,20 @@
-import type { Tab } from '~/lib/tabs'
-import * as stylex from '@stylexjs/stylex'
-import { AnimatePresence, motion, useIsPresent } from 'framer-motion'
 import { useAtomValue } from 'jotai'
+import { AnimatePresence, motion, useIsPresent } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import { folderNameFromPath } from '~/atoms/recentFolders'
+import { tabsStateAtom } from '~/atoms/tabs'
+import { ContextMenu } from '~/components/ContextMenu'
+import { FluidHoverHighlight } from '~/components/FluidHoverHighlight'
+import { IconButton } from '~/components/IconButton'
+import { useFluidHover } from '~/hooks/use-fluid-hover'
+import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
+import { useTabs } from '~/hooks/useTabs'
+import { cn } from '~/lib/cn'
+import { isLibraryPath } from '~/lib/library'
+import { spring } from '~/lib/springs'
+import type { Tab } from '~/lib/tabs'
 import AddRegular from '~icons/mingcute/add-line'
 import AlignArrowRightRegular from '~icons/mingcute/align-arrow-right-line'
 import CloseRegular from '~icons/mingcute/close-line'
@@ -16,143 +27,8 @@ import LayoutGridFilled from '~icons/mingcute/layout-grid-fill'
 import LayoutGridRegular from '~icons/mingcute/layout-grid-line'
 import PicFilled from '~icons/mingcute/pic-fill'
 import PicRegular from '~icons/mingcute/pic-line'
-import { folderNameFromPath } from '~/atoms/recentFolders'
-import { tabsStateAtom } from '~/atoms/tabs'
-import { ContextMenu } from '~/components/ContextMenu'
-import { FluidHoverHighlight } from '~/components/FluidHoverHighlight'
-import { IconButton } from '~/components/IconButton'
-import { useFluidHover } from '~/hooks/use-fluid-hover'
-import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
-import { useTabs } from '~/hooks/useTabs'
-import { isLibraryPath } from '~/lib/library'
-import { spring } from '~/lib/springs'
-import { colors } from '~/theme/colors.stylex'
-import { control, radius } from '~/theme/layout.stylex'
-import { text, utility, weight } from '~/theme/text'
-import { tabMarker } from './markers.stylex'
+
 import { pathMenuItems } from './pathMenuItems'
-
-/**
- * How far a hovered tab keeps from the bar's bottom edge and from the active
- * tab beside it.
- */
-const TAB_INSET = 3
-
-const styles = stylex.create({
-  strip: {
-    display: 'flex',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    gap: 2,
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  tabs: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'flex-end',
-    alignSelf: 'stretch',
-    gap: TAB_INSET,
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  tab: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    // Tabs share the row evenly and shrink together, like a browser's.
-    width: 180,
-    minWidth: 72,
-    flexShrink: 1,
-    height: control.heightCompact,
-    // Centered on the active tab, which reaches down to the page.
-    marginBottom: TAB_INSET,
-    paddingLeft: 10,
-    paddingRight: 4,
-    cursor: 'default',
-    color: colors['--ps-muted-foreground'],
-    transitionProperty: 'color',
-    transitionDuration: '80ms',
-  },
-  active: { color: colors['--ps-foreground'] },
-  // Slides between tabs as the hover does.
-  hover: {
-    borderRadius: radius.item,
-    // Concentric with the selection's flared corners, so a hovered
-    // neighbour's edge runs parallel to them, TAB_INSET away.
-    borderBottomLeftRadius: `calc(${radius.item} - ${TAB_INSET}px)`,
-    borderBottomRightRadius: `calc(${radius.item} - ${TAB_INSET}px)`,
-  },
-  // The selected tab's sheet, sliding between tabs: in the page's color and
-  // open at the bottom, so it runs into the page, its foot flared out by two
-  // concave corners. Level with the tabs at the top, it reaches TAB_INSET
-  // further down, to the page.
-  selection: {
-    'position': 'absolute',
-    'left': 0,
-    'bottom': 0,
-    'pointerEvents': 'none',
-    'height': `calc(${control.heightCompact} + ${TAB_INSET}px)`,
-    'borderTopLeftRadius': radius.item,
-    'borderTopRightRadius': radius.item,
-    'backgroundColor': colors['--ps-background'],
-    // A CSS transition, not a JS spring: a tab switch renders the new grid
-    // on the main thread, stalling JS animation, while WebKit runs this on
-    // the compositor. Only with a cubic Bézier (linear() falls back); this
-    // one starts from rest and settles like spring.moderate.
-    'transitionProperty': 'transform',
-    'transitionDuration': '240ms',
-    'transitionTimingFunction': 'cubic-bezier(0.4, 0, 0.2, 1)',
-    '::before': {
-      content: '""',
-      position: 'absolute',
-      bottom: 0,
-      left: `calc(-1 * ${radius.item})`,
-      width: radius.item,
-      height: radius.item,
-      backgroundImage: `radial-gradient(circle at 0 0, transparent calc(${radius.item} - 0.5px), ${colors['--ps-background']} ${radius.item})`,
-    },
-    '::after': {
-      content: '""',
-      position: 'absolute',
-      bottom: 0,
-      right: `calc(-1 * ${radius.item})`,
-      width: radius.item,
-      height: radius.item,
-      backgroundImage: `radial-gradient(circle at 100% 0, transparent calc(${radius.item} - 0.5px), ${colors['--ps-background']} ${radius.item})`,
-    },
-  },
-  icon: { flexShrink: 0 },
-  iconSpace: { width: 14, height: 14 },
-  label: { minWidth: 0, flexGrow: 1, flexBasis: 0 },
-  close: {
-    display: 'flex',
-    width: 20,
-    height: 20,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
-    borderWidth: 0,
-    borderRadius: 6,
-    cursor: 'pointer',
-    // Only the active tab and the hovered one offer their close button.
-    opacity: {
-      default: 0,
-      [stylex.when.ancestor(':hover', tabMarker)]: 1,
-    },
-    backgroundColor: { 'default': 'transparent', ':hover': colors['--ps-hover'] },
-    color: {
-      'default': colors['--ps-muted-foreground'],
-      ':hover': colors['--ps-foreground'],
-    },
-    transitionProperty: 'opacity, color, background-color',
-    transitionDuration: '80ms',
-  },
-  closeVisible: { opacity: 1 },
-  selectionAt: (left: number, width: number) => ({ transform: `translateX(${left}px)`, width }),
-})
 
 /**
  * The new-tab page's grid, the Photos library, or where a folder lives:
@@ -168,86 +44,86 @@ const TAB_ICONS = {
 } as const
 
 function tabKind(path: string | null, library: boolean, iCloud: boolean | undefined): keyof typeof TAB_ICONS {
-  if (path === null)
-    return 'newTab'
-  if (library)
-    return 'library'
+  if (path === null) return 'newTab'
+  if (library) return 'library'
   return iCloud ? 'iCloud' : 'local'
 }
 
-function TabIcon({ path, active }: { path: string | null, active: boolean }) {
+function TabIcon({ path, active }: { path: string | null; active: boolean }) {
   const iCloud = useIsICloudFolder(path)
   const library = isLibraryPath(path)
-  if (path !== null && !library && iCloud === undefined)
-    return <span {...stylex.props(styles.icon, styles.iconSpace)} />
+  if (path !== null && !library && iCloud === undefined) return <span className="size-3.5 shrink-0" />
   const Icon = TAB_ICONS[tabKind(path, library, iCloud)][active ? 1 : 0]
-  return <Icon width={14} height={14} {...stylex.props(styles.icon)} />
+  return <Icon className="shrink-0" height={14} width={14} />
 }
 
 interface TabItemProps {
-  tab: Tab
-  index: number
   active: boolean
-  isOnly: boolean
+  index: number
   isLast: boolean
+  isOnly: boolean
   registerItem: (index: number, element: HTMLElement | null) => void
+  tab: Tab
 }
 
 function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemProps) {
   const { t } = useTranslation()
   const { activateTab, closeTab, closeOtherTabs, closeTabsToRight } = useTabs()
-  const title = tab.path === null
-    ? t('common.newTab')
-    : (isLibraryPath(tab.path) ? t('library.name') : folderNameFromPath(tab.path))
+  const title =
+    tab.path === null ? t('common.newTab') : isLibraryPath(tab.path) ? t('library.name') : folderNameFromPath(tab.path)
 
   // A closed tab leaves its slot as it starts fading out, in the same commit
   // the tabs after it move down a slot, so it never clears its successor's.
   const ref = useRef<HTMLDivElement>(null)
   const isPresent = useIsPresent()
   useEffect(() => {
-    if (!isPresent)
-      return
+    if (!isPresent) return
     registerItem(index, ref.current)
     return () => registerItem(index, null)
   }, [index, isPresent, registerItem])
 
   const item = (
     <motion.div
-      ref={ref}
-      layout="position"
-      role="tab"
-      data-fluid-hover-index={index}
-      aria-selected={active}
-      initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
+      aria-selected={active}
+      data-fluid-hover-index={index}
       exit={{ opacity: 0, transition: spring.moderate.exit }}
+      initial={{ opacity: 0 }}
+      layout="position"
+      ref={ref}
+      role="tab"
       transition={spring.moderate}
-      {...stylex.props(tabMarker, styles.tab, active && styles.active, text.caption)}
+      // Tabs share the row evenly and shrink together, like a browser's. Centered
+      // on the active tab, which reaches down to the page (mb-[3px]: how far a
+      // hovered tab keeps from the bar's bottom edge and from the active tab).
+      className={cn(
+        'group/tab relative mb-[3px] flex h-7 w-45 min-w-18 shrink cursor-default items-center gap-1.5 pr-1 pl-2.5 text-caption transition-colors duration-80',
+        active ? 'text-text' : 'text-text-secondary',
+      )}
       onMouseDown={(e) => {
         // Middle click closes, like a browser.
         if (e.button === 1) {
           e.preventDefault()
           closeTab(tab.id)
-        }
-        else if (e.button === 0) {
+        } else if (e.button === 0) {
           activateTab(tab.id)
         }
       }}
     >
-      <TabIcon path={tab.path} active={active} />
-      <span
-        {...stylex.props(styles.label, utility.truncate, active ? weight.semibold : weight.normal)}
-      >
-        {title}
-      </span>
+      <TabIcon active={active} path={tab.path} />
+      <span className={cn('min-w-0 grow basis-0 truncate', active ? 'wght-semibold' : 'wght-normal')}>{title}</span>
       <button
         type="button"
-        aria-label={t('tabs.closeTab', { title })}
-        {...stylex.props(styles.close, active && styles.closeVisible)}
-        onMouseDown={e => e.stopPropagation()}
         onClick={() => closeTab(tab.id)}
+        onMouseDown={(e) => e.stopPropagation()}
+        aria-label={t('tabs.closeTab', { title })}
+        // Only the active tab and the hovered one offer their close button.
+        className={cn(
+          'flex size-5 shrink-0 items-center justify-center rounded-md p-0 text-text-secondary transition-[opacity,color,background-color] duration-80 hover:bg-text/5 hover:text-text group-hover/tab:opacity-100',
+          active ? 'opacity-100' : 'opacity-0',
+        )}
       >
-        <CloseRegular width={12} height={12} />
+        <CloseRegular height={12} width={12} />
       </button>
     </motion.div>
   )
@@ -256,9 +132,24 @@ function TabItem({ tab, index, active, isOnly, isLast, registerItem }: TabItemPr
   return (
     <ContextMenu
       items={[
-        { label: t('common.close'), icon: CloseRegular, shortcut: active ? '⌘W' : undefined, onSelect: () => closeTab(tab.id) },
-        { label: t('tabs.closeOthers'), icon: CloseSquareRegular, disabled: isOnly, onSelect: () => closeOtherTabs(tab.id) },
-        { label: t('tabs.closeToRight'), icon: AlignArrowRightRegular, disabled: isLast, onSelect: () => closeTabsToRight(tab.id) },
+        {
+          label: t('common.close'),
+          icon: CloseRegular,
+          shortcut: active ? '⌘W' : undefined,
+          onSelect: () => closeTab(tab.id),
+        },
+        {
+          label: t('tabs.closeOthers'),
+          icon: CloseSquareRegular,
+          disabled: isOnly,
+          onSelect: () => closeOtherTabs(tab.id),
+        },
+        {
+          label: t('tabs.closeToRight'),
+          icon: AlignArrowRightRegular,
+          disabled: isLast,
+          onSelect: () => closeTabsToRight(tab.id),
+        },
         // The Photos library has no path in Finder.
         ...(path && !isLibraryPath(path) ? pathMenuItems(t, path) : []),
       ]}
@@ -277,44 +168,54 @@ export function TabStrip() {
   // Tabs open on mouse down, so a click in a gap has nothing to route to.
   const hover = useFluidHover(listRef, { axis: 'x', gapClick: false })
   const { activeIndex: hoveredIndex, itemRects, isMeasured, handlers, registerItem } = hover
-  const activeIndex = tabs.findIndex(tab => tab.id === activeId)
+  const activeIndex = tabs.findIndex((tab) => tab.id === activeId)
   const selectedRect = isMeasured ? itemRects[activeIndex] : undefined
 
   return (
-    <div {...stylex.props(styles.strip)}>
+    <div className="flex shrink items-center gap-0.5 self-stretch min-w-0">
       {/* In the sticky header, a shorter page clamping the window's scroll
        * would look to framer like the tabs moving by that much. layoutRoot
        * measures them against the strip; it needs `layout` to be measured. */}
       <motion.div
-        ref={listRef}
         layout
         layoutRoot
-        role="tablist"
         aria-label={t('tabs.list')}
-        onMouseMove={handlers.onMouseMove}
+        className="relative flex min-w-0 shrink items-end gap-[3px] self-stretch"
+        ref={listRef}
+        role="tablist"
         onMouseEnter={handlers.onMouseEnter}
         onMouseLeave={handlers.onMouseLeave}
-        {...stylex.props(styles.tabs)}
+        onMouseMove={handlers.onMouseMove}
       >
         {selectedRect && (
-          <div {...stylex.props(styles.selection, styles.selectionAt(selectedRect.left, selectedRect.width))} />
+          // The selected tab's sheet: the page's color, open at the bottom so it runs
+          // into the page, its foot flared by two concave corners. A CSS transition,
+          // not a JS spring, because a tab switch stalls JS animation on the main thread.
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 h-[31px] rounded-t-item bg-background transition-transform duration-240 ease-[cubic-bezier(0.4,0,0.2,1)] before:absolute before:bottom-0 before:-left-2 before:size-2 before:bg-[radial-gradient(circle_at_0_0,transparent_7.5px,var(--color-background)_8px)] before:content-[''] after:absolute after:-right-2 after:bottom-0 after:size-2 after:bg-[radial-gradient(circle_at_100%_0,transparent_7.5px,var(--color-background)_8px)] after:content-['']"
+            style={{ transform: `translateX(${selectedRect.left}px)`, width: selectedRect.width }}
+          />
         )}
-        <FluidHoverHighlight hover={hover} hidden={hoveredIndex === activeIndex} xstyle={styles.hover} />
+        <FluidHoverHighlight
+          className="rounded-item rounded-b-[5px]"
+          hidden={hoveredIndex === activeIndex}
+          hover={hover}
+        />
         <AnimatePresence initial={false}>
           {tabs.map((tab, i) => (
             <TabItem
-              key={tab.id}
-              tab={tab}
-              index={i}
               active={tab.id === activeId}
-              registerItem={registerItem}
-              isOnly={tabs.length === 1}
+              index={i}
               isLast={i === tabs.length - 1}
+              isOnly={tabs.length === 1}
+              key={tab.id}
+              registerItem={registerItem}
+              tab={tab}
             />
           ))}
         </AnimatePresence>
       </motion.div>
-      <IconButton label={t('tabs.newTabShortcut')} icon={AddRegular} onClick={newTab} />
+      <IconButton icon={AddRegular} label={t('tabs.newTabShortcut')} onClick={newTab} />
     </div>
   )
 }

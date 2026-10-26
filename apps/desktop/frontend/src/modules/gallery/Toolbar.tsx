@@ -1,8 +1,6 @@
-import * as stylex from '@stylexjs/stylex'
 import { useAtom, useAtomValue } from 'jotai'
 import { useTranslation } from 'react-i18next'
-import Delete2Regular from '~icons/mingcute/delete-2-line'
-import Refresh2Regular from '~icons/mingcute/refresh-2-line'
+
 import {
   bulkDeleteBlockedAtom,
   currentFolderAtom,
@@ -17,45 +15,10 @@ import { IconButton } from '~/components/IconButton'
 import { Slider } from '~/components/Slider'
 import { useDeletePhoto } from '~/hooks/useDeletePhoto'
 import { useOpenFolder } from '~/hooks/useOpenFolder'
+import { cn } from '~/lib/cn'
 import { TabStrip } from '~/modules/tabs/TabStrip'
-import { colors } from '~/theme/colors.stylex'
-
-const spin = stylex.keyframes({
-  to: { transform: 'rotate(360deg)' },
-})
-
-const styles = stylex.create({
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    // The toolbar occupies the window's top-left corner; keep the tabs
-    // clear of the native traffic lights.
-    paddingLeft: 84,
-    paddingRight: 12,
-    // A fixed height, so the row doesn't grow when the (taller) thumbnail
-    // slider shows. No bottom border: the active tab runs into the page.
-    height: 41,
-    // Centers the controls on the tabs' midline, y=24 (28px tabs, 3px off the
-    // bottom), as are the traffic lights (TrafficLightPosition in main.go).
-    paddingTop: 7,
-    backgroundColor: colors['--ps-titlebar'],
-  },
-  // Empty space between the tabs and the actions - still a drag handle.
-  spacer: { flexGrow: 1, minWidth: 24 },
-  slot: { display: 'flex', flexShrink: 0 },
-  // The folder's controls keep their room on the new-tab page, only hidden:
-  // the tabs, which shrink to fit, would otherwise widen at once on switching.
-  controls: { display: 'flex', flexShrink: 0, alignItems: 'center', gap: 4 },
-  hidden: { visibility: 'hidden' },
-  slider: { width: 192, flexShrink: 0, marginRight: 8 },
-  spinning: {
-    animationName: spin,
-    animationDuration: '1s',
-    animationTimingFunction: 'linear',
-    animationIterationCount: 'infinite',
-  },
-})
+import Delete2Regular from '~icons/mingcute/delete-2-line'
+import Refresh2Regular from '~icons/mingcute/refresh-2-line'
 
 /**
  * The tab bar across the window's top: the tabs, then the room the active
@@ -64,10 +27,14 @@ const styles = stylex.create({
  */
 export function Toolbar({ controlsRef }: { controlsRef: (el: HTMLDivElement | null) => void }) {
   return (
-    <div data-drag-region {...stylex.props(styles.toolbar)}>
+    // Left padding clears the native traffic lights; the fixed height keeps the
+    // row from growing with the slider. The top padding centers the controls on
+    // the tabs' midline, as the traffic lights are (TrafficLightPosition in main.go).
+    <div data-drag-region className="flex h-[41px] items-center gap-1 bg-material-opaque pt-[7px] pr-3 pl-[84px]">
       <TabStrip />
-      <div {...stylex.props(styles.spacer)} />
-      <div ref={controlsRef} {...stylex.props(styles.slot)} />
+      {/* Empty space between the tabs and the actions - still a drag handle. */}
+      <div className="min-w-6 grow" />
+      <div className="flex shrink-0" ref={controlsRef} />
     </div>
   )
 }
@@ -85,32 +52,34 @@ export function FolderControls() {
   const deletePhoto = useDeletePhoto(currentFolder)
 
   return (
-    <div {...stylex.props(styles.controls, !currentFolder && styles.hidden)} aria-hidden={!currentFolder}>
+    // The folder's controls keep their room on the new-tab page, only hidden:
+    // the tabs, which shrink to fit, would otherwise widen at once on switching.
+    <div aria-hidden={!currentFolder} className={cn('flex shrink-0 items-center gap-1', !currentFolder && 'invisible')}>
       {/* The whole track is clickable, not just the thumb, so none of it
           may drag the window. */}
-      <div data-no-drag {...stylex.props(styles.slider)}>
+      <div data-no-drag className="mr-2 w-48 shrink-0">
         {/* Also ⌘= / ⌘- / ⌘0, or a pinch on the grid. */}
         <Slider
           label={t('gallery.thumbnailSize')}
-          min={THUMBNAIL_WIDTH_MIN}
           max={THUMBNAIL_WIDTH_MAX}
+          min={THUMBNAIL_WIDTH_MIN}
+          showValue={false}
           step={10}
           value={thumbnailWidth}
           onChange={setThumbnailWidth}
-          showValue={false}
         />
       </div>
       <IconButton
-        label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
-        icon={Delete2Regular}
         disabled={selectedIds.size === 0 || bulkDeleteBlocked}
-        onClick={() => void deletePhoto(photos.filter(p => selectedIds.has(p.id)))}
+        icon={Delete2Regular}
+        label={bulkDeleteBlocked ? t('gallery.bulkDeleteWaits') : t('gallery.deleteSelected')}
+        onClick={() => void deletePhoto(photos.filter((p) => selectedIds.has(p.id)))}
       />
       <IconButton
-        label={t('gallery.rescan')}
-        icon={Refresh2Regular}
-        iconClassName={isScanning ? stylex.props(styles.spinning).className : undefined}
         disabled={!currentFolder || isScanning}
+        icon={Refresh2Regular}
+        iconClassName={isScanning ? 'animate-spin' : undefined}
+        label={t('gallery.rescan')}
         onClick={() => currentFolder && void navigateToFolder(currentFolder)}
       />
     </div>

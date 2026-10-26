@@ -1,19 +1,8 @@
 {
-  "path": [
-    "apps"
-  ],
-  "ignore": [
-    "**/node_modules/**",
-    "**/.mygo/**",
-    "**/dist/**",
-    "**/bin/**",
-    "**/*.test.*",
-    "**/*_test.go"
-  ],
+  "path": ["apps"],
+  "ignore": ["**/node_modules/**", "**/.mygo/**", "**/dist/**", "**/bin/**", "**/*.test.*", "**/*_test.go"],
   "gitignore": true,
   "minTokens": 50,
-  "reporters": [
-    "console"
-  ],
+  "reporters": ["console"],
   "threshold": 0
 }

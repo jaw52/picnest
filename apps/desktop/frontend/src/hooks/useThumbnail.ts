@@ -10,7 +10,7 @@ import { ensureThumbnailUrl, THUMBNAIL_CANCELLED } from '~/lib/backend'
 export const thumbnailCache = new Map<string, string>()
 
 /** Each photo's largest thumbnail in thumbnailCache, by `folderPath:filePath`. */
-const largestThumbnails = new Map<string, { edge: number, url: string }>()
+const largestThumbnails = new Map<string, { edge: number; url: string }>()
 
 /**
  * `cloud` marks an undownloaded iCloud file, whose thumbnail comes from
@@ -21,12 +21,17 @@ export function thumbnailCacheKey(folderPath: string | null, filePath: string, m
 }
 
 /** Adds a resolved thumbnail to thumbnailCache. */
-export function cacheThumbnail(folderPath: string | null, filePath: string, maxEdge: number, cloud: boolean, url: string) {
+export function cacheThumbnail(
+  folderPath: string | null,
+  filePath: string,
+  maxEdge: number,
+  cloud: boolean,
+  url: string,
+) {
   thumbnailCache.set(thumbnailCacheKey(folderPath, filePath, maxEdge, cloud), url)
   const photoKey = `${folderPath ?? ''}:${filePath}`
   const largest = largestThumbnails.get(photoKey)
-  if (!largest || maxEdge >= largest.edge)
-    largestThumbnails.set(photoKey, { edge: maxEdge, url })
+  if (!largest || maxEdge >= largest.edge) largestThumbnails.set(photoKey, { edge: maxEdge, url })
 }
 
 /** Forgets every resolved thumbnail, once their files are deleted. */
@@ -84,8 +89,7 @@ export function useThumbnail(
   }
 
   useEffect(() => {
-    if (!folderPath || !enabled || thumbnailCache.has(cacheKey))
-      return
+    if (!folderPath || !enabled || thumbnailCache.has(cacheKey)) return
 
     // Aborting on unmount drops the request from the backend queue, so tiles
     // scrolled past don't hold up the ones on screen.
@@ -95,18 +99,17 @@ export function useThumbnail(
       try {
         // folderPath is narrowed above, but TS can't see that across the
         // async boundary without re-checking it here.
-        if (!folderPath)
-          return
-        const resolved = await ensureThumbnailUrl(folderPath, filePath, maxEdge, { background, signal: controller.signal })
+        if (!folderPath) return
+        const resolved = await ensureThumbnailUrl(folderPath, filePath, maxEdge, {
+          background,
+          signal: controller.signal,
+        })
         // Cache even if unmounted meanwhile: the request already ran to
         // completion, so the next mount can reuse it.
         cacheThumbnail(folderPath, filePath, maxEdge, cloud, resolved)
-        if (!controller.signal.aborted)
-          setFetchedUrl(resolved)
-      }
-      catch (error) {
-        if (error === THUMBNAIL_CANCELLED)
-          return
+        if (!controller.signal.aborted) setFetchedUrl(resolved)
+      } catch (error) {
+        if (error === THUMBNAIL_CANCELLED) return
         // Expected for e.g. an undownloaded iCloud file iCloud has no
         // thumbnail of; the UI renders a distinct tile for those.
         console.warn(`thumbnail failed for ${filePath}:`, error)

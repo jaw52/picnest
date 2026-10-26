@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 
 import { prefetchPathsAtom, thumbnailProgressAtom, unloadedPhotosAtom } from '~/atoms/gallery'
 import { ensureThumbnailUrl } from '~/lib/backend'
+
 import { cacheThumbnail, thumbnailCache, thumbnailCacheKey } from './useThumbnail'
 
 const CONCURRENCY = 4
@@ -25,10 +26,9 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
   const setProgress = useSetAtom(thumbnailProgressAtom)
 
   useEffect(() => {
-    if (!folderPath || maxEdge <= 0)
-      return
+    if (!folderPath || maxEdge <= 0) return
 
-    const queue = paths.filter(path => !thumbnailCache.has(thumbnailCacheKey(folderPath, path, maxEdge)))
+    const queue = paths.filter((path) => !thumbnailCache.has(thumbnailCacheKey(folderPath, path, maxEdge)))
     const total = paths.length + unloaded
     let done = paths.length - queue.length
     const report = () => setProgress(done >= total ? { total: 0, done: 0 } : { total, done })
@@ -43,20 +43,23 @@ export function useThumbnailPrefetch(folderPath: string | null, maxEdge: number)
         const key = thumbnailCacheKey(folderPath, path, maxEdge)
         try {
           if (!thumbnailCache.has(key))
-            cacheThumbnail(folderPath, path, maxEdge, false, await ensureThumbnailUrl(folderPath!, path, maxEdge, { background: true, signal: controller.signal }))
-        }
-        catch {
+            cacheThumbnail(
+              folderPath,
+              path,
+              maxEdge,
+              false,
+              await ensureThumbnailUrl(folderPath!, path, maxEdge, { background: true, signal: controller.signal }),
+            )
+        } catch {
           // Per-tile failures surface when that tile mounts.
         }
         // The next run (or none, for a closed folder) reports from here.
-        if (controller.signal.aborted)
-          return
+        if (controller.signal.aborted) return
         done++
         report()
       }
     }
-    for (let i = 0; i < CONCURRENCY; i++)
-      void worker()
+    for (let i = 0; i < CONCURRENCY; i++) void worker()
 
     return () => {
       controller.abort()

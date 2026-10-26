@@ -12,15 +12,13 @@ export function toPhoto(meta: PhotoMeta): Photo {
 export type RatingFilter = number | null
 
 export function matchesRatingFilter(photo: Pick<Photo, 'rating'>, filter: RatingFilter): boolean {
-  if (filter === null)
-    return true
-  if (filter === 0)
-    return photo.rating === 0
+  if (filter === null) return true
+  if (filter === 0) return photo.rating === 0
   return photo.rating === filter
 }
 
 export function filterPhotosByRating(photos: Photo[], filter: RatingFilter): Photo[] {
-  return photos.filter(p => matchesRatingFilter(p, filter))
+  return photos.filter((p) => matchesRatingFilter(p, filter))
 }
 
 export function ratingCounts(photos: Pick<Photo, 'rating'>[]): Record<number, number> {
@@ -39,11 +37,11 @@ export function successorOf<T extends { id: string }>(
   photos: readonly T[],
   removed: ReadonlySet<string>,
 ): T | undefined {
-  const last = photos.findLastIndex(p => removed.has(p.id))
-  if (last === -1)
-    return undefined
-  return photos.slice(last + 1).find(p => !removed.has(p.id))
-    ?? photos.slice(0, last).findLast(p => !removed.has(p.id))
+  const last = photos.findLastIndex((p) => removed.has(p.id))
+  if (last === -1) return undefined
+  return (
+    photos.slice(last + 1).find((p) => !removed.has(p.id)) ?? photos.slice(0, last).findLast((p) => !removed.has(p.id))
+  )
 }
 
 /** What the grid groups photos by when they were taken; `null` for not at all. */
@@ -51,9 +49,9 @@ export type PhotoGrouping = 'year' | 'month' | 'day' | null
 
 /** A run of photos taken in the same year, month or day. */
 export interface PhotoGroup {
+  photos: Photo[]
   /** When the period starts, in local time, as milliseconds since the epoch. */
   start: number
-  photos: Photo[]
 }
 
 /** The newest first; photos taken at the same time keep their order. */
@@ -77,10 +75,8 @@ export function groupPhotos(photos: readonly Photo[], grouping: NonNullable<Phot
   for (const photo of photos) {
     const start = periodStart(photo.taken, grouping)
     const last = groups.at(-1)
-    if (last?.start === start)
-      last.photos.push(photo)
-    else
-      groups.push({ start, photos: [photo] })
+    if (last?.start === start) last.photos.push(photo)
+    else groups.push({ start, photos: [photo] })
   }
   return groups
 }

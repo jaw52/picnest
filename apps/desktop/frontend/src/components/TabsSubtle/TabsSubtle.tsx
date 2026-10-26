@@ -1,18 +1,15 @@
-import type { StyleXStyles } from '@stylexjs/stylex'
-import type { ReactNode } from 'react'
 import { Tabs } from '@base-ui/react/tabs'
-import * as stylex from '@stylexjs/stylex'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'motion/react'
+import type { ReactNode } from 'react'
 import { createContext, use, useCallback, useEffect, useRef, useState } from 'react'
-import { useSize } from '~/context/size'
+
 import { useFluidHover } from '~/hooks/use-fluid-hover'
+import { cn } from '~/lib/cn'
 import { spring } from '~/lib/springs'
-import { trim, weight } from '~/theme/text'
-import { styles } from './style'
 
 interface TabsSubtleContextValue {
-  registerTab: (index: number, element: HTMLElement | null) => void
   hoveredIndex: number | null
+  registerTab: (index: number, element: HTMLElement | null) => void
   selectedIndex: number
 }
 
@@ -20,16 +17,15 @@ const TabsSubtleContext = createContext<TabsSubtleContextValue | null>(null)
 
 function useTabsSubtle() {
   const ctx = use(TabsSubtleContext)
-  if (!ctx)
-    throw new Error('useTabsSubtle must be used within a TabsSubtle')
+  if (!ctx) throw new Error('useTabsSubtle must be used within a TabsSubtle')
   return ctx
 }
 
 export interface TabsSubtleProps {
   children: ReactNode
-  selectedIndex: number
+  className?: string
   onSelect: (index: number) => void
-  xstyle?: StyleXStyles
+  selectedIndex: number
 }
 
 /**
@@ -38,7 +34,7 @@ export interface TabsSubtleProps {
  * Arrow/Home/End keyboard navigation; arrows move focus and Enter/Space selects
  * (manual activation). The pills are measured from the tabs' DOM rects.
  */
-export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSubtleProps) {
+export function TabsSubtle({ children, selectedIndex, onSelect, className }: TabsSubtleProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Whether the pointer is over the list: a ref for blur, which reads it at the
   // moment it runs, and the same flag as state for the render, which picks the
@@ -59,10 +55,8 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
   const registerTab = useCallback(
     (index: number, element: HTMLElement | null) => {
       registerItem(index, element)
-      if (element)
-        tabElementsRef.current.set(index, element)
-      else
-        tabElementsRef.current.delete(index)
+      if (element) tabElementsRef.current.set(index, element)
+      else tabElementsRef.current.delete(index)
     },
     [registerItem],
   )
@@ -74,10 +68,9 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
   // Observe individual tabs for resize (label changes, e.g. counts).
   useEffect(() => {
     const elements = tabElementsRef.current
-    if (elements.size === 0)
-      return
+    if (elements.size === 0) return
     const ro = new ResizeObserver(() => measureTabs())
-    elements.forEach(el => ro.observe(el))
+    elements.forEach((el) => ro.observe(el))
     return () => ro.disconnect()
   }, [measureTabs, children])
 
@@ -106,19 +99,26 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
 
   return (
     <TabsSubtleContext value={{ registerTab, hoveredIndex, selectedIndex }}>
-      <Tabs.Root
-        value={selectedIndex}
-        onValueChange={value => onSelect(Number(value))}
-        {...stylex.props(styles.root)}
-      >
+      <Tabs.Root className="contents" value={selectedIndex} onValueChange={(value) => onSelect(Number(value))}>
         <Tabs.List
           ref={containerRef}
-          onMouseMove={handleMouseMove}
+          className={cn(
+            '-m-1 relative flex max-w-[calc(100%+8px)] min-w-0 items-center overflow-x-auto p-1 select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            className,
+          )}
           onMouseLeave={handleMouseLeave}
+          onMouseMove={handleMouseMove}
+          onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
+            if (containerRef.current?.contains(e.relatedTarget)) return
+            setFocusedIndex(null)
+            if (mouseInsideRef.current) return
+            setHoveredIndex(null)
+          }}
+          // The negative margins and matching padding give the 2px-outset focus ring
+          // room inside overflow-x. The max-width allows for the margins, so the first
+          // and last tab's ring is not clipped.
           onFocus={(e: React.FocusEvent<HTMLDivElement>) => {
-            const indexAttr = (e.target as HTMLElement)
-              .closest<HTMLElement>('[data-fluid-hover-index]')
-              ?.dataset
+            const indexAttr = (e.target as HTMLElement).closest<HTMLElement>('[data-fluid-hover-index]')?.dataset
               .fluidHoverIndex
             if (indexAttr != null) {
               const idx = Number(indexAttr)
@@ -126,21 +126,13 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
               setFocusedIndex((e.target as HTMLElement).matches(':focus-visible') ? idx : null)
             }
           }}
-          onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
-            if (containerRef.current?.contains(e.relatedTarget))
-              return
-            setFocusedIndex(null)
-            if (mouseInsideRef.current)
-              return
-            setHoveredIndex(null)
-          }}
-          {...stylex.props(styles.list, xstyle)}
         >
           {/* Selected pill */}
           {selectedRect !== undefined && (
             <motion.div
-              {...stylex.props(styles.pill)}
+              className="pointer-events-none absolute rounded-item bg-text/10"
               initial={false}
+              transition={{ ...spring.moderate, opacity: { duration: 0.08 } }}
               animate={{
                 left: selectedRect.left,
                 width: selectedRect.width,
@@ -148,7 +140,6 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
                 height: selectedRect.height,
                 opacity: isHovering ? 0.8 : 1,
               }}
-              transition={{ ...spring.moderate, opacity: { duration: 0.08 } }}
             />
           )}
 
@@ -156,14 +147,8 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
           <AnimatePresence>
             {hoverRect && !isHoveringSelected && selectedRect !== undefined && (
               <motion.div
-                {...stylex.props(styles.pill)}
-                initial={{
-                  left: selectedRect.left,
-                  width: selectedRect.width,
-                  top: selectedRect.top,
-                  height: selectedRect.height,
-                  opacity: 0,
-                }}
+                className="pointer-events-none absolute rounded-item bg-text/10"
+                transition={{ ...spring.fast, opacity: { duration: 0.08 } }}
                 animate={{
                   left: hoverRect.left,
                   width: hoverRect.width,
@@ -183,7 +168,13 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
                       }
                     : { opacity: 0, transition: spring.fast.exit }
                 }
-                transition={{ ...spring.fast, opacity: { duration: 0.08 } }}
+                initial={{
+                  left: selectedRect.left,
+                  width: selectedRect.width,
+                  top: selectedRect.top,
+                  height: selectedRect.height,
+                  opacity: 0,
+                }}
               />
             )}
           </AnimatePresence>
@@ -192,16 +183,16 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
           <AnimatePresence>
             {focusRect && (
               <motion.div
-                {...stylex.props(styles.focusRing)}
+                className="pointer-events-none absolute z-20 rounded-[10px] border border-accent"
+                exit={{ opacity: 0, transition: spring.fast.exit }}
                 initial={false}
+                transition={{ ...spring.fast, opacity: { duration: 0.08 } }}
                 animate={{
                   left: focusRect.left - 2,
                   top: focusRect.top - 2,
                   width: focusRect.width + 4,
                   height: focusRect.height + 4,
                 }}
-                exit={{ opacity: 0, transition: spring.fast.exit }}
-                transition={{ ...spring.fast, opacity: { duration: 0.08 } }}
               />
             )}
           </AnimatePresence>
@@ -214,15 +205,14 @@ export function TabsSubtle({ children, selectedIndex, onSelect, xstyle }: TabsSu
 }
 
 export interface TabsSubtleItemProps {
-  label: string
-  index: number
   /** Fades the label while neither hovered nor selected, e.g. for a filter that would show nothing. */
   dimmed?: boolean
+  index: number
+  label: string
 }
 
 export function TabsSubtleItem({ label, index, dimmed = false }: TabsSubtleItemProps) {
   const internalRef = useRef<HTMLElement | null>(null)
-  const size = useSize()
   const { registerTab, hoveredIndex, selectedIndex } = useTabsSubtle()
 
   useEffect(() => {
@@ -238,24 +228,22 @@ export function TabsSubtleItem({ label, index, dimmed = false }: TabsSubtleItemP
       ref={internalRef}
       value={index}
       data-fluid-hover-index={index}
-      // Fixed heights (was py-2 around a 19.5px line box ≈ 35.5px) so the
-      // text-box trim on the label doesn't shrink the tab.
-      {...stylex.props(styles.tab, size.control, size.px, size.gap)}
+      // Fixed height so the text-box trim on the label doesn't shrink the tab.
+      className="relative z-10 flex h-7 items-center gap-1 rounded-item bg-transparent px-2.5 outline-none"
     >
-      <span {...stylex.props(styles.label, size.text)}>
-        <span
-          {...stylex.props(styles.labelSizer, weight.semibold, trim.capAlphabetic)}
-          aria-hidden="true"
-        >
+      {/* Tabular figures, so a changing count doesn't nudge the tabs after it. */}
+      <span className="inline-grid text-body whitespace-nowrap tabular-nums">
+        {/* Both stacked spans carry the text-box trim so the invisible bold sizer
+         * and the visible label keep identical boxes. */}
+        <span aria-hidden="true" className="wght-semibold text-trim invisible col-start-1 row-start-1">
           {label}
         </span>
         <span
-          {...stylex.props(
-            styles.labelText,
-            trim.capAlphabetic,
-            isActive ? styles.active : styles.inactive,
-            dimmed && !isActive && styles.dimmed,
-            isSelected ? weight.semibold : weight.normal,
+          className={cn(
+            'text-trim col-start-1 row-start-1 transition-[color,font-variation-settings] duration-80',
+            isActive ? 'text-text' : 'text-text-secondary',
+            dimmed && !isActive && 'opacity-45',
+            isSelected ? 'wght-semibold' : 'wght-normal',
           )}
         >
           {label}

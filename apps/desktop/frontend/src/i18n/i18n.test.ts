@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+
 import { resources } from '.'
 
 const PLURAL = /_(?:zero|one|two|few|many|other)$/
@@ -9,12 +10,13 @@ function shape(catalog: object, prefix = ''): Map<string, string[]> {
   for (const [key, value] of Object.entries(catalog as Record<string, unknown>)) {
     const path = prefix + key.replace(PLURAL, '')
     if (typeof value === 'object' && value !== null) {
-      for (const [k, v] of shape(value, `${path}.`))
-        keys.set(k, v)
-    }
-    else {
-      const names = [...String(value).matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1])
-      keys.set(path, [...new Set([...(keys.get(path) ?? []), ...names])].toSorted((a, b) => a.localeCompare(b)))
+      for (const [k, v] of shape(value, `${path}.`)) keys.set(k, v)
+    } else {
+      const names = [...String(value).matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1])
+      keys.set(
+        path,
+        [...new Set([...(keys.get(path) ?? []), ...names])].toSorted((a, b) => a.localeCompare(b)),
+      )
     }
   }
   return keys

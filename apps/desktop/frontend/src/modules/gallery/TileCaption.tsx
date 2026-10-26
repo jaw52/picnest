@@ -1,69 +1,16 @@
-import type { Photo } from '~/types/photo'
-import * as stylex from '@stylexjs/stylex'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import StarFilled from '~icons/mingcute/star-fill'
-import StarRegular from '~icons/mingcute/star-line'
+
 import { StarRating } from '~/components/StarRating'
 import { useFileName } from '~/hooks/useFileName'
-import { colors } from '~/theme/colors.stylex'
-import { motion } from '~/theme/layout.stylex'
-import { text, utility, weight } from '~/theme/text'
-import { tileMarker } from './markers.stylex'
-
-const styles = stylex.create({
-  // Revealed while the tile is hovered. On a gradient, so it stays legible
-  // on any photo.
-  caption: {
-    position: 'absolute',
-    insetInline: 0,
-    bottom: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingInline: 8,
-    paddingTop: 16,
-    paddingBottom: 6,
-    backgroundImage: 'linear-gradient(to top, rgb(0 0 0 / 0.7), transparent)',
-    opacity: {
-      default: 0,
-      [stylex.when.ancestor(':hover', tileMarker)]: 1,
-      [stylex.when.ancestor(':focus-within', tileMarker)]: 1,
-    },
-    transitionProperty: 'opacity',
-    transitionDuration: motion.fast,
-  },
-  row: { display: 'flex', maxWidth: '100%', alignItems: 'center', gap: 4 },
-  fileName: { minWidth: 0, pointerEvents: 'none', color: 'rgb(255 255 255 / 0.9)' },
-  ratingButton: {
-    display: 'flex',
-    flexShrink: 0,
-    alignItems: 'center',
-    gap: 2,
-    height: 20,
-    paddingInline: 4,
-    borderRadius: 4,
-    cursor: 'pointer',
-    color: colors['--ps-rating'],
-    backgroundColor: { 'default': 'rgb(255 255 255 / 0.12)', ':hover': 'rgb(255 255 255 / 0.24)' },
-    transitionProperty: 'background-color',
-    transitionDuration: motion.fast,
-  },
-  // The stars' row, folded to no height until the rating button is hovered.
-  fold: {
-    display: 'grid',
-    gridTemplateRows: '0fr',
-    transitionProperty: 'grid-template-rows',
-    transitionDuration: motion.fast,
-  },
-  unfolded: { gridTemplateRows: '1fr' },
-  foldInner: { minHeight: 0, overflow: 'hidden' },
-  stars: { paddingTop: 4 },
-})
+import { cn } from '~/lib/cn'
+import type { Photo } from '~/types/photo'
+import StarFilled from '~icons/mingcute/star-fill'
+import StarRegular from '~icons/mingcute/star-line'
 
 interface TileCaptionProps {
-  photo: Photo
   onRate: (rating: number) => void
+  photo: Photo
 }
 
 /**
@@ -78,47 +25,48 @@ export function TileCaption({ photo, onRate }: TileCaptionProps) {
 
   return (
     <div
-      {...stylex.props(styles.caption)}
+      // Revealed while the tile is hovered. On a gradient, so it stays legible
+      // on any photo.
+      className="absolute inset-x-0 bottom-0 flex flex-col items-center bg-linear-to-t from-black/70 to-transparent px-2 pt-4 pb-1.5 opacity-0 transition-opacity duration-80 group-focus-within/tile:opacity-100 group-hover/tile:opacity-100"
       onMouseLeave={() => setRating(false)}
       // A double-click here is a slow rating, not a request to preview.
-      onDoubleClick={e => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
     >
-      <div {...stylex.props(styles.row)}>
-        <span {...stylex.props(utility.truncate, styles.fileName, text.caption)}>
-          {fileName}
-        </span>
+      <div className="flex max-w-full items-center gap-1">
+        <span className="pointer-events-none min-w-0 truncate text-caption text-white/90">{fileName}</span>
         <button
-          type="button"
           aria-label={t('rating.label')}
-          aria-expanded={rating}
-          // The tile is the grid's tab stop; keys 0-5 rate from there.
-          tabIndex={-1}
-          {...stylex.props(styles.ratingButton, text.caption, weight.semibold)}
+          className="wght-semibold flex h-5 shrink-0 items-center gap-0.5 rounded-sm bg-white/10 px-1 text-caption text-amber transition-colors duration-80 hover:bg-white/25"
+          type="button"
           onMouseEnter={() => setRating(true)}
           onClick={(e) => {
             e.stopPropagation()
-            setRating(open => !open)
+            setRating((open) => !open)
           }}
+          aria-expanded={rating}
+          // The tile is the grid's tab stop; keys 0-5 rate from there.
+          tabIndex={-1}
         >
-          {photo.rating > 0
-            ? (
-                <>
-                  <StarFilled width={12} height={12} />
-                  {photo.rating}
-                </>
-              )
-            : <StarRegular width={12} height={12} />}
+          {photo.rating > 0 ? (
+            <>
+              <StarFilled height={12} width={12} />
+              {photo.rating}
+            </>
+          ) : (
+            <StarRegular height={12} width={12} />
+          )}
         </button>
       </div>
-      <div {...stylex.props(styles.fold, rating && styles.unfolded)}>
-        <div {...stylex.props(styles.foldInner)} inert={!rating}>
-          <div {...stylex.props(styles.stars)}>
-            <StarRating
-              rating={photo.rating}
-              onChange={onRate}
-              size={16}
-              focusable={false}
-            />
+      {/* The stars' row, folded to no height until the rating button is hovered. */}
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-80',
+          rating ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}
+      >
+        <div className="min-h-0 overflow-hidden" inert={!rating}>
+          <div className="pt-1">
+            <StarRating focusable={false} rating={photo.rating} size={16} onChange={onRate} />
           </div>
         </div>
       </div>

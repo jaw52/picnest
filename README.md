@@ -35,12 +35,12 @@ xattr -cr /Applications/Picnest.app
 
 ### Build from source
 
-Requires [Bun](https://bun.sh) and [Go](https://go.dev). The [mygo](https://github.com/egoist/mygo) CLI is pinned as a Go tool in `apps/desktop/go.mod`, so there is nothing else to install.
+Requires [pnpm](https://pnpm.io), [Bun](https://bun.sh) (type checking) and [Go](https://go.dev). The [mygo](https://github.com/egoist/mygo) CLI is pinned as a Go tool in `apps/desktop/go.mod`, so there is nothing else to install.
 
 ```sh
-bun install
-bun run dev     # run in development mode
-bun run build   # build Picnest.app and a .dmg into apps/desktop/bin
+pnpm install
+pnpm dev           # run in development mode
+pnpm build         # build Picnest.app and a .dmg into apps/desktop/bin
 ```
 
 ---
@@ -65,10 +65,10 @@ xattr -cr /Applications/Picnest.app
 
 ### 从源码构建
 
-需要安装 [Bun](https://bun.sh) 与 [Go](https://go.dev)。[mygo](https://github.com/egoist/mygo) CLI 已作为 Go tool 固定在 `apps/desktop/go.mod` 中，无需额外安装。
+需要安装 [pnpm](https://pnpm.io)、[Bun](https://bun.sh)（类型检查） 与 [Go](https://go.dev)。[mygo](https://github.com/egoist/mygo) CLI 已作为 Go tool 固定在 `apps/desktop/go.mod` 中，无需额外安装。
 
 ```sh
-bun install
-bun run dev     # 开发模式运行
-bun run build   # 构建 Picnest.app 和 .dmg，输出到 apps/desktop/bin
+pnpm install
+pnpm dev           # 开发模式运行
+pnpm build         # 构建 Picnest.app 和 .dmg，输出到 apps/desktop/bin
 ```

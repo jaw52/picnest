@@ -1,24 +1,21 @@
 import type { TFunction } from 'i18next'
-import type { ContextMenuItem } from '~/components/ContextMenu'
-import * as stylex from '@stylexjs/stylex'
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import CloseRegular from '~icons/mingcute/close-line'
-import ExternalLinkRegular from '~icons/mingcute/external-link-line'
-import FolderDeleteRegular from '~icons/mingcute/folder-delete-line'
+
+import type { ContextMenuItem } from '~/components/ContextMenu'
 import { ContextMenu } from '~/components/ContextMenu'
 import { useIsICloudFolder } from '~/hooks/useIsICloudFolder'
 import { useOpenOnHover } from '~/hooks/useOpenOnHover'
 import { useThumbnail } from '~/hooks/useThumbnail'
 import { listSubfolders, scanFolderPage } from '~/lib/backend'
+import { cn } from '~/lib/cn'
 import { spring } from '~/lib/springs'
-import { colors } from '~/theme/colors.stylex'
-import { motion as motionTokens } from '~/theme/layout.stylex'
-import { text, utility } from '~/theme/text'
+import CloseRegular from '~icons/mingcute/close-line'
+import ExternalLinkRegular from '~icons/mingcute/external-link-line'
+import FolderDeleteRegular from '~icons/mingcute/folder-delete-line'
 
-import { card } from './card'
-import { cardMarker } from './markers.stylex'
+import { cardClass, cardIconWellClass } from './card'
 import { pathMenuItems } from './pathMenuItems'
 
 /**
@@ -93,7 +90,7 @@ const CLOUD_SHAPES = {
 const CLOUD_OUTLINE = (() => {
   const origin = { x: 0.5, y: 2 }
   const { circles, base } = CLOUD_SHAPES
-  const points: { x: number, y: number }[] = []
+  const points: { x: number; y: number }[] = []
   const steps = 120
   for (let i = 0; i < steps; i++) {
     const angle = (i / steps) * 2 * Math.PI
@@ -109,15 +106,18 @@ const CLOUD_OUTLINE = (() => {
       return disc < 0 ? [] : [[-b - Math.sqrt(disc), -b + Math.sqrt(disc)] as [number, number]]
     })
     const slab = (lo: number, hi: number, o: number, d: number): [number, number] =>
-      d === 0 ? (o >= lo && o <= hi ? [-Infinity, Infinity] : [Infinity, -Infinity]) : [Math.min((lo - o) / d, (hi - o) / d), Math.max((lo - o) / d, (hi - o) / d)]
+      d === 0
+        ? o >= lo && o <= hi
+          ? [-Infinity, Infinity]
+          : [Infinity, -Infinity]
+        : [Math.min((lo - o) / d, (hi - o) / d), Math.max((lo - o) / d, (hi - o) / d)]
     const sx = slab(base.left, base.right, origin.x, dx)
     const sy = slab(base.top, base.bottom, origin.y, dy)
     spans.push([Math.max(sx[0], sy[0]), Math.min(sx[1], sy[1])])
     let end = 0
     // The span that carries the ray on past `end`, until none does.
     const reaching = () => spans.find(([from, to]) => from <= end + 1e-6 && to > end + 1e-6)
-    for (let next = reaching(); next; next = reaching())
-      end = next[1]
+    for (let next = reaching(); next; next = reaching()) end = next[1]
     points.push({ x: origin.x + dx * end, y: origin.y + dy * end })
   }
   return points
@@ -187,41 +187,6 @@ function frontPath(high: number) {
   ].join(' ')
 }
 
-const styles = stylex.create({
-  icon: { display: 'block', width: W, height: H },
-  // In a tile the icon scales with the column instead.
-  fluidIcon: { width: '100%', height: 'auto' },
-  tile: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingInline: 12,
-    borderWidth: 0,
-    borderRadius: 4,
-    cursor: 'pointer',
-    color: colors['--ps-foreground'],
-    backgroundColor: { 'default': colors['--ps-muted'], ':hover': colors['--ps-hover'] },
-    transitionProperty: 'background-color',
-    transitionDuration: motionTokens.fast,
-    outline: { 'default': 'none', ':focus-visible': `2px solid ${colors['--ps-focus-ring']}` },
-    outlineOffset: 6,
-  },
-  tileSize: (width: number, height: number) => ({ width, height }),
-  tileIcon: { width: `${TILE_ICON_SHARE * 100}%` },
-  tileName: { maxWidth: '100%' },
-  name: {
-    display: '-webkit-box',
-    WebkitBoxOrient: 'vertical',
-    WebkitLineClamp: 2,
-    overflow: 'hidden',
-    maxWidth: '100%',
-    textAlign: 'center',
-    wordBreak: 'break-all',
-  },
-})
-
 interface Cover {
   /** The folder the photo is in, which owns its thumbnail. */
   folder: string
@@ -230,19 +195,17 @@ interface Cover {
 
 async function firstPhoto(folderPath: string) {
   const page = await scanFolderPage(folderPath, 0, COVER_CANDIDATES)
-  return page.photos.find(p => !p.isCloudPlaceholder)?.path ?? null
+  return page.photos.find((p) => !p.isCloudPlaceholder)?.path ?? null
 }
 
 /** The folder's first photo, or failing that the first one in a subfolder. */
 async function findCover(folderPath: string): Promise<Cover | null> {
   const own = await firstPhoto(folderPath)
-  if (own)
-    return { folder: folderPath, path: own }
+  if (own) return { folder: folderPath, path: own }
   const subfolders = await listSubfolders(folderPath)
   for (const sub of subfolders.slice(0, SUBFOLDER_CANDIDATES)) {
     const path = await firstPhoto(sub.path)
-    if (path)
-      return { folder: sub.path, path }
+    if (path) return { folder: sub.path, path }
   }
   return null
 }
@@ -254,10 +217,9 @@ function useCover(folderPath: string) {
     let cancelled = false
     findCover(folderPath)
       .then((found) => {
-        if (!cancelled)
-          setCover(found)
+        if (!cancelled) setCover(found)
       })
-      .catch(error => console.warn(`failed to preview ${folderPath}:`, error))
+      .catch((error) => console.warn(`failed to preview ${folderPath}:`, error))
     return () => {
       cancelled = true
     }
@@ -270,14 +232,24 @@ function useCover(folderPath: string) {
  * and a frosted front - the photo blurred and clipped to the front's shape
  * under a translucent blue, which is what Finder's glass looks like.
  */
-function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUrl: string | undefined, open: boolean, iCloud?: boolean, fluid?: boolean }) {
+function FolderIcon({
+  coverUrl,
+  open,
+  iCloud = false,
+  fluid = false,
+}: {
+  coverUrl: string | undefined
+  open: boolean
+  iCloud?: boolean
+  fluid?: boolean
+}) {
   // One value drives the front's height; its outline, highlight and the glass
   // clip are all rebuilt from it each frame, so they move as one.
   const high = useMotionValue(FRONT_HIGH_CLOSED)
   const front = useTransform(high, frontPath)
   const topEdge = useTransform(high, frontTopEdge)
-  const cloud = useTransform(high, h => cloudOnFront(h))
-  const cloudEdge = useTransform(high, h => cloudOnFront(h, 0.5))
+  const cloud = useTransform(high, (h) => cloudOnFront(h))
+  const cloudEdge = useTransform(high, (h) => cloudOnFront(h, 0.5))
   const reduceMotion = useReducedMotion()
   useEffect(() => {
     const target = open ? FRONT_HIGH_OPEN : FRONT_HIGH_CLOSED
@@ -300,13 +272,18 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
   }
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} {...stylex.props(styles.icon, fluid && styles.fluidIcon)}>
+    <svg
+      className={cn('block', fluid && 'h-auto w-full')}
+      height={fluid ? undefined : H}
+      viewBox={`0 0 ${W} ${H}`}
+      width={fluid ? undefined : W}
+    >
       <defs>
-        <linearGradient id={`${id}back`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${id}back`} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#5fb5f4" />
           <stop offset="1" stopColor="#3f9de9" />
         </linearGradient>
-        <linearGradient id={`${id}front`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${id}front`} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stopColor="#9fd3fb" stopOpacity={coverUrl ? 0.55 : 1} />
           <stop offset="1" stopColor="#6fbaf5" stopOpacity={coverUrl ? 0.75 : 1} />
         </linearGradient>
@@ -316,11 +293,11 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
         <clipPath id={`${id}frontClip`}>
           <motion.path d={front} />
         </clipPath>
-        <filter id={`${id}blur`} x="-10%" y="-10%" width="120%" height="120%">
+        <filter height="120%" id={`${id}blur`} width="120%" x="-10%" y="-10%">
           <feGaussianBlur stdDeviation="3" />
         </filter>
-        <filter id={`${id}shadow`} x="-10%" y="-10%" width="120%" height="130%">
-          <feDropShadow dx="0" dy="0.5" stdDeviation="0.75" floodOpacity="0.25" />
+        <filter height="130%" id={`${id}shadow`} width="120%" x="-10%" y="-10%">
+          <feDropShadow dx="0" dy="0.5" floodOpacity="0.25" stdDeviation="0.75" />
         </filter>
       </defs>
 
@@ -329,37 +306,20 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
       {coverUrl && (
         <>
           <rect
-            x={PHOTO.x}
-            y={PHOTO.y}
-            width={PHOTO.width}
-            height={PHOTO.height}
-            rx={PHOTO.radius}
             fill="#fff"
             filter={`url(#${id}shadow)`}
+            height={PHOTO.height}
+            rx={PHOTO.radius}
+            width={PHOTO.width}
+            x={PHOTO.x}
+            y={PHOTO.y}
           />
-          <image
-            href={coverUrl}
-            {...inner}
-            preserveAspectRatio="xMidYMid slice"
-            clipPath={`url(#${id}photo)`}
-          />
+          <image href={coverUrl} {...inner} clipPath={`url(#${id}photo)`} preserveAspectRatio="xMidYMid slice" />
           {/* The frosted glass: the same framed photo, blurred, seen through the front. */}
           <g clipPath={`url(#${id}frontClip)`}>
             <g filter={`url(#${id}blur)`}>
-              <rect
-                x={PHOTO.x}
-                y={PHOTO.y}
-                width={PHOTO.width}
-                height={PHOTO.height}
-                rx={PHOTO.radius}
-                fill="#fff"
-              />
-              <image
-                href={coverUrl}
-                {...inner}
-                preserveAspectRatio="xMidYMid slice"
-                clipPath={`url(#${id}photo)`}
-              />
+              <rect fill="#fff" height={PHOTO.height} rx={PHOTO.radius} width={PHOTO.width} x={PHOTO.x} y={PHOTO.y} />
+              <image href={coverUrl} {...inner} clipPath={`url(#${id}photo)`} preserveAspectRatio="xMidYMid slice" />
             </g>
           </g>
         </>
@@ -368,12 +328,12 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
       <motion.path d={front} fill={`url(#${id}front)`} />
       {/* A highlight along the front's top edge. */}
       <motion.path
+        clipPath={`url(#${id}frontClip)`}
         d={topEdge}
         fill="none"
         stroke="#fff"
         strokeOpacity={0.6}
         strokeWidth={1}
-        clipPath={`url(#${id}frontClip)`}
       />
       {iCloud && (
         // Pressed in: a darker cloud over a light edge just below it.
@@ -390,13 +350,15 @@ function FolderIcon({ coverUrl, open, iCloud = false, fluid = false }: { coverUr
 function folderMenuItems(
   t: TFunction,
   path: string,
-  { onOpenInNewTab, onRemove, onDelete }: { onOpenInNewTab?: () => void, onRemove?: () => void, onDelete?: () => void },
+  { onOpenInNewTab, onRemove, onDelete }: { onOpenInNewTab?: () => void; onRemove?: () => void; onDelete?: () => void },
 ): ContextMenuItem[] {
   return [
     ...(onOpenInNewTab ? [{ label: t('tabs.openInNewTab'), icon: ExternalLinkRegular, onSelect: onOpenInNewTab }] : []),
     ...pathMenuItems(t, path),
     ...(onRemove ? [{ label: t('tabs.removeFromList'), icon: CloseRegular, onSelect: onRemove }] : []),
-    ...(onDelete ? [{ label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete }] : []),
+    ...(onDelete
+      ? [{ label: t('dialogs.deleteFolderTitle'), icon: FolderDeleteRegular, destructive: true, onSelect: onDelete }]
+      : []),
   ]
 }
 
@@ -407,13 +369,13 @@ function useCoverUrl(path: string) {
 }
 
 interface FolderCardProps {
-  path: string
   name: string
+  /** Deletes the folder; the menu item is left out without it. */
+  onDelete?: () => void
   onOpen: () => void
   /** Forgets the folder from a list; the menu item is left out without it. */
   onRemove?: () => void
-  /** Deletes the folder; the menu item is left out without it. */
-  onDelete?: () => void
+  path: string
 }
 
 /** A folder drawn like a Finder folder icon with its first photo inside. */
@@ -425,29 +387,24 @@ export function FolderCard({ path, name, onOpen, onRemove, onDelete }: FolderCar
 
   return (
     <ContextMenu items={folderMenuItems(t, path, { onRemove, onDelete })}>
-      <button
-        type="button"
-        onClick={onOpen}
-        {...handlers}
-        {...stylex.props(cardMarker, card.root)}
-      >
-        <span aria-hidden {...stylex.props(card.iconWell)}>
-          <FolderIcon coverUrl={coverUrl} open={open} iCloud={iCloud} />
+      <button type="button" onClick={onOpen} {...handlers} className={cardClass}>
+        <span aria-hidden className={cardIconWellClass}>
+          <FolderIcon coverUrl={coverUrl} iCloud={iCloud} open={open} />
         </span>
-        <span {...stylex.props(styles.name, text.caption)}>{name}</span>
+        <span className="line-clamp-2 max-w-full text-center text-caption break-all">{name}</span>
       </button>
     </ContextMenu>
   )
 }
 
 interface FolderTileProps {
-  path: string
-  name: string
-  width: number
   height: number
-  /** Opens the folder in place, or in a background tab for ⌘ and middle clicks. */
-  onOpen: (e: { metaKey: boolean, button: number }) => void
+  name: string
   onDelete: () => void
+  /** Opens the folder in place, or in a background tab for ⌘ and middle clicks. */
+  onOpen: (e: { metaKey: boolean; button: number }) => void
+  path: string
+  width: number
 }
 
 /** A subfolder in the masonry, sized like a photo tile, that opens like a link. */
@@ -469,21 +426,20 @@ export function FolderTile({ path, name, width, height, onOpen, onDelete }: Fold
         onClick={onOpen}
         // The middle button never fires a click; it is a new tab, as on a link.
         onAuxClick={(e) => {
-          if (e.button === 1)
-            onOpen(e)
+          if (e.button === 1) onOpen(e)
         }}
         // Keeps the middle button from starting autoscroll.
         onMouseDown={(e) => {
-          if (e.button === 1)
-            e.preventDefault()
+          if (e.button === 1) e.preventDefault()
         }}
         {...handlers}
-        {...stylex.props(styles.tile, styles.tileSize(width, height))}
+        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-sm bg-fill px-3 text-text transition-colors duration-80 hover:bg-fill-secondary focus-visible:outline-2 focus-visible:outline-offset-[6px]"
+        style={{ width, height }}
       >
-        <span aria-hidden {...stylex.props(styles.tileIcon)}>
-          <FolderIcon coverUrl={coverUrl} open={open} iCloud={iCloud} fluid />
+        <span aria-hidden style={{ width: `${TILE_ICON_SHARE * 100}%` }}>
+          <FolderIcon fluid coverUrl={coverUrl} iCloud={iCloud} open={open} />
         </span>
-        <span {...stylex.props(styles.tileName, utility.truncate, text.caption)}>{name}</span>
+        <span className="max-w-full truncate text-caption">{name}</span>
       </button>
     </ContextMenu>
   )

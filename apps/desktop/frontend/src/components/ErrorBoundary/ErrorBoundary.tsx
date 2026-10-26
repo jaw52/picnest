@@ -1,9 +1,7 @@
 import type { ErrorInfo, ReactNode } from 'react'
-import * as stylex from '@stylexjs/stylex'
 import { Component } from 'react'
+
 import { i18n } from '~/i18n'
-import { text, weight } from '~/theme/text'
-import { styles } from './style'
 
 interface Props {
   children: ReactNode
@@ -26,8 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
-    if (props.resetKey === state.resetKey)
-      return null
+    if (props.resetKey === state.resetKey) return null
     return { error: null, resetKey: props.resetKey }
   }
 
@@ -40,16 +37,10 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.error) {
       return (
-        <div {...stylex.props(styles.root)}>
-          <p {...stylex.props(text.subtitleCompact, weight.semibold, styles.title)}>
-            {i18n.t('errorBoundary.title')}
-          </p>
-          <p {...stylex.props(text.caption, styles.muted, styles.message)}>
-            {this.state.error.message}
-          </p>
-          <p {...stylex.props(text.caption, styles.muted)}>
-            {i18n.t('errorBoundary.hint')}
-          </p>
+        <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+          <p className="wght-semibold text-subtitle text-red">{i18n.t('errorBoundary.title')}</p>
+          <p className="max-w-md text-caption text-text-secondary">{this.state.error.message}</p>
+          <p className="text-caption text-text-secondary">{i18n.t('errorBoundary.hint')}</p>
         </div>
       )
     }

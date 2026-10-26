@@ -1,12 +1,12 @@
 import type { ParseKeys } from 'i18next'
 import type { PrimitiveAtom } from 'jotai'
-import type { Photo } from '~/types/photo'
 import { useStore } from 'jotai'
 import { useCallback } from 'react'
 
 import { currentFolderAtom } from '~/atoms/gallery'
 import { i18n } from '~/i18n'
 import { message } from '~/lib/native'
+import type { Photo } from '~/types/photo'
 
 import { useOpenFolder } from './useOpenFolder'
 
@@ -36,25 +36,20 @@ export function usePhotoOperation(
 
   return useCallback(
     async (photos: Photo[]) => {
-      if (!folderPath || photos.length === 0 || store.get(pendingAtom))
-        return
+      if (!folderPath || photos.length === 0 || store.get(pendingAtom)) return
 
       store.set(pendingAtom, true)
       try {
         const errors = await operation(store, folderPath, photos)
-        if (!errors)
-          return
+        if (!errors) return
         // Refresh even after partial failure, without navigating back if the
         // user switched folders while the operation was running.
         if (store.get(currentFolderAtom) === folderPath) {
           const refreshed = await refreshFolder(folderPath)
-          if (!refreshed)
-            errors.push(i18n.t('common.rescanFailed'))
+          if (!refreshed) errors.push(i18n.t('common.rescanFailed'))
         }
-        if (errors.length > 0)
-          await message(errors.join('\n'), { title: i18n.t(errorTitle), kind: 'error' })
-      }
-      finally {
+        if (errors.length > 0) await message(errors.join('\n'), { title: i18n.t(errorTitle), kind: 'error' })
+      } finally {
         store.set(pendingAtom, false)
       }
     },

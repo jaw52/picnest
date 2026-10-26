@@ -1,15 +1,10 @@
-import type { StyleXStyles } from '@stylexjs/stylex'
-import type { Transition } from 'framer-motion'
-import type { ItemRect, UseFluidHoverReturn } from '~/hooks/use-fluid-hover'
-import * as stylex from '@stylexjs/stylex'
-import {
-  AnimatePresence,
-  motion,
+import type { Transition } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 
-  useReducedMotion,
-} from 'framer-motion'
+import type { ItemRect, UseFluidHoverReturn } from '~/hooks/use-fluid-hover'
+import { cn } from '~/lib/cn'
 import { spring } from '~/lib/springs'
-import { styles } from './style'
+
 import { resolveHighlightSource, resolveHighlightTransition, toTarget } from './utils'
 
 // The hover highlight every fluid hover list renders: an absolutely
@@ -20,27 +15,26 @@ import { resolveHighlightSource, resolveHighlightTransition, toTarget } from './
  * What the highlight reads off the hook: the highlighted index, the
  *  measured rects, whether they are current, and the pointer session.
  */
-export type FluidHoverSource = Pick<
-  UseFluidHoverReturn,
-  'activeIndex' | 'itemRects' | 'isMeasured' | 'session'
->
+export type FluidHoverSource = Pick<UseFluidHoverReturn, 'activeIndex' | 'itemRects' | 'isMeasured' | 'session'>
 
 interface HighlightFromHook {
-  /**
-   * The hook's return value. The highlight sits on
-   *  `itemRects[activeIndex]` once `isMeasured`, and re-keys on the session.
-   */
-  hover: FluidHoverSource
   /**
    * Keep the list's state but show nothing (a closed popup, hover switched
    *  off). Runs the exit fade.
    */
   hidden?: boolean
+  /**
+   * The hook's return value. The highlight sits on
+   *  `itemRects[activeIndex]` once `isMeasured`, and re-keys on the session.
+   */
+  hover: FluidHoverSource
   rect?: never
   session?: never
 }
 
 interface HighlightFromRect {
+  hidden?: never
+  hover?: never
   /**
    * For lists that resolve their own rect (the sidebar's unified scope):
    *  the rect to sit on, in the container's coordinate space. `null` hides
@@ -53,8 +47,6 @@ interface HighlightFromRect {
    *  instead of sliding over from wherever it was last.
    */
   session: number
-  hover?: never
-  hidden?: never
 }
 
 export type FluidHoverHighlightProps = (HighlightFromHook | HighlightFromRect) & {
@@ -64,10 +56,10 @@ export type FluidHoverHighlightProps = (HighlightFromHook | HighlightFromRect) &
    */
   from?: ItemRect | null
   /**
-   * Radius, z-index, anything else. Merged onto the base style
+   * Radius, z-index, anything else. Merged onto the base classes
    *  (absolute, hover color, no pointer events).
    */
-  xstyle?: StyleXStyles
+  className?: string
   /**
    * The positional spring. Defaults to `spring.fast`. Pass `false` to snap
    *  to the new rect with no travel (a layout reflow that moved the rows
@@ -77,7 +69,7 @@ export type FluidHoverHighlightProps = (HighlightFromHook | HighlightFromRect) &
 }
 
 export function FluidHoverHighlight(props: FluidHoverHighlightProps) {
-  const { from, xstyle, transition } = props
+  const { from, className, transition } = props
   const { rect, session } = resolveHighlightSource(props)
   // Reads the OS media query directly, so an installed copy honours reduced
   // motion without the app wrapping its tree in MotionConfig. A wrapped app
@@ -88,17 +80,17 @@ export function FluidHoverHighlight(props: FluidHoverHighlightProps) {
     <AnimatePresence>
       {rect && (
         <motion.div
-          key={session}
+          animate={{ opacity: 1, ...toTarget(rect) }}
           data-slot="fluid-hover-highlight"
           // Pinned to the container's padding corner and moved with a
           // transform, so the travel runs on the compositor instead of
           // re-laying out every frame. Width and height are real layout
           // values, but they only change when the target rect's size does,
           // which in most lists is never.
-          {...stylex.props(styles.highlight, xstyle)}
-          initial={{ opacity: 0, ...toTarget(from ?? rect) }}
-          animate={{ opacity: 1, ...toTarget(rect) }}
+          className={cn('pointer-events-none absolute top-0 left-0 rounded-item bg-text/5', className)}
           exit={{ opacity: 0, transition: spring.fast.exit }}
+          initial={{ opacity: 0, ...toTarget(from ?? rect) }}
+          key={session}
           transition={resolveHighlightTransition(transition, reduceMotion)}
         />
       )}

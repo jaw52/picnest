@@ -1,0 +1,7 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "semi": false,
+  "printWidth": 120,
+  "ignorePatterns": ["**/frontend/src/mygo.ts", "apps/desktop/bin/**", "pnpm-lock.yaml"]
+}

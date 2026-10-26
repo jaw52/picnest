@@ -1,17 +1,16 @@
+import { motion } from 'motion/react'
 import type { SyntheticEvent } from 'react'
-import type { ContextMenuItem } from '~/components/ContextMenu'
-import type { View } from '~/lib/zoom'
-import * as stylex from '@stylexjs/stylex'
-import { motion } from 'framer-motion'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+import type { ContextMenuItem } from '~/components/ContextMenu'
+import { ContextMenu } from '~/components/ContextMenu'
+import { cn } from '~/lib/cn'
+import { spring } from '~/lib/springs'
+import type { View } from '~/lib/zoom'
+import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
 import LivePhotoRegular from '~icons/mingcute/live-photo-line'
 import LoadingRegular from '~icons/mingcute/loading-line'
-import { ContextMenu } from '~/components/ContextMenu'
-import { spring } from '~/lib/springs'
-import { actualSizeScale, clampView, FIT, zoomAbout } from '~/lib/zoom'
-import { motion as motionTokens, radius } from '~/theme/layout.stylex'
-import { text } from '~/theme/text'
 
 /** Height kept clear above the photo: the title bar row, where the traffic lights sit. */
 const TITLEBAR_STRIP = 40
@@ -23,110 +22,35 @@ const BUTTON_STRIP = 64
 const DRAG_THRESHOLD = 3
 /**
  * How long the view stays still before the full-size photo shows over the
- * scaled copy: past the 200ms zoom animation (styles.smooth), and between a
+ * scaled copy: past the 200ms zoom animation (duration-200 on the stage), and between a
  * pinch's or a drag's steps.
  */
 const VIEW_SETTLE_MS = 250
 /** Pinch deltas arrive as small wheel `deltaY`s with ctrl held; this turns them into a zoom factor. */
 const WHEEL_ZOOM_RATE = 0.01
 
-const spin = stylex.keyframes({
-  to: { transform: 'rotate(360deg)' },
-})
-
-const styles = stylex.create({
-  // Fills the overlay. The padding leaves the traffic lights, and the caption
-  // and filmstrip, strips of their own, so a tall photo is fitted between
-  // them instead of running underneath.
-  viewport: {
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    paddingTop: TITLEBAR_STRIP,
-    paddingBottom: CAPTION_STRIP,
-    touchAction: 'none',
-  },
-  stage: { position: 'relative', margin: 'auto', transformOrigin: 'center' },
-  smooth: { transitionProperty: 'transform', transitionDuration: '200ms', transitionTimingFunction: 'ease-out' },
-  image: {
-    display: 'block',
-    maxHeight: `calc(100vh - ${TITLEBAR_STRIP + CAPTION_STRIP}px)`,
-    maxWidth: `calc(100vw - ${2 * BUTTON_STRIP}px)`,
-    objectFit: 'contain',
-  },
-  // The photo's fitted box, worked out from its size since the placeholder
-  // has too few pixels to set it: no larger than the photo, nor than the
-  // room the image style leaves it.
-  placeholderBox: (width: number, height: number) => ({
-    width: `min(${width}px, calc(100vw - ${2 * BUTTON_STRIP}px), calc((100vh - ${TITLEBAR_STRIP + CAPTION_STRIP}px) * ${width / height}))`,
-    aspectRatio: `${width} / ${height}`,
-  }),
-  // The photo over its placeholder, unseen until it has loaded.
-  over: { position: 'absolute', inset: 0, width: '100%', height: '100%', maxWidth: 'none', maxHeight: 'none' },
-  unloaded: { visibility: 'hidden' },
-  // The full-size photo over the scaled copy, leaving clicks to the copy.
-  passThrough: { pointerEvents: 'none' },
-  spinner: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginTop: -12,
-    marginLeft: -12,
-    pointerEvents: 'none',
-    color: 'white',
-    filter: 'drop-shadow(0 1px 2px rgb(0 0 0 / 0.5))',
-    animationName: spin,
-    animationDuration: '1s',
-    animationTimingFunction: 'linear',
-    animationIterationCount: 'infinite',
-  },
-  // A Live Photo's video over the photo, faded in once it plays.
-  video: {
-    opacity: 0,
-    transitionProperty: 'opacity',
-    transitionDuration: motionTokens.fast,
-  },
-  videoPlaying: { opacity: 1 },
-  // Marks a Live Photo in its corner; hovering it plays the video.
-  liveBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: radius.full,
-    paddingInline: 8,
-    paddingBlock: 2,
-    backgroundColor: 'rgb(0 0 0 / 0.45)',
-    color: 'white',
-    cursor: 'default',
-    userSelect: 'none',
-  },
-  liveSpinner: {
-    animationName: spin,
-    animationDuration: '1s',
-    animationTimingFunction: 'linear',
-    animationIterationCount: 'infinite',
-  },
-  fit: { cursor: 'zoom-in' },
-  zoomed: { cursor: 'grab' },
-  dragging: { cursor: 'grabbing' },
-})
+// Fills the overlay. The padding (40px) leaves the traffic lights, and the
+// caption and filmstrip (112px), strips of their own, so a tall photo is fitted
+// between them instead of running underneath.
+const VIEWPORT_CLASS = 'absolute inset-0 box-border flex touch-none overflow-hidden pt-10 pb-28'
+// 152px is those two strips together; 128px, the room kept for the buttons.
+const IMAGE_CLASS = 'block max-h-[calc(100vh-152px)] max-w-[calc(100vw-128px)] object-contain'
+// The photo over its placeholder, unseen until it has loaded.
+const OVER_CLASS = 'absolute inset-0 size-full max-h-none max-w-none'
+// The full-size photo over the scaled copy, leaving clicks to the copy.
+const PASS_THROUGH_CLASS = 'pointer-events-none'
 
 interface WebKitGestureEvent extends UIEvent {
-  scale: number
   clientX: number
   clientY: number
+  scale: number
 }
 
 /** A smaller picture of a photo, and the photo's size, to show while the photo loads. */
 export interface Placeholder {
+  height: number
   src: string
   width: number
-  height: number
 }
 
 /**
@@ -142,7 +66,11 @@ function useLoaded(src: string) {
     // Decoded off the main thread before it shows: shown as soon as it
     // loads, a large photo would decode on it (decoding="sync") and hold up
     // the page, a switch to the next photo included.
-    onLoad: (e: SyntheticEvent<HTMLImageElement>) => void e.currentTarget.decode().catch(() => {}).then(done),
+    onLoad: (e: SyntheticEvent<HTMLImageElement>) =>
+      void e.currentTarget
+        .decode()
+        .catch(() => {})
+        .then(done),
     onError: done,
   }
 }
@@ -154,10 +82,17 @@ function useLoaded(src: string) {
 function PlaceholderImage({ placeholder }: { placeholder: Placeholder }) {
   return (
     <img
-      src={placeholder.src}
       alt=""
       draggable={false}
-      {...stylex.props(styles.image, styles.placeholderBox(placeholder.width, placeholder.height))}
+      src={placeholder.src}
+      className={IMAGE_CLASS}
+      // The photo's fitted box, worked out from its size since the placeholder
+      // has too few pixels to set it: no larger than the photo, nor than the
+      // room the image classes leave it.
+      style={{
+        width: `min(${placeholder.width}px, calc(100vw - ${2 * BUTTON_STRIP}px), calc((100vh - ${TITLEBAR_STRIP + CAPTION_STRIP}px) * ${placeholder.width / placeholder.height}))`,
+        aspectRatio: `${placeholder.width} / ${placeholder.height}`,
+      }}
     />
   )
 }
@@ -170,43 +105,43 @@ interface FullImage {
 
 /** The video of a Live Photo, and whether it plays over and over (a loop or a bounce). */
 export interface LiveVideo {
-  src: string
   loop: boolean
+  src: string
 }
 
 interface ZoomableImageProps {
-  src: string
-  /** Loaded over `src` once zoomed in, and what actual size means. */
-  full?: FullImage
-  /** Shown while `src` loads, with a spinner over it. */
-  placeholder?: Placeholder
-  /** Played over the photo: once through while its badge is hovered, or over and over. */
-  live?: LiveVideo
   alt: string
   /** Fade and scale the photo in on mount; off when it replaces another. */
   fadeIn: boolean
+  /** Loaded over `src` once zoomed in, and what actual size means. */
+  full?: FullImage
+  /** Played over the photo: once through while its badge is hovered, or over and over. */
+  live?: LiveVideo
   menuItems: ContextMenuItem[]
+  /** Shown while `src` loads, with a spinner over it. */
+  placeholder?: Placeholder
+  src: string
 }
 
 /**
  * A photo laid out as the lightbox fits it, without the zoom: a neighbour
  * waiting beside the photo shown, for a swipe to bring in.
  */
-export function FittedImage({ src, placeholder, alt }: { src: string, placeholder?: Placeholder, alt: string }) {
+export function FittedImage({ src, placeholder, alt }: { src: string; placeholder?: Placeholder; alt: string }) {
   const { loaded, ...loadHandlers } = useLoaded(src)
   return (
-    <div {...stylex.props(styles.viewport)}>
-      <div {...stylex.props(styles.stage)}>
+    <div className={VIEWPORT_CLASS}>
+      <div className="relative m-auto origin-center">
         {placeholder && <PlaceholderImage placeholder={placeholder} />}
         {/* WebKit decodes a large photo off the main thread the first time it
             paints, leaving it blank meanwhile: a neighbour offscreen until a
             swipe slides it in would come in empty. */}
         <img
-          src={src}
           alt={alt}
           decoding="sync"
+          src={src}
           {...loadHandlers}
-          {...stylex.props(styles.image, placeholder && styles.over, placeholder && !loaded && styles.unloaded)}
+          className={cn(IMAGE_CLASS, placeholder && OVER_CLASS, placeholder && !loaded && 'invisible')}
           draggable={false}
         />
       </div>
@@ -234,7 +169,7 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
   // the latest view from a ref rather than closing over state.
   const viewRef = useRef<View>(FIT)
   const gestureRef = useRef<{ base: number } | null>(null)
-  const dragRef = useRef<{ x: number, y: number, view: View, moved: boolean } | null>(null)
+  const dragRef = useRef<{ x: number; y: number; view: View; moved: boolean } | null>(null)
   const suppressClickRef = useRef(false)
 
   // WebKit stalls a frame for 150-220ms painting a photo of 12 megapixels
@@ -262,8 +197,7 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
     const viewport = viewportRef.current
     const stage = stageRef.current
     const image = imageRef.current
-    if (!viewport || !stage || !image)
-      return null
+    if (!viewport || !stage || !image) return null
     const rect = stage.getBoundingClientRect()
     const vRect = viewport.getBoundingClientRect()
     const v = viewRef.current
@@ -286,12 +220,8 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
 
   function zoomTo(scale: number, clientX: number, clientY: number, animated = false) {
     const m = measure()
-    if (!m)
-      return
-    updateView(
-      zoomAbout(viewRef.current, scale, clientX - m.centerX, clientY - m.centerY, m.box, m.max),
-      animated,
-    )
+    if (!m) return
+    updateView(zoomAbout(viewRef.current, scale, clientX - m.centerX, clientY - m.centerY, m.box, m.max), animated)
   }
 
   // Native listeners (React's are passive, which can't cancel a wheel event),
@@ -301,16 +231,13 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
     e.preventDefault()
     // At fit, a plain two-finger scroll is left to bubble up to the
     // lightbox, which turns a horizontal swipe into the next or previous photo.
-    if (gestureRef.current || e.ctrlKey || viewRef.current.scale > 1)
-      e.stopPropagation()
-    if (gestureRef.current)
-      return
+    if (gestureRef.current || e.ctrlKey || viewRef.current.scale > 1) e.stopPropagation()
+    if (gestureRef.current) return
     if (e.ctrlKey) {
       zoomTo(viewRef.current.scale * Math.exp(-e.deltaY * WHEEL_ZOOM_RATE), e.clientX, e.clientY)
       return
     }
-    if (viewRef.current.scale <= 1)
-      return
+    if (viewRef.current.scale <= 1) return
     const m = measure()
     if (m) {
       const { x, y } = viewRef.current
@@ -324,8 +251,7 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
   const onGestureChange = useEffectEvent((e: Event) => {
     e.preventDefault()
     const g = e as WebKitGestureEvent
-    if (gestureRef.current)
-      zoomTo(gestureRef.current.base * g.scale, g.clientX, g.clientY)
+    if (gestureRef.current) zoomTo(gestureRef.current.base * g.scale, g.clientX, g.clientY)
   })
   const onGestureEnd = useEffectEvent((e: Event) => {
     e.preventDefault()
@@ -334,8 +260,7 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
 
   useEffect(() => {
     const el = viewportRef.current
-    if (!el)
-      return
+    if (!el) return
     const wheel = (e: WheelEvent) => onWheel(e)
     const start = (e: Event) => onGestureStart(e)
     const change = (e: Event) => onGestureChange(e)
@@ -355,48 +280,15 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
   const zoomed = view.scale > 1
   // The photo itself loads the first time it's zoomed into, and stays.
   const [wantFull, setWantFull] = useState(false)
-  if (zoomed && full && !wantFull)
-    setWantFull(true)
+  if (zoomed && full && !wantFull) setWantFull(true)
   const [fullShown, setFullShown] = useState(false)
-  if (fullLoaded && !moving && !fullShown)
-    setFullShown(true)
+  if (fullLoaded && !moving && !fullShown) setFullShown(true)
   const liveVideo = useLiveVideo(live, zoomed)
 
   return (
     <div
+      className={VIEWPORT_CLASS}
       ref={viewportRef}
-      {...stylex.props(styles.viewport)}
-      onPointerDown={(e) => {
-        if (e.button !== 0 || !zoomed)
-          return
-        suppressClickRef.current = false
-        dragRef.current = { x: e.clientX, y: e.clientY, view: viewRef.current, moved: false }
-      }}
-      onPointerMove={(e) => {
-        const d = dragRef.current
-        if (!d)
-          return
-        const dx = e.clientX - d.x
-        const dy = e.clientY - d.y
-        if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD)
-          return
-        if (!d.moved) {
-          // Captured only once it is a drag: capturing on press would
-          // redirect a plain click from the photo to the viewport.
-          e.currentTarget.setPointerCapture(e.pointerId)
-          d.moved = true
-          setDragging(true)
-        }
-        const m = measure()
-        if (m)
-          updateView(clampView({ ...d.view, x: d.view.x + dx, y: d.view.y + dy }, m.box))
-      }}
-      onPointerUp={() => {
-        // A drag that ends over the backdrop must not close the lightbox.
-        suppressClickRef.current = dragRef.current?.moved ?? false
-        dragRef.current = null
-        setDragging(false)
-      }}
       onClickCapture={(e) => {
         if (!suppressClickRef.current) {
           return
@@ -405,52 +297,82 @@ export function ZoomableImage({ src, full, placeholder, live, alt, fadeIn, menuI
         suppressClickRef.current = false
         e.stopPropagation()
       }}
+      onPointerDown={(e) => {
+        if (e.button !== 0 || !zoomed) return
+        suppressClickRef.current = false
+        dragRef.current = { x: e.clientX, y: e.clientY, view: viewRef.current, moved: false }
+      }}
+      onPointerMove={(e) => {
+        const d = dragRef.current
+        if (!d) return
+        const dx = e.clientX - d.x
+        const dy = e.clientY - d.y
+        if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return
+        if (!d.moved) {
+          // Captured only once it is a drag: capturing on press would
+          // redirect a plain click from the photo to the viewport.
+          e.currentTarget.setPointerCapture(e.pointerId)
+          d.moved = true
+          setDragging(true)
+        }
+        const m = measure()
+        if (m) updateView(clampView({ ...d.view, x: d.view.x + dx, y: d.view.y + dy }, m.box))
+      }}
+      onPointerUp={() => {
+        // A drag that ends over the backdrop must not close the lightbox.
+        suppressClickRef.current = dragRef.current?.moved ?? false
+        dragRef.current = null
+        setDragging(false)
+      }}
     >
       <ContextMenu items={menuItems}>
         <div
+          className={cn('relative m-auto origin-center', smooth && 'transition-transform duration-200 ease-out')}
           ref={stageRef}
-          className={stylex.props(styles.stage, smooth && styles.smooth).className}
           style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
         >
           {placeholder && <PlaceholderImage placeholder={placeholder} />}
           <motion.img
-            ref={imageRef}
-            src={src}
             alt={alt}
             decoding="sync"
+            ref={imageRef}
+            src={src}
             {...loadHandlers}
-            {...stylex.props(
-              styles.image,
-              placeholder && styles.over,
-              placeholder && !loaded && styles.unloaded,
-              dragging ? styles.dragging : (zoomed ? styles.zoomed : styles.fit),
-            )}
+            animate={{ opacity: 1, scale: 1 }}
             draggable={false}
             initial={fadeIn ? { opacity: 0, scale: 0.98 } : false}
-            animate={{ opacity: 1, scale: 1 }}
             transition={spring.slow}
+            className={cn(
+              IMAGE_CLASS,
+              placeholder && OVER_CLASS,
+              placeholder && !loaded && 'invisible',
+              dragging ? 'cursor-grabbing' : zoomed ? 'cursor-grab' : 'cursor-zoom-in',
+            )}
             onClick={(e) => {
               e.stopPropagation()
               const m = measure()
-              if (!m)
-                return
-              if (zoomed)
-                updateView(FIT, true)
-              else
-                zoomTo(m.actual, e.clientX, e.clientY, true)
+              if (!m) return
+              if (zoomed) updateView(FIT, true)
+              else zoomTo(m.actual, e.clientX, e.clientY, true)
             }}
           />
           {wantFull && full && (
             <img
-              src={full.src}
               alt=""
+              src={full.src}
               {...fullLoadHandlers}
-              {...stylex.props(styles.image, styles.over, styles.passThrough, !fullShown && styles.unloaded)}
+              className={cn(IMAGE_CLASS, OVER_CLASS, PASS_THROUGH_CLASS, !fullShown && 'invisible')}
               draggable={false}
             />
           )}
           {live && liveVideo.video}
-          {placeholder && !loaded && <LoadingRegular width={24} height={24} {...stylex.props(styles.spinner)} />}
+          {placeholder && !loaded && (
+            <LoadingRegular
+              className="pointer-events-none absolute top-1/2 left-1/2 -mt-3 -ml-3 animate-spin text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+              height={24}
+              width={24}
+            />
+          )}
           {live && !live.loop && !zoomed && liveVideo.badge}
         </div>
       </ContextMenu>
@@ -474,20 +396,17 @@ function useLiveVideo(live: LiveVideo | undefined, zoomed: boolean) {
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video)
-      return
+    if (!video) return
     if (zoomed) {
       video.pause()
-    }
-    else if (loop) {
+    } else if (loop) {
       video.play().catch(() => {})
     }
   }, [zoomed, loop])
 
   function play() {
     const video = videoRef.current
-    if (!video)
-      return
+    if (!video) return
     setWanted(true)
     video.currentTime = 0
     video.play().catch(() => {})
@@ -500,32 +419,42 @@ function useLiveVideo(live: LiveVideo | undefined, zoomed: boolean) {
   const video = live && (
     // eslint-disable-next-line jsx-a11y/media-has-caption -- a Live Photo's sound is ambient, with nothing to caption
     <video
-      ref={videoRef}
-      src={live.src}
-      muted={live.loop}
       playsInline
       loop={live.loop}
+      muted={live.loop}
       preload="auto"
-      onPlaying={() => setPlaying(true)}
+      ref={videoRef}
+      src={live.src}
+      className={cn(
+        IMAGE_CLASS,
+        OVER_CLASS,
+        PASS_THROUGH_CLASS,
+        'opacity-0 transition-opacity duration-80',
+        playing && 'opacity-100',
+      )}
       onPause={() => setPlaying(false)}
       onEnded={() => {
         setPlaying(false)
         setWanted(false)
       }}
-      {...stylex.props(styles.image, styles.over, styles.passThrough, styles.video, playing && styles.videoPlaying)}
+      // A Live Photo's video over the photo, faded in once it plays.
+      onPlaying={() => setPlaying(true)}
     />
   )
   const badge = (
     <span
-      role="presentation"
-      {...stylex.props(styles.liveBadge, text.caption)}
+      onClick={(e) => e.stopPropagation()}
       onPointerEnter={play}
       onPointerLeave={stop}
-      onClick={e => e.stopPropagation()}
+      role="presentation"
+      // Marks a Live Photo in its corner; hovering it plays the video.
+      className="absolute top-3 left-3 flex cursor-default items-center gap-1 rounded-full bg-black/45 px-2 py-0.5 text-caption text-white select-none"
     >
-      {wanted && !playing
-        ? <LoadingRegular width={14} height={14} {...stylex.props(styles.liveSpinner)} />
-        : <LivePhotoRegular width={14} height={14} />}
+      {wanted && !playing ? (
+        <LoadingRegular className="animate-spin" height={14} width={14} />
+      ) : (
+        <LivePhotoRegular height={14} width={14} />
+      )}
       {t('preview.live')}
     </span>
   )

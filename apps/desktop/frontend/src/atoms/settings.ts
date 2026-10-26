@@ -1,5 +1,6 @@
-import type { LanguageState } from '~/mygo'
 import { atom } from 'jotai'
+
+import type { LanguageState } from '~/mygo'
 
 /** The language picked in Settings, and the one the app is shown in. */
 export const languageStateAtom = atom<LanguageState>({ preference: 'system', language: 'en' })

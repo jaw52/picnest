@@ -1,8 +1,16 @@
-import type { Photo, PhotoMeta } from '~/types/photo'
-
 import { describe, expect, it } from 'vitest'
 
-import { filterPhotosByRating, groupPhotos, matchesRatingFilter, ratingCounts, sortByTaken, successorOf, toPhoto } from './photo'
+import type { Photo, PhotoMeta } from '~/types/photo'
+
+import {
+  filterPhotosByRating,
+  groupPhotos,
+  matchesRatingFilter,
+  ratingCounts,
+  sortByTaken,
+  successorOf,
+  toPhoto,
+} from './photo'
 
 function photo(overrides: Partial<Photo> = {}): Photo {
   return {
@@ -84,7 +92,7 @@ describe('filterPhotosByRating', () => {
 
   it('returns only photos matching the given rating', () => {
     const result = filterPhotosByRating(photos, 3)
-    expect(result.map(p => p.id)).toEqual(['2', '3'])
+    expect(result.map((p) => p.id)).toEqual(['2', '3'])
   })
 
   it('returns empty array when nothing matches', () => {
@@ -94,12 +102,7 @@ describe('filterPhotosByRating', () => {
 
 describe('ratingCounts', () => {
   it('counts photos per rating bucket, including zero for missing buckets', () => {
-    const photos = [
-      photo({ rating: 0 }),
-      photo({ rating: 0 }),
-      photo({ rating: 5 }),
-      photo({ rating: 3 }),
-    ]
+    const photos = [photo({ rating: 0 }), photo({ rating: 0 }), photo({ rating: 5 }), photo({ rating: 3 })]
     expect(ratingCounts(photos)).toEqual({
       0: 2,
       1: 0,
@@ -116,7 +119,7 @@ describe('ratingCounts', () => {
 })
 
 describe('successorOf', () => {
-  const photos = ['a', 'b', 'c', 'd', 'e'].map(id => ({ id }))
+  const photos = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id }))
   const ids = (...list: string[]) => new Set(list)
 
   it('picks the first photo after the removed ones', () => {
@@ -138,12 +141,8 @@ describe('successorOf', () => {
 
 describe('sortByTaken', () => {
   it('puts the newest first, keeping the order of ties', () => {
-    const photos = [
-      photo({ id: 'a', taken: 1 }),
-      photo({ id: 'b', taken: 3 }),
-      photo({ id: 'c', taken: 1 }),
-    ]
-    expect(sortByTaken(photos).map(p => p.id)).toEqual(['b', 'a', 'c'])
+    const photos = [photo({ id: 'a', taken: 1 }), photo({ id: 'b', taken: 3 }), photo({ id: 'c', taken: 1 })]
+    expect(sortByTaken(photos).map((p) => p.id)).toEqual(['b', 'a', 'c'])
   })
 })
 
@@ -154,13 +153,13 @@ describe('groupPhotos', () => {
 
   it('splits the photos into runs from the same period', () => {
     const ids = (grouping: 'year' | 'month' | 'day') =>
-      groupPhotos(photos, grouping).map(g => g.photos.map(p => p.id))
+      groupPhotos(photos, grouping).map((g) => g.photos.map((p) => p.id))
     expect(ids('year')).toEqual([['a', 'b', 'c'], ['d']])
     expect(ids('month')).toEqual([['a', 'b'], ['c'], ['d']])
     expect(ids('day')).toEqual([['a'], ['b'], ['c'], ['d']])
   })
 
-  it('starts each group at its period\'s start', () => {
+  it("starts each group at its period's start", () => {
     expect(groupPhotos(photos, 'month')[0].start).toBe(new Date(2025, 4, 1).getTime())
   })
 })

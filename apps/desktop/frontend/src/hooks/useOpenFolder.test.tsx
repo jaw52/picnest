@@ -46,7 +46,7 @@ describe('useOpenFolder', () => {
       await result.current.openFolder.navigateToFolder('/f')
     })
 
-    expect(store.get(photosAtom).map(p => p.path)).toEqual(files.map(f => f.path))
+    expect(store.get(photosAtom).map((p) => p.path)).toEqual(files.map((f) => f.path))
   })
 
   it('holds back the later pages while grouped, until the scan is done', async () => {
@@ -67,7 +67,7 @@ describe('useOpenFolder', () => {
 
     // Fetching the first page, the second, then the third.
     expect(shown).toEqual([0, 300, 300])
-    expect(store.get(photosAtom).map(p => p.path)).toEqual(files.map(f => f.path))
+    expect(store.get(photosAtom).map((p) => p.path)).toEqual(files.map((f) => f.path))
   })
 })
 
@@ -84,8 +84,9 @@ function mockFolder(count: number) {
     isCloudPlaceholder: false,
   })
   const files = Array.from({ length: count }, (_, i) => meta(`/f/${i}.jpg`))
-  vi.mocked(scanFolderPage).mockImplementation(async (_folder, offset, limit) => (
-    { photos: files.slice(offset, offset + limit), total: files.length }
-  ))
+  vi.mocked(scanFolderPage).mockImplementation(async (_folder, offset, limit) => ({
+    photos: files.slice(offset, offset + limit),
+    total: files.length,
+  }))
   return files
 }

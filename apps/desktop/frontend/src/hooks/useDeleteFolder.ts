@@ -17,18 +17,19 @@ export function useDeleteFolder() {
         title: i18n.t('dialogs.deleteFolderTitle'),
         kind: 'warning',
       })
-      if (!confirmed)
-        return
+      if (!confirmed) return
 
       try {
         await deleteFolder(folderPath)
-      }
-      catch (error) {
-        await message(i18n.t('dialogs.deleteFailed', { error }), { title: i18n.t('dialogs.deleteFolderTitle'), kind: 'error' })
+      } catch (error) {
+        await message(i18n.t('dialogs.deleteFailed', { error }), {
+          title: i18n.t('dialogs.deleteFolderTitle'),
+          kind: 'error',
+        })
         return
       }
 
-      setRecentFolders(prev => withFolderRemoved(prev, folderPath))
+      setRecentFolders((prev) => withFolderRemoved(prev, folderPath))
       closeFolderTabs(folderPath)
     },
     [setRecentFolders, closeFolderTabs],

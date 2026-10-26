@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { StarRating } from '../StarRating'
 
 describe('starRating', () => {
-  it('clicking a star reports that star\'s value', () => {
+  it("clicking a star reports that star's value", () => {
     const onChange = vi.fn()
     render(<StarRating rating={0} onChange={onChange} />)
     fireEvent.click(screen.getByLabelText('3 星'))

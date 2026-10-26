@@ -1,7 +1,13 @@
-import type { RecentFolder } from './recentFolders'
-
 import { describe, expect, it } from 'vitest'
-import { folderNameFromPath, pathSegments, withFolderAdded, withFolderForgotten, withFolderRemoved } from './recentFolders'
+
+import type { RecentFolder } from './recentFolders'
+import {
+  folderNameFromPath,
+  pathSegments,
+  withFolderAdded,
+  withFolderForgotten,
+  withFolderRemoved,
+} from './recentFolders'
 
 describe('folderNameFromPath', () => {
   it('returns the last path segment', () => {
@@ -25,12 +31,12 @@ describe('withFolderAdded', () => {
 
   it('appends a new root', () => {
     const result = withFolderAdded(existing, '/c')
-    expect(result.map(f => f.path)).toEqual(['/a', '/b', '/c'])
+    expect(result.map((f) => f.path)).toEqual(['/a', '/b', '/c'])
   })
 
   it('keeps an already-known root in place', () => {
     const result = withFolderAdded(existing, '/b')
-    expect(result.map(f => f.path)).toEqual(['/a', '/b'])
+    expect(result.map((f) => f.path)).toEqual(['/a', '/b'])
   })
 
   it('does not evict roots after adding 12 folders', () => {
@@ -45,16 +51,16 @@ describe('withFolderAdded', () => {
   })
 
   it('adds a folder inside an added one', () => {
-    expect(withFolderAdded(existing, '/a/child').map(f => f.path)).toEqual(['/a', '/b', '/a/child'])
+    expect(withFolderAdded(existing, '/a/child').map((f) => f.path)).toEqual(['/a', '/b', '/a/child'])
   })
 
   it('keeps the folders inside one that is added after them', () => {
     const children = [{ lastOpenedAt: 1, name: 'child', path: '/photos/child' }]
-    expect(withFolderAdded(children, '/photos').map(f => f.path)).toEqual(['/photos/child', '/photos'])
+    expect(withFolderAdded(children, '/photos').map((f) => f.path)).toEqual(['/photos/child', '/photos'])
   })
 
   it('does not confuse similarly named siblings with descendants', () => {
-    expect(withFolderAdded(existing, '/abc').map(f => f.path)).toEqual(['/a', '/b', '/abc'])
+    expect(withFolderAdded(existing, '/abc').map((f) => f.path)).toEqual(['/a', '/b', '/abc'])
   })
 })
 
@@ -64,7 +70,7 @@ describe('withFolderRemoved', () => {
       { lastOpenedAt: 1, name: 'a', path: '/a' },
       { lastOpenedAt: 2, name: 'b', path: '/b' },
     ]
-    expect(withFolderRemoved(existing, '/a').map(f => f.path)).toEqual(['/b'])
+    expect(withFolderRemoved(existing, '/a').map((f) => f.path)).toEqual(['/b'])
   })
 })
 
@@ -74,7 +80,7 @@ describe('withFolderForgotten', () => {
       { lastOpenedAt: 1, name: 'a', path: '/a' },
       { lastOpenedAt: 2, name: 'child', path: '/a/child' },
     ]
-    expect(withFolderForgotten(existing, '/a').map(f => f.path)).toEqual(['/a/child'])
+    expect(withFolderForgotten(existing, '/a').map((f) => f.path)).toEqual(['/a/child'])
   })
 })
 
@@ -93,6 +99,9 @@ describe('pathSegments', () => {
   })
 
   it('keeps Windows separators', () => {
-    expect(pathSegments(String.raw`C:\pics\a`, [String.raw`C:\pics`])).toEqual([String.raw`C:\pics`, String.raw`C:\pics\a`])
+    expect(pathSegments(String.raw`C:\pics\a`, [String.raw`C:\pics`])).toEqual([
+      String.raw`C:\pics`,
+      String.raw`C:\pics\a`,
+    ])
   })
 })

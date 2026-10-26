@@ -1,9 +1,9 @@
 import { atomWithStorage } from 'jotai/utils'
 
 export interface RecentFolder {
-  path: string
-  name: string
   lastOpenedAt: number
+  name: string
+  path: string
 }
 
 const PATH_SEPARATOR_RE = /[/\\]/
@@ -15,11 +15,8 @@ export function isDescendantPath(path: string, parent: string): boolean {
 }
 
 export function folderRoots(folders: RecentFolder[]): RecentFolder[] {
-  return folders.filter(
-    folder =>
-      folders.every(
-        other => other.path === folder.path || !isDescendantPath(folder.path, other.path),
-      ),
+  return folders.filter((folder) =>
+    folders.every((other) => other.path === folder.path || !isDescendantPath(folder.path, other.path)),
   )
 }
 
@@ -39,8 +36,7 @@ export function folderNameFromPath(path: string): string {
  * added one are added too: each is its own shortcut.
  */
 export function withFolderAdded(folders: RecentFolder[], path: string): RecentFolder[] {
-  if (folders.some(f => f.path === path))
-    return folders
+  if (folders.some((f) => f.path === path)) return folders
   const entry: RecentFolder = {
     path,
     name: folderNameFromPath(path),
@@ -51,12 +47,12 @@ export function withFolderAdded(folders: RecentFolder[], path: string): RecentFo
 
 /** Forgets just the shortcut to `path`; those to folders inside it stay. */
 export function withFolderForgotten(folders: RecentFolder[], path: string): RecentFolder[] {
-  return folders.filter(f => f.path !== path)
+  return folders.filter((f) => f.path !== path)
 }
 
 /** Drops `path` and everything inside it - for a folder gone from disk. */
 export function withFolderRemoved(folders: RecentFolder[], path: string): RecentFolder[] {
-  return folders.filter(f => f.path !== path && !isDescendantPath(f.path, path))
+  return folders.filter((f) => f.path !== path && !isDescendantPath(f.path, path))
 }
 
 /**
@@ -65,16 +61,14 @@ export function withFolderRemoved(folders: RecentFolder[], path: string): Recent
  * own root.
  */
 export function pathSegments(path: string, roots: string[]): string[] {
-  const root = roots.find(r => r === path || isDescendantPath(path, r))
-  if (!root || root === path)
-    return [path]
+  const root = roots.find((r) => r === path || isDescendantPath(path, r))
+  if (!root || root === path) return [path]
   const separator = path[root.replace(TRAILING_SEPARATOR_RE, '').length]
   const segments = [root]
   let current = root.replace(TRAILING_SEPARATOR_RE, '')
   const parts = path.slice(current.length + 1).split(PATH_SEPARATOR_RE)
   for (const part of parts) {
-    if (!part)
-      continue
+    if (!part) continue
     current += `${separator}${part}`
     segments.push(current)
   }

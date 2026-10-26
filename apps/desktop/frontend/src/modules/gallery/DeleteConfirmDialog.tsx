@@ -1,127 +1,28 @@
-import type { RefObject } from 'react'
-import type { DeleteConfirmRequest } from '~/atoms/gallery'
-import type { Photo } from '~/types/photo'
 import { AlertDialog } from '@base-ui/react/alert-dialog'
-import * as stylex from '@stylexjs/stylex'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useAtom } from 'jotai'
+import { AnimatePresence, motion } from 'motion/react'
+import type { RefObject } from 'react'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import BackRegular from '~icons/mingcute/back-line'
-import CloudRegular from '~icons/mingcute/cloud-line'
+
+import type { DeleteConfirmRequest } from '~/atoms/gallery'
 import { deleteConfirmRequestAtom } from '~/atoms/gallery'
 import { Button } from '~/components/Button'
-import { SurfaceProvider } from '~/context/surface'
 import { thumbnailEdgeFor, useThumbnail } from '~/hooks/useThumbnail'
+import { cn } from '~/lib/cn'
 import { cellsInRange, layoutMasonry } from '~/lib/masonry'
 import { spring } from '~/lib/springs'
-import { colors } from '~/theme/colors.stylex'
-import { dialog } from '~/theme/dialog'
-import { motion as motionTokens, radius } from '~/theme/layout.stylex'
-import { surfaceStyles } from '~/theme/surface'
-import { text, utility, weight } from '~/theme/text'
-import { tileMarker } from './markers.stylex'
+import { dialogBackdrop, dialogPopup } from '~/lib/surface'
+import type { Photo } from '~/types/photo'
+import BackRegular from '~icons/mingcute/back-line'
+import CloudRegular from '~icons/mingcute/cloud-line'
 
 const MIN_COLUMN_WIDTH = 140
 const GUTTER = 8
-const SURFACE_LEVEL = 3
 
-const styles = stylex.create({
-  popup: {
-    width: 'min(880px, calc(100vw - 64px))',
-    maxHeight: 'calc(100vh - 96px)',
-  },
-  header: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-    paddingInline: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  // The masonry scrolls on its own, so the header and buttons stay put.
-  scroller: {
-    flexGrow: 1,
-    minHeight: 160,
-    overflowY: 'auto',
-    paddingInline: 20,
-    paddingBlock: 4,
-  },
-  grid: { position: 'relative' },
-  gridHeight: (height: number) => ({ height }),
-  cell: { position: 'absolute', top: 0, left: 0 },
-  empty: {
-    display: 'flex',
-    height: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: colors['--ps-muted-foreground'],
-  },
-  footer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: 8,
-    paddingInline: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-
-  tile: {
-    position: 'relative',
-    overflow: 'hidden',
-    borderRadius: 4,
-    backgroundColor: colors['--ps-muted'],
-  },
-  size: (width: number, height: number) => ({ width, height }),
-  fill: { width: '100%', height: '100%', objectFit: 'cover' },
-  placeholder: {
-    display: 'flex',
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: colors['--ps-muted-foreground'],
-  },
-  fileName: {
-    position: 'absolute',
-    insetInline: 0,
-    bottom: 0,
-    paddingInline: 8,
-    paddingTop: 16,
-    paddingBottom: 6,
-    textAlign: 'center',
-    pointerEvents: 'none',
-    color: 'rgb(255 255 255 / 0.9)',
-    backgroundImage: 'linear-gradient(to top, rgb(0 0 0 / 0.7), transparent)',
-  },
-  // Revealed while the tile is hovered or the button has keyboard focus.
-  revealed: {
-    opacity: {
-      default: 0,
-      [stylex.when.ancestor(':hover', tileMarker)]: 1,
-      [stylex.when.ancestor(':focus-within', tileMarker)]: 1,
-    },
-    transitionProperty: 'opacity',
-    transitionDuration: motionTokens.fast,
-  },
-  remove: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    display: 'flex',
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
-    cursor: 'pointer',
-    borderWidth: 0,
-    borderRadius: radius.full,
-    backgroundColor: { 'default': 'rgb(0 0 0 / 0.6)', ':hover': 'rgb(0 0 0 / 0.8)' },
-    color: 'white',
-    outline: { 'default': 'none', ':focus-visible': `2px solid ${colors['--ps-focus-ring']}` },
-  },
-})
+// Revealed while the tile is hovered or the button has keyboard focus.
+const revealedClass =
+  'opacity-0 transition-opacity duration-80 group-focus-within/tile:opacity-100 group-hover/tile:opacity-100'
 
 function DeleteConfirmTile({
   photo,
@@ -140,33 +41,41 @@ function DeleteConfirmTile({
   const thumbnailUrl = useThumbnail(folderPath, photo.path, thumbnailEdgeFor(width), true, photo.isCloudPlaceholder)
 
   return (
-    <div {...stylex.props(tileMarker, styles.tile, styles.size(width, height))}>
-      {photo.isCloudPlaceholder && !thumbnailUrl
-        ? (
-            <div {...stylex.props(styles.placeholder)}>
-              <CloudRegular width={20} height={20} />
-            </div>
-          )
-        : thumbnailUrl && (
+    <div className="group/tile relative overflow-hidden rounded-sm bg-fill" style={{ width, height }}>
+      {photo.isCloudPlaceholder && !thumbnailUrl ? (
+        <div className="flex size-full items-center justify-center text-text-secondary">
+          <CloudRegular height={20} width={20} />
+        </div>
+      ) : (
+        thumbnailUrl && (
           <img
-            src={thumbnailUrl}
             alt={photo.fileName}
+            className="size-full object-cover"
             decoding="async"
             draggable={false}
-            {...stylex.props(styles.fill)}
+            src={thumbnailUrl}
           />
+        )
+      )}
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-x-0 bottom-0 truncate bg-linear-to-t from-black/70 to-transparent px-2 pt-4 pb-1.5 text-center text-caption text-white/90',
+          revealedClass,
         )}
-      <div {...stylex.props(styles.fileName, styles.revealed, utility.truncate, text.caption)}>
+      >
         {photo.fileName}
       </div>
       <button
-        type="button"
         aria-label={t('deleteConfirm.keep', { name: photo.fileName })}
         title={t('deleteConfirm.keepTitle')}
-        {...stylex.props(styles.remove, styles.revealed)}
+        type="button"
+        className={cn(
+          'absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-black/60 p-0 text-white hover:bg-black/80 focus-visible:outline-2',
+          revealedClass,
+        )}
         onClick={onRemove}
       >
-        <BackRegular width={14} height={14} />
+        <BackRegular height={14} width={14} />
       </button>
     </div>
   )
@@ -188,8 +97,7 @@ function DeleteConfirmGrid({
   const [viewport, setViewport] = useState({ top: 0, height: 0 })
   useLayoutEffect(() => {
     const el = scrollerRef.current
-    if (!el)
-      return
+    if (!el) return
     const observer = new ResizeObserver(([entry]) => {
       setWidth(entry.contentRect.width)
       setViewport({ top: el.scrollTop, height: el.clientHeight })
@@ -199,7 +107,13 @@ function DeleteConfirmGrid({
   }, [])
 
   const layout = useMemo(
-    () => layoutMasonry(photos.map(p => p.aspectRatio), width, MIN_COLUMN_WIDTH, GUTTER),
+    () =>
+      layoutMasonry(
+        photos.map((p) => p.aspectRatio),
+        width,
+        MIN_COLUMN_WIDTH,
+        GUTTER,
+      ),
     [photos, width],
   )
   // A screen above and below the visible part stays mounted, as in the main grid.
@@ -207,41 +121,45 @@ function DeleteConfirmGrid({
 
   return (
     <div
+      onScroll={(e) => setViewport({ top: e.currentTarget.scrollTop, height: e.currentTarget.clientHeight })}
       ref={scrollerRef}
-      {...stylex.props(styles.scroller)}
-      onScroll={e => setViewport({ top: e.currentTarget.scrollTop, height: e.currentTarget.clientHeight })}
+      // The masonry scrolls on its own, so the header and buttons stay put.
+      className="min-h-40 grow overflow-y-auto px-5 py-1"
     >
-      {photos.length === 0
-        ? <div {...stylex.props(styles.empty, text.body)}>{t('deleteConfirm.nothingLeft')}</div>
-        : (
-            <div {...stylex.props(styles.grid, styles.gridHeight(layout.height))}>
-              {/* Tiles glide into the gaps left by removed ones. */}
-              <AnimatePresence initial={false}>
-                {width > 0 && visible.map((i) => {
-                  const photo = photos[i]
-                  const cell = layout.cells[i]
-                  return (
-                    <motion.div
-                      key={photo.id}
-                      {...stylex.props(styles.cell)}
-                      initial={{ opacity: 0, scale: 0.96, x: cell.left, y: cell.top }}
-                      animate={{ opacity: 1, scale: 1, x: cell.left, y: cell.top }}
-                      exit={{ opacity: 0, scale: 0.96, transition: spring.moderate.exit }}
-                      transition={spring.moderate}
-                    >
-                      <DeleteConfirmTile
-                        photo={photo}
-                        folderPath={folderPath}
-                        width={layout.columnWidth}
-                        height={cell.height}
-                        onRemove={() => onRemove(photo)}
-                      />
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
-            </div>
-          )}
+      {photos.length === 0 ? (
+        <div className="flex h-40 items-center justify-center text-body text-text-secondary">
+          {t('deleteConfirm.nothingLeft')}
+        </div>
+      ) : (
+        <div className="relative" style={{ height: layout.height }}>
+          {/* Tiles glide into the gaps left by removed ones. */}
+          <AnimatePresence initial={false}>
+            {width > 0 &&
+              visible.map((i) => {
+                const photo = photos[i]
+                const cell = layout.cells[i]
+                return (
+                  <motion.div
+                    animate={{ opacity: 1, scale: 1, x: cell.left, y: cell.top }}
+                    className="absolute top-0 left-0"
+                    exit={{ opacity: 0, scale: 0.96, transition: spring.moderate.exit }}
+                    initial={{ opacity: 0, scale: 0.96, x: cell.left, y: cell.top }}
+                    key={photo.id}
+                    transition={spring.moderate}
+                  >
+                    <DeleteConfirmTile
+                      folderPath={folderPath}
+                      height={cell.height}
+                      photo={photo}
+                      width={layout.columnWidth}
+                      onRemove={() => onRemove(photo)}
+                    />
+                  </motion.div>
+                )
+              })}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   )
 }
@@ -266,23 +184,21 @@ function DeleteConfirmContent({
 
   return (
     <>
-      <div {...stylex.props(styles.header)}>
-        <AlertDialog.Title {...stylex.props(text.title, weight.semibold)}>
+      <div className="flex flex-col gap-1 px-5 pt-5 pb-3">
+        <AlertDialog.Title className="wght-semibold text-title">
           {t('common.deletePhotos', { count: remaining.length })}
         </AlertDialog.Title>
       </div>
       <DeleteConfirmGrid
-        photos={remaining}
         folderPath={request.folderPath}
-        onRemove={photo => setRemaining(prev => prev.filter(p => p.id !== photo.id))}
+        photos={remaining}
+        onRemove={(photo) => setRemaining((prev) => prev.filter((p) => p.id !== photo.id))}
       />
-      <div {...stylex.props(styles.footer)}>
-        <AlertDialog.Close ref={cancelRef} render={<Button variant="tertiary" />}>{t('common.cancel')}</AlertDialog.Close>
-        <Button
-          variant="destructive"
-          disabled={remaining.length === 0}
-          onClick={() => onClose(remaining)}
-        >
+      <div className="flex justify-end gap-2 px-5 pt-3 pb-5">
+        <AlertDialog.Close ref={cancelRef} render={<Button variant="tertiary" />}>
+          {t('common.cancel')}
+        </AlertDialog.Close>
+        <Button disabled={remaining.length === 0} variant="destructive" onClick={() => onClose(remaining)}>
           {t('deleteConfirm.confirm')}
         </Button>
       </div>
@@ -297,8 +213,7 @@ export function DeleteConfirmDialog() {
   const cancelRef = useRef<HTMLButtonElement>(null)
   // Keeps the last request on screen while the popup animates out.
   const [shown, setShown] = useState(request)
-  if (request && request !== shown)
-    setShown(request)
+  if (request && request !== shown) setShown(request)
 
   const close = (photos: Photo[] | null) => {
     request?.resolve(photos)
@@ -309,21 +224,20 @@ export function DeleteConfirmDialog() {
     <AlertDialog.Root
       open={request !== null}
       onOpenChange={(open) => {
-        if (!open)
-          close(null)
+        if (!open) close(null)
       }}
       onOpenChangeComplete={(open) => {
-        if (!open)
-          setShown(null)
+        if (!open) setShown(null)
       }}
     >
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop {...stylex.props(dialog.backdrop)} />
-        <SurfaceProvider value={SURFACE_LEVEL}>
-          <AlertDialog.Popup initialFocus={cancelRef} {...stylex.props(dialog.popup, styles.popup, ...surfaceStyles(SURFACE_LEVEL, 8))}>
-            {shown && <DeleteConfirmContent request={shown} cancelRef={cancelRef} onClose={close} />}
-          </AlertDialog.Popup>
-        </SurfaceProvider>
+        <AlertDialog.Backdrop className={dialogBackdrop} />
+        <AlertDialog.Popup
+          className={cn(dialogPopup, 'max-h-[calc(100vh-96px)] w-[min(880px,calc(100vw-64px))]')}
+          initialFocus={cancelRef}
+        >
+          {shown && <DeleteConfirmContent cancelRef={cancelRef} request={shown} onClose={close} />}
+        </AlertDialog.Popup>
       </AlertDialog.Portal>
     </AlertDialog.Root>
   )

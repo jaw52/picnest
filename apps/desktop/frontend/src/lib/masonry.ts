@@ -4,15 +4,15 @@ export interface MasonryColumns {
 }
 
 export interface MasonryCell {
-  top: number
-  left: number
-  height: number
   column: number
+  height: number
+  left: number
+  top: number
 }
 
 export interface MasonryLayout {
-  columnWidth: number
   cells: MasonryCell[]
+  columnWidth: number
   /** Total height of the grid, without a trailing gutter. */
   height: number
 }
@@ -43,8 +43,7 @@ export function layoutMasonry(
   const cells = aspectRatios.map((ratio) => {
     let column = 0
     for (let i = 1; i < count; i++) {
-      if (columnTops[i] < columnTops[column])
-        column = i
+      if (columnTops[i] < columnTops[column]) column = i
     }
     const top = columnTops[column]
     const height = width / ratio
@@ -55,9 +54,9 @@ export function layoutMasonry(
 }
 
 export interface MasonrySection {
+  aspectRatios: readonly number[]
   /** Room above the section's items, for its header; 0 for none. */
   headerHeight: number
-  aspectRatios: readonly number[]
 }
 
 export interface SectionedMasonryLayout extends MasonryLayout {
@@ -82,8 +81,7 @@ export function layoutMasonrySections(
     const section = layoutMasonry(aspectRatios, containerWidth, minColumnWidth, gutter)
     headerTops.push(top)
     const itemsTop = top + headerHeight
-    for (const cell of section.cells)
-      cells.push({ ...cell, top: cell.top + itemsTop })
+    for (const cell of section.cells) cells.push({ ...cell, top: cell.top + itemsTop })
     top = itemsTop + section.height + gutter
   }
   return {
@@ -105,12 +103,10 @@ function travel(origin: MasonryCell, cell: MasonryCell, direction: GridDirection
     const distance = direction === 'up' ? origin.top - cell.top : cell.top - origin.top
     return cell.column === origin.column && distance > 0 ? distance : undefined
   }
-  if (cell.column !== origin.column + (direction === 'left' ? -1 : 1))
-    return undefined
+  if (cell.column !== origin.column + (direction === 'left' ? -1 : 1)) return undefined
   // Overlapping the origin's middle beats any distance.
   const center = origin.top + origin.height / 2
-  if (cell.top <= center && center < cell.top + cell.height)
-    return 0
+  if (cell.top <= center && center < cell.top + cell.height) return 0
   return Math.abs(cell.top + cell.height / 2 - center)
 }
 
@@ -126,8 +122,7 @@ export function neighborCell(
   candidates: readonly number[],
 ): number | undefined {
   const origin = cells[from]
-  if (origin === undefined)
-    return undefined
+  if (origin === undefined) return undefined
   let best: number | undefined
   let bestTravel = Infinity
   for (const i of candidates) {
@@ -144,8 +139,7 @@ export function neighborCell(
 export function cellsInRange(cells: readonly MasonryCell[], top: number, bottom: number): number[] {
   const indices: number[] = []
   for (const [i, cell] of cells.entries()) {
-    if (cell.top <= bottom && cell.top + cell.height >= top)
-      indices.push(i)
+    if (cell.top <= bottom && cell.top + cell.height >= top) indices.push(i)
   }
   return indices
 }

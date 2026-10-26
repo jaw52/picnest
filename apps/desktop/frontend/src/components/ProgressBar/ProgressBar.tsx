@@ -1,43 +1,36 @@
-import type { StyleXStyles } from '@stylexjs/stylex'
-import * as stylex from '@stylexjs/stylex'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
+
+import { cn } from '~/lib/cn'
 import { spring } from '~/lib/springs'
-import { styles } from './style'
 
 export interface ProgressBarProps {
+  className?: string
   label: string
-  value: number
   max?: number
   tone?: 'default' | 'error'
-  xstyle?: StyleXStyles
+  value: number
 }
 
 /**
  * A thin determinate bar. The fill scales on a spring rather than animating
  * its width, so it stays on the compositor.
  */
-export function ProgressBar({
-  label,
-  value,
-  max = 100,
-  tone = 'default',
-  xstyle,
-}: ProgressBarProps) {
+export function ProgressBar({ label, value, max = 100, tone = 'default', className }: ProgressBarProps) {
   const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0
 
   return (
     <div
-      role="progressbar"
       aria-label={label}
-      aria-valuemin={0}
       aria-valuemax={max}
+      aria-valuemin={0}
       aria-valuenow={value}
-      {...stylex.props(styles.track, xstyle)}
+      className={cn('h-1 overflow-hidden rounded-full bg-fill-secondary', className)}
+      role="progressbar"
     >
       <motion.div
-        {...stylex.props(styles.fill, tone === 'error' ? styles.toneError : styles.toneDefault)}
-        initial={false}
         animate={{ scaleX: ratio }}
+        className={cn('h-full origin-left', tone === 'error' ? 'bg-red' : 'bg-text')}
+        initial={false}
         transition={spring.moderate}
       />
     </div>

@@ -1,8 +1,8 @@
 import type { DeleteResult, LibraryAccess, TrashedPhoto } from '~/mygo'
+import { App } from '~/mygo'
 import type { FolderEntry } from '~/types/folder'
 import type { PhotoDetails, PhotoPage } from '~/types/photo'
 
-import { App } from '~/mygo'
 import { convertFileSrc } from './native'
 
 /**
@@ -12,17 +12,12 @@ import { convertFileSrc } from './native'
 async function call<T>(promise: PromiseLike<T>): Promise<T> {
   try {
     return await promise
-  }
-  catch (error) {
+  } catch (error) {
     throw error instanceof Error ? error.message : error
   }
 }
 
-export function scanFolderPage(
-  folderPath: string,
-  offset: number,
-  limit: number,
-): Promise<PhotoPage> {
+export function scanFolderPage(folderPath: string, offset: number, limit: number): Promise<PhotoPage> {
   return call(App.scanFolderPage(folderPath, offset, limit))
 }
 
@@ -55,7 +50,7 @@ export async function ensureThumbnailUrl(
   folderPath: string,
   filePath: string,
   maxEdge: number,
-  { background = false, signal }: { background?: boolean, signal?: AbortSignal } = {},
+  { background = false, signal }: { background?: boolean; signal?: AbortSignal } = {},
 ): Promise<string> {
   const requestId = signal ? String(++thumbnailRequestSeq) : ''
   const cancel = () => void App.cancelThumbnail(requestId)
@@ -63,8 +58,7 @@ export async function ensureThumbnailUrl(
   try {
     const thumbPath = await call(App.ensureThumbnail(folderPath, filePath, maxEdge, background, requestId))
     return convertFileSrc(thumbPath)
-  }
-  finally {
+  } finally {
     signal?.removeEventListener('abort', cancel)
   }
 }
@@ -135,11 +129,7 @@ export function renamePhoto(folderPath: string, oldName: string, newName: string
  * their ratings along. Rejects with every per-file
  * failure joined by newlines; files that did move stay moved.
  */
-export function movePhotos(
-  folderPath: string,
-  fileNames: string[],
-  destFolder: string,
-): Promise<void> {
+export function movePhotos(folderPath: string, fileNames: string[], destFolder: string): Promise<void> {
   return call(App.movePhotos(folderPath, fileNames, destFolder))
 }
 

@@ -21,8 +21,7 @@ it('pulls past the end against growing resistance, up to PULL_MAX', () => {
   const first = result.current.get()
   expect(first).toBeGreaterThan(0)
   expect(first).toBeLessThan(40)
-  for (let i = 0; i < 50; i++)
-    wheel(100)
+  for (let i = 0; i < 50; i++) wheel(100)
   expect(result.current.get()).toBeGreaterThan(PULL_MAX * 0.99)
   expect(result.current.get()).toBeLessThanOrEqual(PULL_MAX)
 })
@@ -40,7 +39,9 @@ it('springs back once the wheel goes quiet', async () => {
 })
 
 it('leaves pinch zoom and a disabled grid alone', () => {
-  const { result, rerender } = renderHook(({ enabled }) => useBottomPull(enabled, document.documentElement), { initialProps: { enabled: true } })
+  const { result, rerender } = renderHook(({ enabled }) => useBottomPull(enabled, document.documentElement), {
+    initialProps: { enabled: true },
+  })
   act(() => {
     window.dispatchEvent(new WheelEvent('wheel', { deltaY: 50, ctrlKey: true }))
   })

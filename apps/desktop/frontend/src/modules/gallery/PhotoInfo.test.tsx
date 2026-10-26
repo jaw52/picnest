@@ -1,9 +1,9 @@
-import type { Photo } from '~/types/photo'
 import { act, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { expect, it, vi } from 'vitest'
 
 import { currentFolderAtom, photoInfoIdAtom, photosAtom } from '~/atoms/gallery'
+import type { Photo } from '~/types/photo'
 
 import { PhotoInfoPopover } from './PhotoInfo'
 
@@ -23,7 +23,7 @@ const photo: Photo = {
   aspectRatio: 1.5,
 }
 
-it('shows a photo\'s info beside its tile, and closes once the photo is gone', async () => {
+it("shows a photo's info beside its tile, and closes once the photo is gone", async () => {
   const store = createStore()
   store.set(currentFolderAtom, '/f')
   store.set(photosAtom, [photo])

@@ -1,6 +1,8 @@
-import type { Photo } from '~/types/photo'
 import { createStore } from 'jotai'
 import { describe, expect, it } from 'vitest'
+
+import type { Photo } from '~/types/photo'
+
 import {
   closePreviewAtom,
   photosAtom,
@@ -67,7 +69,7 @@ describe('rating out of the filter', () => {
     store.set(setPhotoRatingAtom, ['b'], 5)
 
     expect(store.get(previewPhotoAtom)?.rating).toBe(5)
-    expect(store.get(previewPhotosAtom).map(p => p.id)).toEqual(['a', 'b', 'c'])
+    expect(store.get(previewPhotosAtom).map((p) => p.id)).toEqual(['a', 'b', 'c'])
   })
 })
 

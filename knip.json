@@ -11,7 +11,12 @@
     ".": {},
     "apps/desktop/frontend": {
       "project": ["src/**/*.{ts,tsx}"],
-      "ignoreDependencies": ["@fontsource-variable/inter", "@svgr/plugin-jsx"]
+      "ignoreDependencies": [
+        "@fontsource-variable/inter",
+        "@svgr/plugin-jsx",
+        "tailwindcss",
+        "@pastel-palette/tailwindcss"
+      ]
     }
   }
 }

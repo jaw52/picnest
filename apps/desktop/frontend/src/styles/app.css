@@ -1,0 +1,199 @@
+/* Picnest's own tokens and base rules; the colors all come from the palette. */
+
+@theme {
+  --font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'PingFang SC', system-ui, sans-serif;
+
+  /* Type scale: six roles, each a size and a leading. */
+  --text-display: 24px;
+  --text-display--line-height: 30px;
+  --text-title: 15px;
+  --text-title--line-height: 20px;
+  --text-subtitle: 13px;
+  --text-subtitle--line-height: 18px;
+  --text-body: 12px;
+  --text-body--line-height: 18px;
+  --text-caption: 11px;
+  --text-caption--line-height: 14px;
+  --text-micro: 10px;
+  --text-micro--line-height: 12px;
+
+  /* Corner radii: item for rows, buttons and inputs; container for popup
+     shells (item radius plus the 4px inset, so the curves stay concentric). */
+  --radius-item: 8px;
+  --radius-container: 12px;
+
+  --ease-out-expo: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* The loading squiggle: it travels along its path while the dash breathes. */
+  --animate-spinner: spinner-move 2s linear infinite, spinner-dash 4s ease-in-out infinite;
+
+  @keyframes spinner-move {
+    to {
+      stroke-dashoffset: -100;
+    }
+  }
+
+  @keyframes spinner-dash {
+    0%,
+    100% {
+      stroke-dasharray: 15 85;
+    }
+
+    50% {
+      stroke-dasharray: 40 60;
+    }
+  }
+}
+
+/* Variable-font weights (wght + opsz axes), used for the normal -> semibold
+   shift that signals interaction. */
+@utility wght-normal {
+  font-variation-settings:
+    'wght' 400,
+    'opsz' 14;
+}
+
+@utility wght-semibold {
+  font-variation-settings:
+    'wght' 550,
+    'opsz' 18;
+}
+
+@utility wght-bold {
+  font-variation-settings:
+    'wght' 700,
+    'opsz' 25;
+}
+
+/* Trims the line box to cap-height -> baseline so labels center optically.
+   `text-box` only applies to block containers, so put it on a blockified
+   element (a flex item, grid child), not a flex root. */
+@utility text-trim {
+  text-box: trim-both cap alphabetic;
+}
+
+/* Window drag handles (MyGo reads --app-region). The property inherits, so a
+   marked toolbar drags from its whole subtree while plain clicks on its
+   buttons still work. Text fields stay interactive. */
+@utility app-drag {
+  --app-region: drag;
+}
+
+@utility app-no-drag {
+  --app-region: no-drag;
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    min-height: 100vh;
+    overscroll-behavior: none;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* A desktop app: chrome text is not selectable (text fields still are). */
+  body {
+    user-select: none;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  [data-drag-region] {
+    --app-region: drag;
+  }
+
+  [data-drag-region] :is(input, textarea, select, button, [role='slider'], [role='tab'], [data-no-drag]) {
+    --app-region: no-drag;
+  }
+
+  [data-icon-only] svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Native scrollbar theme: narrow, low-contrast, darkens on hover. Chromium 121+
+   renders scrollbar-color and ignores the ::-webkit-* block, so both ramps must
+   stay in sync. Fine pointers only; touch keeps its overlay momentum bars. */
+@media (pointer: fine) {
+  * {
+    --scroll-thumb: color-mix(in oklab, var(--color-text) 8%, transparent);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Transparent borders + content-box clip leave a ~4px visible thumb inside
+     the 10px hit area; the asymmetric border slides it away from the edge. */
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scroll-thumb);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:vertical {
+    border-left-width: 1px;
+    border-right-width: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:horizontal {
+    border-top-width: 1px;
+    border-bottom-width: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--color-text) 12%, transparent);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in oklab, var(--color-text) 16%, transparent);
+  }
+}
+
+/* Honour the OS reduced-motion setting for CSS animations (motion has its own
+   switch in main.tsx). Loading pulses and spinners stop; state changes still
+   happen, just without the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,6 +1,7 @@
-import type { Photo } from '~/types/photo'
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
+
+import type { Photo } from '~/types/photo'
 
 import { useFileName } from './useFileName'
 
@@ -32,9 +33,16 @@ beforeEach(() => {
 
 it('reads the names of the library photos shown together, once', async () => {
   libraryFileNames.mockImplementation(async (paths: string[]) =>
-    Object.fromEntries(paths.map(p => [p, `${p.slice('photos:'.length)}.HEIC`])))
+    Object.fromEntries(paths.map((p) => [p, `${p.slice('photos:'.length)}.HEIC`])),
+  )
   const photos = [photo('photos:a'), photo('photos:b'), photo('/f/c.jpg', 'c.jpg')]
-  const { rerender } = render(<>{photos.map(p => <Name key={p.path} photo={p} />)}</>)
+  const { rerender } = render(
+    <>
+      {photos.map((p) => (
+        <Name key={p.path} photo={p} />
+      ))}
+    </>,
+  )
 
   expect(screen.getByTestId('/f/c.jpg').textContent).toBe('c.jpg')
   await waitFor(() => expect(screen.getByTestId('photos:b').textContent).toBe('b.HEIC'))
@@ -43,7 +51,13 @@ it('reads the names of the library photos shown together, once', async () => {
   expect(libraryFileNames).toHaveBeenCalledWith(['photos:a', 'photos:b'])
 
   // Shown again, they come from what was read.
-  rerender(<>{photos.slice(0, 1).map(p => <Name key={p.path} photo={p} />)}</>)
+  rerender(
+    <>
+      {photos.slice(0, 1).map((p) => (
+        <Name key={p.path} photo={p} />
+      ))}
+    </>,
+  )
   expect(screen.getByTestId('photos:a').textContent).toBe('a.HEIC')
   expect(libraryFileNames).toHaveBeenCalledTimes(1)
 })

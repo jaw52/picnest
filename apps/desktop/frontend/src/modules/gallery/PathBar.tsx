@@ -1,13 +1,7 @@
-import type { FolderEntry } from '~/types/folder'
-import * as stylex from '@stylexjs/stylex'
 import { useAtomValue } from 'jotai'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import ArrowLeftRegular from '~icons/mingcute/arrow-left-line'
-import ArrowRightRegular from '~icons/mingcute/arrow-right-line'
-import FolderRegular from '~icons/mingcute/folder-line'
-import PicRegular from '~icons/mingcute/pic-line'
-import RightRegular from '~icons/mingcute/right-line'
+
 import { subfoldersAtom } from '~/atoms/gallery'
 import { folderNameFromPath, folderRoots, pathSegments, recentFoldersAtom } from '~/atoms/recentFolders'
 import { activeTabPathAtom, canGoBackAtom, canGoForwardAtom } from '~/atoms/tabs'
@@ -15,62 +9,14 @@ import { DropdownMenu } from '~/components/ContextMenu'
 import { IconButton } from '~/components/IconButton'
 import { useTabs } from '~/hooks/useTabs'
 import { listSubfolders } from '~/lib/backend'
+import { cn } from '~/lib/cn'
 import { isLibraryPath } from '~/lib/library'
-import { colors } from '~/theme/colors.stylex'
-import { radius } from '~/theme/layout.stylex'
-import { text, utility, weight } from '~/theme/text'
-
-const styles = stylex.create({
-  bar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 2,
-    minWidth: 0,
-  },
-  history: { display: 'flex', gap: 2, marginRight: 6, flexShrink: 0 },
-  segment: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    minWidth: 0,
-    maxWidth: 200,
-    height: 24,
-    paddingInline: 6,
-    borderWidth: 0,
-    borderRadius: radius.item,
-    cursor: 'pointer',
-    color: { 'default': colors['--ps-muted-foreground'], ':hover': colors['--ps-foreground'] },
-    backgroundColor: { 'default': 'transparent', ':hover': colors['--ps-hover'] },
-    transitionProperty: 'color, background-color',
-    transitionDuration: '80ms',
-  },
-  current: {
-    cursor: 'default',
-    color: { 'default': colors['--ps-foreground'], ':hover': colors['--ps-foreground'] },
-    backgroundColor: { 'default': 'transparent', ':hover': 'transparent' },
-  },
-  icon: { flexShrink: 0 },
-  chevron: {
-    display: 'flex',
-    width: 20,
-    height: 24,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 0,
-    borderWidth: 0,
-    borderRadius: radius.item,
-    cursor: 'pointer',
-    color: { 'default': colors['--ps-muted-foreground'], ':hover': colors['--ps-foreground'] },
-    backgroundColor: {
-      'default': 'transparent',
-      ':hover': colors['--ps-hover'],
-      ':is([data-popup-open])': colors['--ps-active'],
-    },
-    transitionProperty: 'color, background-color',
-    transitionDuration: '80ms',
-  },
-})
+import type { FolderEntry } from '~/types/folder'
+import ArrowLeftRegular from '~icons/mingcute/arrow-left-line'
+import ArrowRightRegular from '~icons/mingcute/arrow-right-line'
+import FolderRegular from '~icons/mingcute/folder-line'
+import PicRegular from '~icons/mingcute/pic-line'
+import RightRegular from '~icons/mingcute/right-line'
 
 /**
  * A chevron between two folders of the path that drops down the first one's
@@ -87,13 +33,11 @@ function SubfolderMenu({ folder }: { folder: string }) {
     let cancelled = false
     listSubfolders(folder)
       .then((entries) => {
-        if (!cancelled)
-          setSubfolders(entries)
+        if (!cancelled) setSubfolders(entries)
       })
       .catch((error) => {
         console.warn(`failed to list subfolders of ${folder}:`, error)
-        if (!cancelled)
-          setSubfolders([])
+        if (!cancelled) setSubfolders([])
       })
     return () => {
       cancelled = true
@@ -102,24 +46,23 @@ function SubfolderMenu({ folder }: { folder: string }) {
 
   return (
     <DropdownMenu
-      onOpenChange={(open) => {
-        if (open)
-          setVersion(v => v + 1)
-      }}
-      items={(subfolders ?? []).map(entry => ({
+      items={(subfolders ?? []).map((entry) => ({
         label: entry.name,
         icon: FolderRegular,
         onSelect: () => openInActiveTab(entry.path),
       }))}
-      trigger={(
+      trigger={
         <button
-          type="button"
           aria-label={t('path.subfolders', { name: folderNameFromPath(folder) })}
-          {...stylex.props(styles.chevron)}
+          className="flex h-6 w-5 shrink-0 items-center justify-center rounded-item p-0 text-text-secondary transition-colors duration-80 hover:bg-text/5 hover:text-text data-popup-open:bg-text/10"
+          type="button"
         >
-          <RightRegular width={14} height={14} />
+          <RightRegular height={14} width={14} />
         </button>
-      )}
+      }
+      onOpenChange={(open) => {
+        if (open) setVersion((v) => v + 1)
+      }}
     />
   )
 }
@@ -139,18 +82,23 @@ export function PathBar() {
   const hasSubfolders = useAtomValue(subfoldersAtom).length > 0
   const { openFromClick, goBack, goForward } = useTabs()
   const segments = useMemo(
-    () => (path ? pathSegments(path, folderRoots(recentFolders).map(f => f.path)) : []),
+    () =>
+      path
+        ? pathSegments(
+            path,
+            folderRoots(recentFolders).map((f) => f.path),
+          )
+        : [],
     [path, recentFolders],
   )
 
-  if (segments.length <= 1 && !hasSubfolders && !canGoBack && !canGoForward)
-    return null
+  if (segments.length <= 1 && !hasSubfolders && !canGoBack && !canGoForward) return null
 
   return (
-    <nav aria-label={t('path.breadcrumb')} {...stylex.props(styles.bar)}>
-      <div {...stylex.props(styles.history)}>
-        <IconButton label={t('path.back')} icon={ArrowLeftRegular} disabled={!canGoBack} onClick={goBack} />
-        <IconButton label={t('path.forward')} icon={ArrowRightRegular} disabled={!canGoForward} onClick={goForward} />
+    <nav aria-label={t('path.breadcrumb')} className="flex min-w-0 items-center gap-0.5">
+      <div className="mr-1.5 flex shrink-0 gap-0.5">
+        <IconButton disabled={!canGoBack} icon={ArrowLeftRegular} label={t('path.back')} onClick={goBack} />
+        <IconButton disabled={!canGoForward} icon={ArrowRightRegular} label={t('path.forward')} onClick={goForward} />
       </div>
       {segments.map((segment, i) => {
         const isCurrent = i === segments.length - 1
@@ -159,20 +107,21 @@ export function PathBar() {
         return (
           <Fragment key={segment}>
             <button
-              type="button"
               aria-current={isCurrent ? 'page' : undefined}
-              onClick={(e) => {
-                if (!isCurrent)
-                  openFromClick(segment, e)
-              }}
+              type="button"
+              className={cn(
+                'flex h-6 max-w-50 min-w-0 items-center gap-1.5 rounded-item px-1.5 text-caption transition-colors duration-80',
+                isCurrent ? 'cursor-default text-text' : 'text-text-secondary hover:bg-text/5 hover:text-text',
+              )}
               onAuxClick={(e) => {
-                if (!isCurrent && e.button === 1)
-                  openFromClick(segment, e)
+                if (!isCurrent && e.button === 1) openFromClick(segment, e)
               }}
-              {...stylex.props(styles.segment, isCurrent && styles.current, text.caption)}
+              onClick={(e) => {
+                if (!isCurrent) openFromClick(segment, e)
+              }}
             >
-              {i === 0 && <SegmentIcon width={14} height={14} {...stylex.props(styles.icon)} />}
-              <span {...stylex.props(utility.truncate, isCurrent ? weight.semibold : weight.normal)}>
+              {i === 0 && <SegmentIcon className="shrink-0" height={14} width={14} />}
+              <span className={cn('truncate', isCurrent ? 'wght-semibold' : 'wght-normal')}>
                 {library ? t('library.name') : folderNameFromPath(segment)}
               </span>
             </button>

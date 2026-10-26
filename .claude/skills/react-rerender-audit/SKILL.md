@@ -85,24 +85,24 @@ to last render — the component was dragged along, it did not need to run).
 
 ```js
 // count.js — pipe with: agent-browser --cdp 9222 eval --stdin < count.js
-(async () => {
-  const { scan } = await import('/@id/react-scan'); // Vite dev id; else 'react-scan'
-  const counts = {};
+;(async () => {
+  const { scan } = await import('/@id/react-scan') // Vite dev id; else 'react-scan'
+  const counts = {}
   scan({
     enabled: true,
     showToolbar: false,
     onRender(fiber, renders) {
-      const name = fiber.type?.displayName || fiber.type?.name || (typeof fiber.type === 'string' ? fiber.type : '?');
+      const name = fiber.type?.displayName || fiber.type?.name || (typeof fiber.type === 'string' ? fiber.type : '?')
       for (const r of renders) {
-        const c = (counts[name] ??= { total: 0, unnecessary: 0 });
-        c.total++;
-        if (r.unnecessary) c.unnecessary++;
+        const c = (counts[name] ??= { total: 0, unnecessary: 0 })
+        c.total++
+        if (r.unnecessary) c.unnecessary++
       }
     },
-  });
-  await new Promise((r) => setTimeout(r, 10000));
-  scan({ enabled: true, showToolbar: true, onRender: undefined });
-  const rows = Object.entries(counts).sort((a, b) => b[1].total - a[1].total);
+  })
+  await new Promise((r) => setTimeout(r, 10000))
+  scan({ enabled: true, showToolbar: true, onRender: undefined })
+  const rows = Object.entries(counts).sort((a, b) => b[1].total - a[1].total)
   return (
     rows.length +
     ' components\n' +
@@ -110,8 +110,8 @@ to last render — the component was dragged along, it did not need to run).
       .slice(0, 60)
       .map(([n, c]) => `${c.total}\t${c.unnecessary}\t${n}`)
       .join('\n')
-  );
-})();
+  )
+})()
 ```
 
 **Key by instance, not by name.** The snippet above aggregates every
@@ -122,15 +122,15 @@ that), and it hides the most important boot finding of all — the same
 component mounted twice. Assign each fiber a stable id and key on it:
 
 ```js
-const ids = new WeakMap();
-let next = 1;
+const ids = new WeakMap()
+let next = 1
 const idOf = (f) => {
-  let id = ids.get(f) ?? (f.alternate && ids.get(f.alternate)) ?? next++;
-  ids.set(f, id);
-  if (f.alternate) ids.set(f.alternate, id); // alternates share one id
-  return id;
-};
-const key = nameOf(fiber) + '#' + idOf(fiber);
+  let id = ids.get(f) ?? (f.alternate && ids.get(f.alternate)) ?? next++
+  ids.set(f, id)
+  if (f.alternate) ids.set(f.alternate, id) // alternates share one id
+  return id
+}
+const key = nameOf(fiber) + '#' + idOf(fiber)
 ```
 
 Record `first`/`last` timestamps per instance too — mount waves are visible
@@ -167,7 +167,7 @@ some component conditionally wraps its children, so a falsy-to-truthy flip
 inserts a node and React unmounts everything below.
 
 ```jsx
-if (locale) child = <LocaleProvider locale={locale}>{child}</LocaleProvider>; // antd ConfigProvider
+if (locale) child = <LocaleProvider locale={locale}>{child}</LocaleProvider> // antd ConfigProvider
 ```
 
 A boot storm hides real costs the render count understates: every provider,
@@ -183,8 +183,8 @@ scan({
   enabled: true,
   showToolbar: false,
   onRender(fiber, renders) {
-    const name = fiber.type?.displayName || fiber.type?.name;
-    if (!['SuspectA', 'SuspectB'].includes(name)) return;
+    const name = fiber.type?.displayName || fiber.type?.name
+    if (!['SuspectA', 'SuspectB'].includes(name)) return
     for (const r of renders)
       out.push(
         name +
@@ -197,9 +197,9 @@ scan({
               next: String(c.nextValue).slice(0, 60),
             })),
           ),
-      );
+      )
   },
-});
+})
 ```
 
 ### [4] Name the hook
@@ -214,28 +214,28 @@ scan({
   enabled: true,
   showToolbar: false,
   onRender(fiber) {
-    if ((fiber.type?.displayName || fiber.type?.name) !== 'SuspectA') return;
+    if ((fiber.type?.displayName || fiber.type?.name) !== 'SuspectA') return
     let a = fiber.memoizedState,
       b = fiber.alternate?.memoizedState,
-      i = 0;
-    const diff = [];
+      i = 0
+    const diff = []
     while (a && b) {
       if (a.memoizedState !== b.memoizedState) {
         const isEffect =
           a.memoizedState &&
           typeof a.memoizedState === 'object' &&
           'tag' in a.memoizedState &&
-          'create' in a.memoizedState;
+          'create' in a.memoizedState
         if (!isEffect)
-          diff.push(i + ': ' + String(b.memoizedState).slice(0, 40) + ' -> ' + String(a.memoizedState).slice(0, 40));
+          diff.push(i + ': ' + String(b.memoizedState).slice(0, 40) + ' -> ' + String(a.memoizedState).slice(0, 40))
       }
-      a = a.next;
-      b = b.next;
-      i++;
+      a = a.next
+      b = b.next
+      i++
     }
-    out.push('hooks=' + i + ' changed: ' + diff.join(' | '));
+    out.push('hooks=' + i + ' changed: ' + diff.join(' | '))
   },
-});
+})
 ```
 
 **Context reads are not in this list.** `useContext` records into
@@ -305,18 +305,18 @@ render(
   <Locale defaultLang="zh-CN">
     <MountCounter />
   </Locale>,
-);
-expect(mounts).toBe(1);
-resolveLocale({ locale: 'zh-cn' }); // the async load that flipped the wrapper
-await waitFor(() => expect(getAntdLocale).toHaveBeenCalled());
-expect(mounts).toBe(1); // was 2 before the fix
+)
+expect(mounts).toBe(1)
+resolveLocale({ locale: 'zh-cn' }) // the async load that flipped the wrapper
+await waitFor(() => expect(getAntdLocale).toHaveBeenCalled())
+expect(mounts).toBe(1) // was 2 before the fix
 ```
 
 **Regression test.** `<Profiler>` around the subtree that must not move.
 Mock the transport, push one message, assert zero commits:
 
 ```tsx
-let dockCommits = 0;
+let dockCommits = 0
 render(
   <Sidebar
     live
@@ -326,11 +326,11 @@ render(
       </Profiler>
     }
   />,
-);
-dockCommits = 0; // discard mount
-act(() => subs[0].onPayload({ quotes: [{ symbol: 'NVDA.US', last: 123.45 }] }));
-expect(screen.getByText('$123.45')).toBeTruthy(); // the value did arrive
-expect(dockCommits).toBe(0); // and nobody else moved
+)
+dockCommits = 0 // discard mount
+act(() => subs[0].onPayload({ quotes: [{ symbol: 'NVDA.US', last: 123.45 }] }))
+expect(screen.getByText('$123.45')).toBeTruthy() // the value did arrive
+expect(dockCommits).toBe(0) // and nobody else moved
 ```
 
 Assert both halves. `dockCommits === 0` alone also passes when the feature
@@ -346,7 +346,7 @@ small number. Return a `loaded` flag alongside the counts and refuse any
 sample where it is false:
 
 ```js
-const loaded = !document.querySelector('[class*=keleton]') && document.body.innerText.length > 500;
+const loaded = !document.querySelector('[class*=keleton]') && document.body.innerText.length > 500
 ```
 
 Cross-check the component names too: if the user can see a sidebar full of
@@ -358,9 +358,9 @@ instances by mount timestamp; a late wave is usually one list. Resolve each
 one's DOM node and measure it:
 
 ```js
-const el = domOf(fiber); // walk fiber.child until stateNode is an Element
-const r = el.getBoundingClientRect();
-const hidden = r.width === 0 || r.height === 0 || el.offsetParent === null;
+const el = domOf(fiber) // walk fiber.child until stateNode is an Element
+const r = el.getBoundingClientRect()
+const hidden = r.width === 0 || r.height === 0 || el.offsetParent === null
 ```
 
 `72 rows, visible=0` turns a vague "the page is heavy" into a specific bug.

@@ -7,10 +7,11 @@ import { Native } from '~/mygo'
  * scheme. WebView2 serves custom schemes under http://<scheme>.localhost.
  */
 export function convertFileSrc(path: string): string {
-  const base = isMyGo() && runtime().platform === 'win32'
-    // eslint-disable-next-line unicorn/prefer-https -- WebView2 only serves custom schemes over http
-    ? 'http://localfile.localhost/'
-    : 'localfile://localhost/'
+  const base =
+    isMyGo() && runtime().platform === 'win32'
+      ? // WebView2 only serves custom schemes over http
+        'http://localfile.localhost/'
+      : 'localfile://localhost/'
   return `${base}?path=${encodeURIComponent(path)}`
 }
 
@@ -40,16 +41,14 @@ export function openPath(path: string): Promise<void> {
   return Native.openPath(path)
 }
 
-export async function pickFolder(
-  options: { title?: string, defaultPath?: string } = {},
-): Promise<string | null> {
+export async function pickFolder(options: { title?: string; defaultPath?: string } = {}): Promise<string | null> {
   const selected = await Native.pickFolder(options.title ?? '', options.defaultPath ?? '')
   return selected || null
 }
 
 interface DialogOptions {
-  title?: string
   kind?: 'info' | 'warning' | 'error'
+  title?: string
 }
 
 /** Yes/no confirmation; resolves to whether the user confirmed. */
@@ -65,8 +64,7 @@ const hasFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files
 
 // Without preventDefault on dragover the drop is refused.
 function acceptFileDrag(event: DragEvent) {
-  if (hasFiles(event))
-    event.preventDefault()
+  if (hasFiles(event)) event.preventDefault()
 }
 
 /**
@@ -80,14 +78,11 @@ export function onFileDrop(handlers: {
   // dragenter/dragleave fire for every child crossed, so count the depth.
   let depth = 0
   const enter = (event: DragEvent) => {
-    if (!hasFiles(event))
-      return
-    if (depth++ === 0)
-      handlers.onHover(true)
+    if (!hasFiles(event)) return
+    if (depth++ === 0) handlers.onHover(true)
   }
   const leave = (event: DragEvent) => {
-    if (!hasFiles(event))
-      return
+    if (!hasFiles(event)) return
     if (--depth <= 0) {
       depth = 0
       handlers.onHover(false)

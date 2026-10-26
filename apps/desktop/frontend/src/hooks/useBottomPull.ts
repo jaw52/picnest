@@ -1,5 +1,6 @@
-import { animate, useMotionValue } from 'framer-motion'
+import { animate, useMotionValue } from 'motion/react'
 import { useEffect } from 'react'
+
 import { spring } from '~/lib/springs'
 
 /** How hard the end of the grid can be pushed against, in px of arc. */
@@ -31,8 +32,7 @@ function atBottom(scroller: HTMLElement) {
 export function useBottomPull(enabled: boolean, scroller: HTMLElement | null) {
   const pull = useMotionValue(0)
   useEffect(() => {
-    if (!enabled || !scroller)
-      return
+    if (!enabled || !scroller) return
     const el = scroller
     // The wheel distance taken in, before resistance.
     let raw = 0
@@ -48,20 +48,17 @@ export function useBottomPull(enabled: boolean, scroller: HTMLElement | null) {
       settling = animate(pull, 0, spring.slow)
     }
     function onWheel(e: WheelEvent) {
-      if (e.ctrlKey || (e.target instanceof Element && e.target.closest('[role="dialog"]')))
-        return
+      if (e.ctrlKey || (e.target instanceof Element && e.target.closest('[role="dialog"]'))) return
       const now = performance.now()
       const sincePrevious = now - lastWheel
       lastWheel = now
       if (e.deltaY <= 0 || !atBottom(el)) {
         retrying = false
-        if (pull.get() > 0)
-          settle()
+        if (pull.get() > 0) settle()
         return
       }
       retrying ||= sincePrevious > RETRY_GAP_MS
-      if (!retrying)
-        return
+      if (!retrying) return
       if (settling) {
         settling.stop()
         settling = null

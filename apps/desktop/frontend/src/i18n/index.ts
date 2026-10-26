@@ -1,12 +1,14 @@
-import type { Language } from '~/mygo'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
+
+import type { Language } from '~/mygo'
+
 import { en } from './locales/en'
 import { zhCN } from './locales/zh-CN'
 
 export const resources = {
   'zh-CN': { translation: zhCN },
-  'en': { translation: en },
+  en: { translation: en },
 } satisfies Record<Language, { translation: object }>
 
 /** Starts i18next in `language`, ready before the first render. */

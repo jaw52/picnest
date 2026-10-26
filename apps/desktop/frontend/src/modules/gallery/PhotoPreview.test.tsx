@@ -1,8 +1,7 @@
-import type { Photo } from '~/types/photo'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-
 import { beforeEach, expect, it, vi } from 'vitest'
+
 import {
   currentFolderAtom,
   photosAtom,
@@ -10,6 +9,7 @@ import {
   selectedPhotoIdsAtom,
   subfoldersAtom,
 } from '~/atoms/gallery'
+import type { Photo } from '~/types/photo'
 
 import { MasonryView } from './MasonryView'
 import { PhotoPreview } from './PhotoPreview'
@@ -34,46 +34,43 @@ beforeEach(() => {
   rate.mockClear()
 })
 
-it.each(['Delete', 'Backspace'])(
-  'routes %s only to the preview, then restores grid shortcuts on close',
-  (key) => {
-    const store = createStore()
-    const a: Photo = {
-      id: '/a.jpg',
-      path: '/a.jpg',
-      fileName: 'a.jpg',
-      width: 100,
-      height: 100,
-      rating: 0,
-      modified: 0,
-      taken: 0,
-      isCloudPlaceholder: false,
-      aspectRatio: 1,
-    }
-    const b: Photo = { ...a, id: '/b.jpg', path: '/b.jpg', fileName: 'b.jpg' }
-    store.set(currentFolderAtom, '/')
-    store.set(photosAtom, [a, b])
-    store.set(selectedPhotoIdsAtom, new Set([a.id, b.id]))
-    store.set(previewPhotoIdAtom, b.id)
-    render(
-      <Provider store={store}>
-        <MasonryView />
-        <PhotoPreview />
-      </Provider>,
-    )
+it.each(['Delete', 'Backspace'])('routes %s only to the preview, then restores grid shortcuts on close', (key) => {
+  const store = createStore()
+  const a: Photo = {
+    id: '/a.jpg',
+    path: '/a.jpg',
+    fileName: 'a.jpg',
+    width: 100,
+    height: 100,
+    rating: 0,
+    modified: 0,
+    taken: 0,
+    isCloudPlaceholder: false,
+    aspectRatio: 1,
+  }
+  const b: Photo = { ...a, id: '/b.jpg', path: '/b.jpg', fileName: 'b.jpg' }
+  store.set(currentFolderAtom, '/')
+  store.set(photosAtom, [a, b])
+  store.set(selectedPhotoIdsAtom, new Set([a.id, b.id]))
+  store.set(previewPhotoIdAtom, b.id)
+  render(
+    <Provider store={store}>
+      <MasonryView />
+      <PhotoPreview />
+    </Provider>,
+  )
 
-    fireEvent.keyDown(window, { key })
-    expect(deletePhoto).toHaveBeenCalledTimes(1)
-    expect(deletePhoto).toHaveBeenLastCalledWith([b])
-    fireEvent.keyDown(window, { key, repeat: true })
-    expect(deletePhoto).toHaveBeenCalledTimes(1)
+  fireEvent.keyDown(window, { key })
+  expect(deletePhoto).toHaveBeenCalledTimes(1)
+  expect(deletePhoto).toHaveBeenLastCalledWith([b])
+  fireEvent.keyDown(window, { key, repeat: true })
+  expect(deletePhoto).toHaveBeenCalledTimes(1)
 
-    act(() => store.set(previewPhotoIdAtom, null))
-    fireEvent.keyDown(window, { key })
-    expect(deletePhoto).toHaveBeenCalledTimes(2)
-    expect(deletePhoto).toHaveBeenLastCalledWith([a, b])
-  },
-)
+  act(() => store.set(previewPhotoIdAtom, null))
+  fireEvent.keyDown(window, { key })
+  expect(deletePhoto).toHaveBeenCalledTimes(2)
+  expect(deletePhoto).toHaveBeenLastCalledWith([a, b])
+})
 
 it('rates the grid selection, then only the previewed photo, with the 0-5 keys', () => {
   const store = createStore()

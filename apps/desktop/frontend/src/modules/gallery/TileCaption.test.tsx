@@ -1,6 +1,7 @@
-import type { Photo } from '~/types/photo'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
+
+import type { Photo } from '~/types/photo'
 
 import { TileCaption } from './TileCaption'
 
