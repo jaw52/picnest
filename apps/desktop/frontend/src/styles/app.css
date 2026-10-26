@@ -141,8 +141,11 @@
    renders scrollbar-color and ignores the ::-webkit-* block, so both ramps must
    stay in sync. Fine pointers only; touch keeps its overlay momentum bars. */
 @media (pointer: fine) {
-  * {
+  :root {
     --scroll-thumb: color-mix(in oklab, var(--color-text) 8%, transparent);
+  }
+
+  * {
     scrollbar-width: thin;
     scrollbar-color: var(--scroll-thumb) transparent;
   }
